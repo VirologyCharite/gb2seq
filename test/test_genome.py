@@ -6,6 +6,7 @@ import sars2seq
 from sars2seq.fasta import getSequence
 from sars2seq.features import Features
 from sars2seq.genome import SARS2Genome
+from sars2seq.variants import spikeDeletion, VOC_20201201_UK, N501Y
 
 
 DATA_DIR = join(dirname(dirname(sars2seq.__file__)), 'data')
@@ -13,40 +14,33 @@ REF_GB = join(DATA_DIR, 'NC_045512.2.gb')
 FEATURES = Features(REF_GB)
 
 
-class _TestMixin:
+class _Mixin:
     """
     Mixin for SARS2Genome class tests.
     """
     def testLength(self):
-        self.assertGreater(len(self.read), 28000)
+        self.assertGreater(len(self.genomeRead), 28000)
 
-    def checkLocation(self, read, location, expected):
-        """
-        Check that a 1-based sequence location has the expected value.
-        """
-        self.assertEqual(expected, read.sequence[location - 1])
-
-    def checkLocationIdentical(self, read1, read2, location):
-        """
-        Check that a 1-based sequence location has the same value in two reads.
-        """
-        self.assertEqual(read1.sequence[location - 1],
-                         read2.sequence[location - 1])
-
-    def checkChanges(self, changes, sequence, reference):
+    def check(self, name, changes, nt):
         """
         Check that a set of changes all happened as expected.
 
+        @param name: The C{str} name of the feature to check (e.g., 'nsp2').
         @param changes: A C{str} specification in the form of space-separated
             RNS strings, where R is a reference base, N is an integer offset,
             and S is a sequence base. So, e.g., 'L28S P1003Q' indicates that
             we expected a change from 'L' to 'S' at offset 28 and from 'P' to
             'Q' at offset 1003.
+        @param nt: If C{True} check nucleotide sequences. Else protein.
         """
-        for change in changes.split():
-            location = int(change[1:-1])
-            self.checkLocation(reference, location, change[0])
-            self.checkLocation(sequence, location, change[-1])
+        feature = self.genome.feature(name)
+        _, errorCount, result = feature.check(changes, nt)
+        if errorCount:
+            for change, (referenceOK, genomeOK) in result.items():
+                if not referenceOK:
+                    self.fail(f'Reference base check failed on {change!r}')
+                if not genomeOK:
+                    self.fail(f'Genome base check failed on {change!r}')
 
 
 class Test_EPI_ISL_402125(TestCase):
@@ -64,21 +58,20 @@ class Test_EPI_ISL_402125(TestCase):
             getSequence(join(DATA_DIR, 'NC_045512.2.fasta')).sequence)
 
 
-class Test_EPI_ISL_601443(TestCase, _TestMixin):
+class Test_EPI_ISL_601443(TestCase, _Mixin):
     """
     Test the EPI_ISL_601433 sequence. This is the variant of concern
     (VOC 202012/01) referred to in https://www.gov.uk/government/publications/
     investigation-of-novel-sars-cov-2-variant-variant-of-concern-20201201
     """
-    read = getSequence(join(DATA_DIR, 'EPI_ISL_601443.fasta'))
-    genome = SARS2Genome(read, FEATURES)
+    genomeRead = getSequence(join(DATA_DIR, 'EPI_ISL_601443.fasta'))
+    genome = SARS2Genome(genomeRead, FEATURES)
 
     def testSpikeDeletionsAa(self):
         """
         The spike protein should have the three deletions.
         """
-        self.checkChanges('H69- V70- Y144-',
-                          *self.genome.feature('spike').aaSequences())
+        self.check('spike', 'H69- V70- Y144-', nt=False)
 
     def testSpikeMutationsAa(self):
         """
@@ -86,44 +79,86 @@ class Test_EPI_ISL_601443(TestCase, _TestMixin):
         that the UK report does not include mention of D614G (but they also
         don't say what reference their SNPs are relative to)
         """
-        self.checkChanges('N501Y A570D D614G P681H T716I S982A D1118H',
-                          *self.genome.feature('spike').aaSequences())
+        self.check('spike', 'N501Y A570D D614G P681H T716I S982A D1118H',
+                   False)
+
+    def testSpikeDeletionVariant(self):
+        """
+        The genome must fulfil all the requirements of a spike deletion
+        variant.
+        """
+        testCount, errorCount, result = self.genome.checkVariant(spikeDeletion)
+        self.assertEqual(2, testCount)
+        self.assertEqual(0, errorCount)
+        self.assertEqual(
+            {
+                'spike': {
+                    'aa': {
+                        '69-': (True, True),
+                        '70-': (True, True),
+                    },
+                },
+            },
+            result
+        )
+
+    def testN501YVariant(self):
+        """
+        The genome must be an N501Y variant.
+        """
+        testCount, errorCount, result = self.genome.checkVariant(N501Y)
+        self.assertEqual(1, testCount)
+        self.assertEqual(0, errorCount)
+        self.assertEqual(
+            {
+                'spike': {
+                    'aa': {
+                        'N501Y': (True, True),
+                    },
+                },
+            },
+            result
+        )
+
+    def testVariantOfConcern20201201(self):
+        """
+        The genome must fulfil all the requirements of the UK variant of
+        concern 202012/01.
+        """
+        testCount, errorCount, _ = self.genome.checkVariant(VOC_20201201_UK)
+        self.assertEqual(20, testCount)
+        self.assertEqual(0, errorCount)
 
     def testORF1aDeletionsAa(self):
         """
         The ORF1a protein should have the expected deletions.
         """
-        self.checkChanges('S3675- G3676- F3677-',
-                          *self.genome.feature('orf1a').aaSequences())
+        self.check('orf1a', 'S3675- G3676- F3677-', False)
 
     def testORF1aMutationsAa(self):
         """
         The ORF1a protein should have the expected amino acid changes.
         """
-        self.checkChanges('T1001I A1708D I2230T',
-                          *self.genome.feature('orf1a').aaSequences())
+        self.check('orf1a', 'T1001I A1708D I2230T', False)
 
     def testORF1abDeletionsAa(self):
         """
         The ORF1ab protein should have the expected deletions.
         """
-        self.checkChanges('S3675- G3676- F3677-',
-                          *self.genome.feature('orf1ab').aaSequences())
+        self.check('orf1ab', 'S3675- G3676- F3677-', False)
 
     # TODO: Is this actually correct???
     def testORF1abInsertionsAa(self):
         """
         The ORF1ab protein should have the expected insertions.
         """
-        self.checkChanges('-4402F -4403K',
-                          *self.genome.feature('orf1ab').aaSequences())
+        self.check('orf1ab', '-4402F -4403K', False)
 
     def testORF1abMutationsAa(self):
         """
         The ORF1ab protein should have the expected amino acid changes.
         """
-        self.checkChanges('T1001I A1708D I2230T P4717L',
-                          *self.genome.feature('orf1ab').aaSequences())
+        self.check('orf1ab', 'T1001I A1708D I2230T P4717L', False)
 
     def testNucleocapsidMutationsNt(self):
         """
@@ -133,23 +168,20 @@ class Test_EPI_ISL_601443(TestCase, _TestMixin):
         # location 235. That's a 0-based offset of 234 = 702 in the
         # genome. The change is an S -> via a TCT -> TTT mutation in the
         # middle position, or 703 in 0-based, and 704 in 1-based.
-        self.checkChanges('G7C A8T T9A G608A G609A G610C C704T',
-                          *self.genome.feature('N').ntSequences())
+        self.check('N', 'G7C A8T T9A G608A G609A G610C C704T', True)
 
     def testNucleocapsidMutationsAa(self):
         """
         The nucleocapsid protein should have the expected amino acid changes.
         Note that the UK report does not include mention of R203K or G204R.
         """
-        self.checkChanges('D3L R203K G204R S235F',
-                          *self.genome.feature('N').aaSequences())
+        self.check('N', 'D3L R203K G204R S235F', False)
 
     def testORF8MutationsAa(self):
         """
         The ORF8 protein should have the expected amino acid changes.
         """
-        self.checkChanges('Q27* R52I Y73C',
-                          *self.genome.feature('orf8').aaSequences())
+        self.check('orf8', 'Q27* R52I Y73C', False)
 
     def testSNPs(self):
         """
@@ -162,45 +194,88 @@ class Test_EPI_ISL_601443(TestCase, _TestMixin):
         # the given offset and also +/- 18 nucleotides due to the
         # deletions. They don't say what their SNPs/deletions are relative
         # to or how they got their offsets.
+        reference = self.genomeRead.sequence
         for location, nt in ((3267, 'T'), (5388, 'G'), (6954, 'C'),
                              (23063, 'T'), (23271, 'G'), (23604, 'T')):
-            self.checkLocation(self.read, location, nt)
+            self.assertEqual(nt, reference[location - 1])
 
 
-class Test_BavPat2(TestCase, _TestMixin):
+class Test_BavPat2(TestCase, _Mixin):
     """
     Test the BavPat2 sequence. This is Bavarian patient #2.
     """
-    read = getSequence(join(DATA_DIR, 'BavPat2.fasta'))
-    genome = SARS2Genome(read, FEATURES)
+    genomeRead = getSequence(join(DATA_DIR, 'BavPat2.fasta'))
+    genome = SARS2Genome(genomeRead, FEATURES)
 
     def testSpikeMutationsNt(self):
         """
         The spike genome should have the expected change.
         """
-        self.checkChanges('A1841G',
-                          *self.genome.feature('spike').ntSequences())
+        self.check('spike', 'A1841G', True)
 
     def testSpikeMutationsAa(self):
         """
         The spike protein should have the expected amino acid change.
         """
-        self.checkChanges('D614G',
-                          *self.genome.feature('spike').aaSequences())
+        self.check('spike', 'D614G', False)
 
     def testORF1aMutationsNt(self):
         """
         The ORF1a genome should have the expected change.
         """
-        self.checkChanges('C2772T',
-                          *self.genome.feature('orf1a').ntSequences())
+        self.check('orf1a', 'C2772T', True)
 
     def testORF1abInsertionsAa(self):
         """
         The ORF1ab protein should have the expected insertions.
         """
-        self.checkChanges('-4402F -4403K',
-                          *self.genome.feature('orf1ab').aaSequences())
+        self.check('orf1ab', '-4402F -4403K', False)
+
+    def testSpikeDeletionVariant(self):
+        """
+        The genome is not a spike deletion variant.
+        """
+        testCount, errorCount, result = self.genome.checkVariant(spikeDeletion)
+        self.assertEqual(2, testCount)
+        self.assertEqual(2, errorCount)
+        self.assertEqual(
+            {
+                'spike': {
+                    'aa': {
+                        '69-': (True, False),
+                        '70-': (True, False),
+                    },
+                },
+            },
+            result
+        )
+
+    def testN501YVariant(self):
+        """
+        The genome must not be an N501Y variant.
+        """
+        testCount, errorCount, result = self.genome.checkVariant(N501Y)
+        self.assertEqual(1, testCount)
+        self.assertEqual(1, errorCount)
+        self.assertEqual(
+            {
+                'spike': {
+                    'aa': {
+                        'N501Y': (True, False),
+                    },
+                },
+            },
+            result
+        )
+
+    def testVariantOfConcern20201201(self):
+        """
+        The genome must not have any of the UK variant of concern 202012/01
+        changes.
+        """
+        testCount, errorCount, _ = self.genome.checkVariant(VOC_20201201_UK)
+        self.assertEqual(20, testCount)
+        self.assertEqual(20, errorCount)
 
     def testNucleocapsidIdentical(self):
         """
@@ -250,13 +325,13 @@ class Test_BavPat2(TestCase, _TestMixin):
         self.assertEqual(sequenceAa.sequence, referenceAa.sequence)
 
 
-class Test_NC_045512(TestCase, _TestMixin):
+class Test_NC_045512(TestCase, _Mixin):
     """
     Test the NC_045512.2 sequence, which should test as equal seeing as it is
     the default feature reference.
     """
-    read = getSequence(join(DATA_DIR, 'NC_045512.2.fasta'))
-    genome = SARS2Genome(read, FEATURES)
+    genomeRead = getSequence(join(DATA_DIR, 'NC_045512.2.fasta'))
+    genome = SARS2Genome(genomeRead, FEATURES)
 
     def testSpikeIdenticalNt(self):
         """
@@ -273,3 +348,49 @@ class Test_NC_045512(TestCase, _TestMixin):
         spike = self.genome.feature('S')
         sequenceAa, referenceAa = spike.aaSequences()
         self.assertEqual(sequenceAa.sequence, referenceAa.sequence)
+
+    def testSpikeDeletionVariant(self):
+        """
+        The genome is not a spike deletion variant.
+        """
+        testCount, errorCount, result = self.genome.checkVariant(spikeDeletion)
+        self.assertEqual(2, testCount)
+        self.assertEqual(2, errorCount)
+        self.assertEqual(
+            {
+                'spike': {
+                    'aa': {
+                        '69-': (True, False),
+                        '70-': (True, False),
+                    },
+                },
+            },
+            result
+        )
+
+    def testN501YVariant(self):
+        """
+        The genome must not be an N501Y variant.
+        """
+        testCount, errorCount, result = self.genome.checkVariant(N501Y)
+        self.assertEqual(1, testCount)
+        self.assertEqual(1, errorCount)
+        self.assertEqual(
+            {
+                'spike': {
+                    'aa': {
+                        'N501Y': (True, False),
+                    },
+                },
+            },
+            result
+        )
+
+    def testVariantOfConcern20201201(self):
+        """
+        The genome must not have any of the UK variant of concern 202012/01
+        changes.
+        """
+        testCount, errorCount, _ = self.genome.checkVariant(VOC_20201201_UK)
+        self.assertEqual(20, testCount)
+        self.assertEqual(20, errorCount)

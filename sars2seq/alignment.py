@@ -1,49 +1,11 @@
-from Bio.Seq import Seq
-
 from dark.aligners import mafft
 from dark.reads import AARead, DNARead, Reads
 
+from sars2seq.change import splitChange
+from sars2seq.translate import translate
 
 DEBUG = False
 SLICE = slice(300)
-
-
-def translate(seq, name):
-    """
-    Translate a sequence.
-
-    @param seq: A C{str} nucelotide sequence.
-    @param name: A C{str} feature name.
-    @return: A translated C{str} amino acid sequence.
-    """
-    if name == 'ORF1ab polyprotein':
-        # See Fields Virology (figure 10.6a on page 421, 7th edition or
-        # figure 28.7a on page 836, 6th edition) plus
-        # https://www.ncbi.nlm.nih.gov/nuccore/NC_045512 for details of
-        # what happens below. Note that the nucelotide sequence we are
-        # passed is the one that's made from the alignment with the
-        # reference ORF1ab nucleotide sequence (in sequence.py) and so is
-        # just that ORF and does not include the leading ~265 nucleotides
-        # of the 5' UTR. As a result, the offset used to begin the search
-        # for the slippery sequence is 13000, which is chosen to be a bit
-        # before 13468 - 265.  There are various occurrences of the
-        # slippery sequence in the reference genome (and hence probably in
-        # other CoV genomes), but only one in this region and with a stop
-        # codon shortly (<20 nt) downstream.
-        slipperySeq = 'TTTAAAC'
-        slipperyLen = len(slipperySeq)
-        offset = seq.find(slipperySeq, 13000)
-        stop = seq.find('TAA', offset + slipperyLen)
-        if DEBUG:
-            print(f'LEN: {len(seq)}, OFFSET: {offset}, STOP: {stop}')
-        assert offset > -1 and stop > -1 and stop - offset < 20
-        seq = seq[:offset + slipperyLen] + seq[offset:]
-
-    # Pad with 'N' to avoid a 'BiopythonWarning: Partial codon' warning.
-    remainder = len(seq) % 3
-    seq += 'N' * (3 - remainder if remainder else 0)
-
-    return Seq(seq).translate()
 
 
 class Alignment:
@@ -235,3 +197,47 @@ class Alignment:
             print('END process alignment')
 
         return genomeResult, referenceResult
+
+    def check(self, changes, nt):
+        """
+        Check that a set of changes all happened as expected.
+
+        @param changes: Either a C{str} or a iterable of 3-C{tuple}s. If a
+            C{str}, gives a specification in the form of space-separated
+            RNG strings, where R is a reference base, N is a 1-based location,
+            and G is a sequence base. So, e.g., 'L28S P1003Q' indicates that
+            we expected a change from 'L' to 'S' at offset 28 and from 'P' in
+            the reference to 'Q' in the genome we're examining at offset 1003.
+            The reference or genome base (but not both) may be absent.
+            If an iterable of 3-C{tuple}s, each tuple should have a C{str}
+            expected reference base, a 0-based offset, and a C{str} expected
+            genome base.  Note that the string format (meant for humans) uses
+            1-based locations whereas the tuple format uses 0-based offsets.
+        @param nt: If C{True} check nucleotide sequences. Else protein.
+        @raise ValueError: If a change string cannot be parsed.
+        @return: A 3-C{tuple} with the number of checks done, the number of
+            errors, and a C{dict} keyed by changes in C{changes}, with values
+            a 2-C{tuple} of Booleans to indicate success or failure of the
+            check for the reference and the genome respectively.
+        """
+        genome, reference = self.ntSequences() if nt else self.aaSequences()
+        genome, reference = genome.sequence, reference.sequence
+        result = {}
+        testCount = errorCount = 0
+
+        if isinstance(changes, str):
+            for change in changes.split():
+                refBase, offset, genBase = splitChange(change)
+                result[change] = (
+                    refBase is None or reference[offset] == refBase,
+                    genBase is None or genome[offset] == genBase)
+        else:
+            for change in changes:
+                refBase, offset, genBase = change
+                result[change] = (reference[offset] == refBase,
+                                  genome[offset] == genBase)
+
+        errorCount = len([v for v in result.values() if v != (True, True)])
+        testCount = len(result)
+
+        return testCount, errorCount, result

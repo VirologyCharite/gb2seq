@@ -2,13 +2,51 @@ from os import environ
 from os.path import dirname, exists, join
 
 from Bio import Entrez, SeqIO
-# from Bio.Seq import Seq
 
 import sars2seq
 
+# Set ENTREZ_EMAIL in your environment to have your requests to NCBI Entez
+# be accompanied by your address. If you don't do this you'll see warning
+# messages and be limited to a lower rate of querying.
 Entrez.email = environ.get('ENTREZ_EMAIL')
 
 _DATA_DIR = join(dirname(dirname(sars2seq.__file__)), 'data')
+
+
+# Feature aliases should have a lower case key.
+ALIASES = {
+    '2': "2'-O-ribose methyltransferase",
+    '3clpro': '3C-like proteinase',
+    '3utr': "3'UTR",
+    '5utr': "5'UTR",
+    'e': 'envelope protein',
+    'endornase': 'endoRNAse',
+    'envelope': 'envelope protein',
+    'exon': "3'-to-5' exonuclease",
+    'exonuclease': "3'-to-5' exonuclease",
+    'leader': 'leader protein',
+    'm': 'membrane glycoprotein',
+    'membrane': 'membrane glycoprotein',
+    'mpro': '3C-like proteinase',
+    'n': 'nucleocapsid phosphoprotein',
+    'orf10': 'ORF10 protein',
+    'orf1a': 'ORF1a polyprotein',
+    'orf1ab': 'ORF1ab polyprotein',
+    'orf3a': 'ORF3a protein',
+    'orf6': 'ORF6 protein',
+    'orf7a': 'ORF7a protein',
+    'orf7b': 'ORF7b',
+    'orf8': 'ORF8 protein',
+    'rdrp': 'RNA-dependent RNA polymerase',
+    's': 'surface glycoprotein',
+    'sl1': 'stem loop 1',
+    'sl2': 'stem loop 2',
+    'sl3': 'stem loop 3',
+    'sl4': 'stem loop 4',
+    'sl5': 'stem loop 5',
+    'spike': 'surface glycoprotein',
+    'surface glycoprotein': 'surface glycoprotein',
+}
 
 
 class Features:
@@ -158,3 +196,28 @@ class Features:
             result[key].update(values)
 
         return result
+
+    def getFeature(self, name):
+        """
+        Find a feature by name.
+
+        @param name: A C{str} feature name to look up.
+        @return: A C{dict} for the feature.
+        """
+        featuresDict = self.featuresDict()
+        try:
+            return featuresDict[name]
+        except KeyError:
+            nameLower = name.lower()
+            for featureName in featuresDict:
+                if nameLower == featureName.lower():
+                    name = featureName
+                    break
+            else:
+                alt = ALIASES.get(nameLower)
+                if alt is None:
+                    raise KeyError(name)
+                else:
+                    name = alt
+
+        return featuresDict[name]

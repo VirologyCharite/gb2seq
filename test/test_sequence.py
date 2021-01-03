@@ -15,15 +15,8 @@ FEATURES = Features(REF_GB)
 
 class _TestMixin:
     """
-    Test the SARS2Sequence class.
+    Mixin for SARS2Sequence class tests.
     """
-    @classmethod
-    def setup_class(cls):
-        """
-        Set up the class.
-        """
-        cls.seq = SARS2Sequence(cls.read, FEATURES)
-
     def testLength(self):
         self.assertGreater(len(self.read), 28000)
 
@@ -39,6 +32,21 @@ class _TestMixin:
         """
         self.assertEqual(read1.sequence[location - 1],
                          read2.sequence[location - 1])
+
+    def checkChanges(self, changes, sequence, reference):
+        """
+        Check that a set of changes all happened as expected.
+
+        @param changes: A C{str} specification in the form of space-separated
+            RNS strings, where R is a reference base, N is an integer offset,
+            and S is a sequence base. So, e.g., 'L28S P1003Q' indicates that
+            we expected a change from 'L' to 'S' at offset 28 and from 'P' to
+            'Q' at offset 1003.
+        """
+        for change in changes.split():
+            location = int(change[1:-1])
+            self.checkLocation(reference, location, change[0])
+            self.checkLocation(sequence, location, change[-1])
 
 
 class TestEPI_ISL_402125(TestCase):
@@ -58,64 +66,106 @@ class TestEPI_ISL_402125(TestCase):
 
 class TestEPI_ISL_601443(TestCase, _TestMixin):
     """
-    Test the EPI_ISL_601433 sequence. This is the variant of concern referred
-    to in https://www.gov.uk/government/publications/
+    Test the EPI_ISL_601433 sequence. This is the variant of concern
+    (VOC 202012/01) referred to in https://www.gov.uk/government/publications/
     investigation-of-novel-sars-cov-2-variant-variant-of-concern-20201201
     """
     read = getSequence(join(DATA_DIR, 'EPI_ISL_601443.fasta'))
+    seq = SARS2Sequence(read, FEATURES)
 
-    def testSpikeDeletions(self):
+    def testSpikeDeletionsAa(self):
         """
         The spike protein should have the three deletions.
         """
-        spike = self.seq.feature('S')
-        sequenceAa, _ = spike.aaSequences()
-        for location in 69, 70, 144:
-            self.checkLocation(sequenceAa, location, '-')
+        self.checkChanges('H69- V70- Y144-',
+                          *self.seq.feature('spike').aaSequences())
 
     def testSpikeMutationsAa(self):
         """
         The spike protein should have the expected amino acid changes. Note
-        that the UK report does not include mention of D614G.
+        that the UK report does not include mention of D614G (but they also
+        don't say what reference their SNPs are relative to)
         """
-        spike = self.seq.feature('S')
-        sequenceAa, _ = spike.aaSequences()
-        for location, aa in ((501, 'Y'), (570, 'D'), (614, 'G'), (681, 'H'),
-                             (716, 'I'), (982, 'A'), (1118, 'H')):
-            self.checkLocation(sequenceAa, location, aa)
+        self.checkChanges('N501Y A570D D614G P681H T716I S982A D1118H',
+                          *self.seq.feature('spike').aaSequences())
 
-    def testNucloecapsidMutationsNt(self):
+    def testORF1aDeletionsAa(self):
+        """
+        The ORF1a protein should have the expected deletions.
+        """
+        self.checkChanges('S3675- G3676- F3677-',
+                          *self.seq.feature('orf1a').aaSequences())
+
+    def testORF1aMutationsAa(self):
+        """
+        The ORF1a protein should have the expected amino acid changes.
+        """
+        self.checkChanges('T1001I A1708D I2230T',
+                          *self.seq.feature('orf1a').aaSequences())
+
+    def testORF1abDeletionsAa(self):
+        """
+        The ORF1ab protein should have the expected deletions.
+        """
+        self.checkChanges('S3675- G3676- F3677-',
+                          *self.seq.feature('orf1ab').aaSequences())
+
+    # TODO: Is this actually correct???
+    def testORF1abInsertionsAa(self):
+        """
+        The ORF1ab protein should have the expected insertions.
+        """
+        self.checkChanges('-4402F -4403K',
+                          *self.seq.feature('orf1ab').aaSequences())
+
+    def testORF1abMutationsAa(self):
+        """
+        The ORF1ab protein should have the expected amino acid changes.
+        """
+        self.checkChanges('T1001I A1708D I2230T P4717L',
+                          *self.seq.feature('orf1ab').aaSequences())
+
+    def testNucleocapsidMutationsNt(self):
         """
         The nucleocapsid genome should have the expected changes.
         Note that the UK report does not include mention of R203K or G204R.
         """
-        spike = self.seq.feature('N')
-        sequenceNt, _ = spike.ntSequences()
         # The 704 below is due to a change at the 1-based amino acid
         # location 235. That's a 0-based offset of 234 = 702 in the
         # genome. The change is an S -> via a TCT -> TTT mutation in the
         # middle position, or 703 in 0-based, and 704 in 1-based.
-        for location, nt in (7, 'C'), (8, 'T'), (9, 'A'), (704, 'T'):
-            self.checkLocation(sequenceNt, location, nt)
+        self.checkChanges('G7C A8T T9A G608A G609A G610C C704T',
+                          *self.seq.feature('N').ntSequences())
 
-    def testNucloecapsidMutationsAa(self):
+    def testNucleocapsidMutationsAa(self):
         """
         The nucleocapsid protein should have the expected amino acid changes.
         Note that the UK report does not include mention of R203K or G204R.
         """
-        spike = self.seq.feature('N')
-        sequenceAa, _ = spike.aaSequences()
-        for location, aa in (3, 'L'), (203, 'K'), (204, 'R'), (235, 'F'):
-            self.checkLocation(sequenceAa, location, aa)
+        self.checkChanges('D3L R203K G204R S235F',
+                          *self.seq.feature('N').aaSequences())
 
     def testORF8MutationsAa(self):
         """
         The ORF8 protein should have the expected amino acid changes.
         """
-        orf8 = self.seq.feature('orf8')
-        sequenceAa, _ = orf8.aaSequences()
-        for location, aa in (27, '*'), (52, 'I'), (73, 'C'):
-            self.checkLocation(sequenceAa, location, aa)
+        self.checkChanges('Q27* R52I Y73C',
+                          *self.seq.feature('orf8').aaSequences())
+
+    def testSNPs(self):
+        """
+        The SNPs in Table 1 of the report mentioned the docstring of this class
+        should all be present.
+        """
+        # Table 1 seems incorrect. Instead of C5388A, the sequence has a
+        # G. Instead of C23271A the sequence has a G. Instead of C23604A
+        # the sequence has a T. That's as far as I checked. I checked at
+        # the given offset and also +/- 18 nucleotides due to the
+        # deletions. They don't say what their SNPs/deletions are relative
+        # to or how they got their offsets.
+        for location, nt in ((3267, 'T'), (5388, 'G'), (6954, 'C'),
+                             (23063, 'T'), (23271, 'G'), (23604, 'T')):
+            self.checkLocation(self.read, location, nt)
 
 
 class TestNC_045512(TestCase, _TestMixin):
@@ -124,6 +174,7 @@ class TestNC_045512(TestCase, _TestMixin):
     the default feature reference.
     """
     read = getSequence(join(DATA_DIR, 'NC_045512.2.fasta'))
+    seq = SARS2Sequence(read, FEATURES)
 
     def testSpikeIdenticalNt(self):
         """

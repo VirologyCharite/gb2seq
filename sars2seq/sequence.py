@@ -1,10 +1,9 @@
-from dark.aligners import mafft
-from dark.reads import DNARead, Reads
+from dark.reads import DNARead
 
-from sars2seq.alignment import Alignment
+from sars2seq.alignment import Alignment, align
 
 DEBUG = False
-PREFIX = 300
+SLICE = slice(300)
 
 # Alias names should have a lower case key.
 ALIASES = {
@@ -58,7 +57,7 @@ class SARS2Sequence:
     @param sequence: A C{dark.reads.Read} instance.
     @param features: An C{Features} instance.
     """
-    def __init__(self, sequence, features, window=200):
+    def __init__(self, sequence, features, window=500):
         self.sequence = sequence
         self.features = features
         self.window = window
@@ -113,38 +112,15 @@ class SARS2Sequence:
                                 self._features[name]['sequence'])
         assert len(sequenceRead) >= len(referenceRead)
 
-        alignment = mafft(Reads([sequenceRead, referenceRead]),
-                          options='--preservecase')
-
-        sequenceResult, referenceResult = list(alignment)
-
-        if (sequenceResult.sequence.startswith('-') or
-                sequenceResult.sequence.endswith('-')):
-            if DEBUG:
-                print('Sequence result has leading/trailing gaps!')
-
-        # In the alignment, the reference will have a bunch of leading and
-        # trailing '-' chars. The length of these gives us the offsets in
-        # the original full-length sequence where the match is.
-        offset = max(
-            (len(referenceResult) - len(referenceResult.sequence.lstrip('-'))),
-            (len(sequenceResult) - len(sequenceResult.sequence.lstrip('-'))))
-        length = len(referenceResult.sequence.strip('-'))
-        assert length == len(referenceRead)
-
-        sequenceTrimmed = sequenceResult[offset:offset + length]
-
         if DEBUG:
-            print('FIND FEATURE', name)
-            print(f'offset, length = {offset}, {length}')
-            print('seq   in', sequenceRead.sequence[:PREFIX])
-            print('ref   in', referenceRead.sequence[:PREFIX])
-            print('seq   al', sequenceResult.sequence[:PREFIX])
-            print('ref   al', referenceResult.sequence[:PREFIX])
-            print('seq trim', sequenceTrimmed.sequence[:PREFIX])
-            print('END FIND FEATURE', name)
+            print('NT MATCH:')
+            print('seq  nt:', sequenceRead.sequence[SLICE])
+            print('ref  nt:', referenceRead.sequence[SLICE])
 
-        assert len(sequenceTrimmed) == len(referenceRead), (
-            f'{len(sequenceTrimmed)} != {len(referenceRead)}')
+        sequenceResult, referenceResult = align(sequenceRead, referenceRead)
+        sequenceNoGaps = sequenceResult.sequence.replace('-', '')
+        sequenceOffset = self.sequence.sequence.find(sequenceNoGaps)
+        assert sequenceOffset > -1
 
-        return Alignment(sequenceTrimmed, referenceRead, self._features, name)
+        return Alignment(sequenceResult, referenceResult, self._features, name,
+                         sequenceOffset)

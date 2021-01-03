@@ -151,6 +151,7 @@ class Features:
                 key = name
 
             result[key] = {
+                'name': name,
                 'start': start,
                 'stop': stop,
             }

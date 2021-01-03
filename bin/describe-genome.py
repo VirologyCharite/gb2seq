@@ -11,14 +11,14 @@ from dark.dna import compareDNAReads, matchToString as dnaMatchToString
 from dark.reads import Read, Reads
 
 from sars2seq.features import Features
-from sars2seq.sequence import SARS2Sequence
+from sars2seq.genome import SARS2Genome
 
 
-def save(sequence, reference, read, feature, outDir, nt):
+def save(genome, reference, read, feature, outDir, nt):
     """
     Save the sequences and alignment.
 
-    @param sequence: A C{dark.reads.Read} instance (aligned, so with gaps).
+    @param genome: A C{dark.reads.Read} instance (aligned, so with gaps).
     @param reference: A C{dark.reads.Read} instance (aligned, so with gaps).
     @param read: The C{dark.reads.Read} that was read from the input FASTA file
         (this is the overall genome from which the feature was obtained).
@@ -30,11 +30,11 @@ def save(sequence, reference, read, feature, outDir, nt):
         outDir,
         read.id.split()[0] + '-' + feature + ('-nt' if nt else '-aa'))
 
-    Reads([sequence, reference]).save(filenameBase + '-align.fasta')
+    Reads([genome, reference]).save(filenameBase + '-align.fasta')
 
-    sequenceNoGaps = Read(sequence.id, sequence.sequence.replace('-', ''))
+    genomeNoGaps = Read(genome.id, genome.sequence.replace('-', ''))
     referenceNoGaps = Read(reference.id, reference.sequence.replace('-', ''))
-    Reads([sequenceNoGaps, referenceNoGaps]).save(filenameBase + '.fasta')
+    Reads([genomeNoGaps, referenceNoGaps]).save(filenameBase + '.fasta')
 
 
 def printDiffs(read1, read2, indent=''):
@@ -64,13 +64,13 @@ def printDiffs(read1, read2, indent=''):
 
 def main(args):
     """
-    Describe a SARS-CoV-2 sequence.
+    Describe a SARS-CoV-2 genome.
 
     @param args: A C{Namespace} instance as returned by argparse with
         values for command-line options.
     """
-    for read in FastaReads(args.fastaFile):
-        seq = SARS2Sequence(read, Features(args.gbFile))
+    for read in FastaReads(args.genome):
+        seq = SARS2Genome(read, Features(args.gbFile))
 
         features = args.feature or seq.featureNames()
 
@@ -78,40 +78,40 @@ def main(args):
             print(f'Matching {feature}')
             result = seq.feature(feature)
 
-            sequenceNt, referenceNt = result.ntSequences()
-            match = compareDNAReads(referenceNt, sequenceNt)
+            genomeNt, referenceNt = result.ntSequences()
+            match = compareDNAReads(referenceNt, genomeNt)
             print('  DNA:')
-            print(dnaMatchToString(match, referenceNt, sequenceNt,
+            print(dnaMatchToString(match, referenceNt, genomeNt,
                                    matchAmbiguous=False, indent='   '))
             if match['match']['nonGapMismatchCount']:
-                printDiffs(referenceNt, sequenceNt, indent='     ')
+                printDiffs(referenceNt, genomeNt, indent='     ')
 
-            sequenceAa, referenceAa = result.aaSequences()
-            match = compareAaReads(referenceAa, sequenceAa)
+            genomeAa, referenceAa = result.aaSequences()
+            match = compareAaReads(referenceAa, genomeAa)
             print('  AA:')
-            print(aaMatchToString(match, referenceAa, sequenceAa,
+            print(aaMatchToString(match, referenceAa, genomeAa,
                                   indent='   '))
             if (match['match']['nonGapMismatchCount'] or
                     match['match']['gapMismatchCount']):
-                printDiffs(referenceAa, sequenceAa, indent='     ')
+                printDiffs(referenceAa, genomeAa, indent='     ')
 
             outDir = args.outDir
             if outDir:
                 if not exists(outDir):
                     os.makedirs(outDir)
-                save(sequenceNt, referenceNt, read, feature, outDir, True)
-                save(sequenceAa, referenceAa, read, feature, outDir, False)
+                save(genomeNt, referenceNt, read, feature, outDir, True)
+                save(genomeAa, referenceAa, read, feature, outDir, False)
 
 
 if __name__ == '__main__':
 
     parser = argparse.ArgumentParser(
         formatter_class=argparse.ArgumentDefaultsHelpFormatter,
-        description='Describe a SARS-CoV-2 sequence.')
+        description='Describe a SARS-CoV-2 genome (or genomes).')
 
     parser.add_argument(
-        'fastaFile', metavar='file.fasta',
-        help='The FASTA file to examine.')
+        '--genome', metavar='file.fasta',
+        help='The FASTA file containing the SARS-CoV-2 genome(s) to examine.')
 
     parser.add_argument(
         '--feature', action='append', metavar='FEATURE',
@@ -123,7 +123,7 @@ if __name__ == '__main__':
 
     parser.add_argument(
         '--gbFile', metavar='file.gb', default=Features.REF_GB,
-        help='The Genbank file to read for features.')
+        help='The Genbank file to read for SARS-CoV-2 features.')
 
     args = parser.parse_args()
 

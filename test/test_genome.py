@@ -5,7 +5,7 @@ from os.path import dirname, join
 import sars2seq
 from sars2seq.fasta import getSequence
 from sars2seq.features import Features
-from sars2seq.sequence import SARS2Sequence
+from sars2seq.genome import SARS2Genome
 
 
 DATA_DIR = join(dirname(dirname(sars2seq.__file__)), 'data')
@@ -15,7 +15,7 @@ FEATURES = Features(REF_GB)
 
 class _TestMixin:
     """
-    Mixin for SARS2Sequence class tests.
+    Mixin for SARS2Genome class tests.
     """
     def testLength(self):
         self.assertGreater(len(self.read), 28000)
@@ -71,14 +71,14 @@ class Test_EPI_ISL_601443(TestCase, _TestMixin):
     investigation-of-novel-sars-cov-2-variant-variant-of-concern-20201201
     """
     read = getSequence(join(DATA_DIR, 'EPI_ISL_601443.fasta'))
-    seq = SARS2Sequence(read, FEATURES)
+    genome = SARS2Genome(read, FEATURES)
 
     def testSpikeDeletionsAa(self):
         """
         The spike protein should have the three deletions.
         """
         self.checkChanges('H69- V70- Y144-',
-                          *self.seq.feature('spike').aaSequences())
+                          *self.genome.feature('spike').aaSequences())
 
     def testSpikeMutationsAa(self):
         """
@@ -87,28 +87,28 @@ class Test_EPI_ISL_601443(TestCase, _TestMixin):
         don't say what reference their SNPs are relative to)
         """
         self.checkChanges('N501Y A570D D614G P681H T716I S982A D1118H',
-                          *self.seq.feature('spike').aaSequences())
+                          *self.genome.feature('spike').aaSequences())
 
     def testORF1aDeletionsAa(self):
         """
         The ORF1a protein should have the expected deletions.
         """
         self.checkChanges('S3675- G3676- F3677-',
-                          *self.seq.feature('orf1a').aaSequences())
+                          *self.genome.feature('orf1a').aaSequences())
 
     def testORF1aMutationsAa(self):
         """
         The ORF1a protein should have the expected amino acid changes.
         """
         self.checkChanges('T1001I A1708D I2230T',
-                          *self.seq.feature('orf1a').aaSequences())
+                          *self.genome.feature('orf1a').aaSequences())
 
     def testORF1abDeletionsAa(self):
         """
         The ORF1ab protein should have the expected deletions.
         """
         self.checkChanges('S3675- G3676- F3677-',
-                          *self.seq.feature('orf1ab').aaSequences())
+                          *self.genome.feature('orf1ab').aaSequences())
 
     # TODO: Is this actually correct???
     def testORF1abInsertionsAa(self):
@@ -116,14 +116,14 @@ class Test_EPI_ISL_601443(TestCase, _TestMixin):
         The ORF1ab protein should have the expected insertions.
         """
         self.checkChanges('-4402F -4403K',
-                          *self.seq.feature('orf1ab').aaSequences())
+                          *self.genome.feature('orf1ab').aaSequences())
 
     def testORF1abMutationsAa(self):
         """
         The ORF1ab protein should have the expected amino acid changes.
         """
         self.checkChanges('T1001I A1708D I2230T P4717L',
-                          *self.seq.feature('orf1ab').aaSequences())
+                          *self.genome.feature('orf1ab').aaSequences())
 
     def testNucleocapsidMutationsNt(self):
         """
@@ -134,7 +134,7 @@ class Test_EPI_ISL_601443(TestCase, _TestMixin):
         # genome. The change is an S -> via a TCT -> TTT mutation in the
         # middle position, or 703 in 0-based, and 704 in 1-based.
         self.checkChanges('G7C A8T T9A G608A G609A G610C C704T',
-                          *self.seq.feature('N').ntSequences())
+                          *self.genome.feature('N').ntSequences())
 
     def testNucleocapsidMutationsAa(self):
         """
@@ -142,14 +142,14 @@ class Test_EPI_ISL_601443(TestCase, _TestMixin):
         Note that the UK report does not include mention of R203K or G204R.
         """
         self.checkChanges('D3L R203K G204R S235F',
-                          *self.seq.feature('N').aaSequences())
+                          *self.genome.feature('N').aaSequences())
 
     def testORF8MutationsAa(self):
         """
         The ORF8 protein should have the expected amino acid changes.
         """
         self.checkChanges('Q27* R52I Y73C',
-                          *self.seq.feature('orf8').aaSequences())
+                          *self.genome.feature('orf8').aaSequences())
 
     def testSNPs(self):
         """
@@ -172,81 +172,81 @@ class Test_BavPat2(TestCase, _TestMixin):
     Test the BavPat2 sequence. This is Bavarian patient #2.
     """
     read = getSequence(join(DATA_DIR, 'BavPat2.fasta'))
-    seq = SARS2Sequence(read, FEATURES)
+    genome = SARS2Genome(read, FEATURES)
 
     def testSpikeMutationsNt(self):
         """
         The spike genome should have the expected change.
         """
         self.checkChanges('A1841G',
-                          *self.seq.feature('spike').ntSequences())
+                          *self.genome.feature('spike').ntSequences())
 
     def testSpikeMutationsAa(self):
         """
         The spike protein should have the expected amino acid change.
         """
         self.checkChanges('D614G',
-                          *self.seq.feature('spike').aaSequences())
+                          *self.genome.feature('spike').aaSequences())
 
     def testORF1aMutationsNt(self):
         """
         The ORF1a genome should have the expected change.
         """
         self.checkChanges('C2772T',
-                          *self.seq.feature('orf1a').ntSequences())
+                          *self.genome.feature('orf1a').ntSequences())
 
     def testORF1abInsertionsAa(self):
         """
         The ORF1ab protein should have the expected insertions.
         """
         self.checkChanges('-4402F -4403K',
-                          *self.seq.feature('orf1ab').aaSequences())
+                          *self.genome.feature('orf1ab').aaSequences())
 
     def testNucleocapsidIdentical(self):
         """
         The nucleocapsid genome should be identical to the reference.
         """
-        sequenceNt, referenceNt = self.seq.feature('N').ntSequences()
+        sequenceNt, referenceNt = self.genome.feature('N').ntSequences()
         self.assertEqual(sequenceNt.sequence, referenceNt.sequence)
 
     def testORF8Identical(self):
         """
         The ORF8 genome should be identical to the reference.
         """
-        sequenceNt, referenceNt = self.seq.feature('orf8').ntSequences()
+        sequenceNt, referenceNt = self.genome.feature('orf8').ntSequences()
         self.assertEqual(sequenceNt.sequence, referenceNt.sequence)
 
-        sequenceAa, referenceAa = self.seq.feature('orf8').aaSequences()
+        sequenceAa, referenceAa = self.genome.feature('orf8').aaSequences()
         self.assertEqual(sequenceAa.sequence, referenceAa.sequence)
 
     def testEnvelopeIdentical(self):
         """
         The envelope should be identical to the reference.
         """
-        sequenceNt, referenceNt = self.seq.feature('E').ntSequences()
+        sequenceNt, referenceNt = self.genome.feature('E').ntSequences()
         self.assertEqual(sequenceNt.sequence, referenceNt.sequence)
 
-        sequenceAa, referenceAa = self.seq.feature('E').aaSequences()
+        sequenceAa, referenceAa = self.genome.feature('E').aaSequences()
         self.assertEqual(sequenceAa.sequence, referenceAa.sequence)
 
     def testMembraneIdentical(self):
         """
         The membrane should be identical to the reference.
         """
-        sequenceNt, referenceNt = self.seq.feature('M').ntSequences()
+        sequenceNt, referenceNt = self.genome.feature('M').ntSequences()
         self.assertEqual(sequenceNt.sequence, referenceNt.sequence)
 
-        sequenceAa, referenceAa = self.seq.feature('M').aaSequences()
+        sequenceAa, referenceAa = self.genome.feature('M').aaSequences()
         self.assertEqual(sequenceAa.sequence, referenceAa.sequence)
 
     def testRdRpIdentical(self):
         """
         The polymerase should be identical to the reference.
         """
-        sequenceNt, referenceNt = self.seq.feature('rdrp').ntSequences()
+        sequenceNt, referenceNt = self.genome.feature('rdrp').ntSequences()
         self.assertEqual(sequenceNt.sequence, referenceNt.sequence)
 
-        sequenceAa, referenceAa = self.seq.feature('rdrp').aaSequences()
+        sequenceAa, referenceAa = self.genome.feature('rdrp').aaSequences()
         self.assertEqual(sequenceAa.sequence, referenceAa.sequence)
 
 
@@ -256,13 +256,13 @@ class Test_NC_045512(TestCase, _TestMixin):
     the default feature reference.
     """
     read = getSequence(join(DATA_DIR, 'NC_045512.2.fasta'))
-    seq = SARS2Sequence(read, FEATURES)
+    genome = SARS2Genome(read, FEATURES)
 
     def testSpikeIdenticalNt(self):
         """
         The spike nucleotides should be identical.
         """
-        spike = self.seq.feature('S')
+        spike = self.genome.feature('S')
         sequenceNt, referenceNt = spike.ntSequences()
         self.assertEqual(sequenceNt.sequence, referenceNt.sequence)
 
@@ -270,6 +270,6 @@ class Test_NC_045512(TestCase, _TestMixin):
         """
         The spike protein should be identical.
         """
-        spike = self.seq.feature('S')
+        spike = self.genome.feature('S')
         sequenceAa, referenceAa = spike.aaSequences()
         self.assertEqual(sequenceAa.sequence, referenceAa.sequence)

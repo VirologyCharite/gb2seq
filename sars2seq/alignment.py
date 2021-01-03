@@ -1,7 +1,8 @@
 from Bio.Seq import Seq
 
 from dark.aligners import mafft
-from dark.reads import AARead, Reads
+from dark.reads import AARead, DNARead, Reads
+
 
 DEBUG = False
 SLICE = slice(300)
@@ -49,146 +50,188 @@ class Alignment:
     """
     Hold information about a matched feature.
 
-    @param sequence: A C{dark.reads.DNARead} instance holding the sequence
-        of the feature of interest. This has been aligned with C{reference}
-        and may contain '-' gap characters.
-    @param reference: A C{dark.reads.DNARead} instance holding the
-        corresponding sequence extracted from a reference genome. This has been
-        aligned with C{reference} and may contain '-' gap characters.
-    @param features: A features C{dict}.
-    @param name: The C{str} name of the feature.
-    @param sequenceOffset: The C{int} offset of where the feature was found in
-        C{sequence}.
+    @param genome: A C{dark.reads.DNARead} instance holding the SARS-CoV-2
+        genome of interest.
+    @param referenceId: A C{str} with the id of the reference.
+    @param feature: A C{dict} with information about the reference feature.
+    @param window: The C{int} number of nucleotides to include in the region
+        of the genome that is searched for the reference sequence. This is
+        in addition to the range of the feature in the reference. So e.g., if
+        the feature is in positions 1000-1300 in the reference and the window
+        is 500, then the alignment call that tries to find the reference in the
+        genome will look in the region 500-1800 of the genome. This is to
+        allow for indels in the genome that cause its feature to be located
+        at quite different offsets than the location of the feature in the
+        reference.  It greatly speeds up the alignment and also prevents cases
+        where a short prefix of the reference matches very early in the
+        genome, followed by a huge gap and then the rest of the reference
+        matching the genome. The default value below was arrived at by
+        experimentation.
     """
-    def __init__(self, sequence, reference, features, name, sequenceOffset):
-        self.sequence = sequence
-        self.reference = reference
-        self.features = features
-        self.name = name
-        self.sequenceOffset = sequenceOffset
+    def __init__(self, genome, referenceId, feature, window=500):
+        self.genome = genome
+        self.referenceId = referenceId
+        self.feature = feature
+        self.window = window
+        self.genomeOffset = None
+        self.genomeNt = self.genomeAa = None
+        self.referenceNt = self.referenceAa = None
 
     def ntSequences(self):
         """
         Get the aligned nucelotide sequences.
 
         @return: A 2-C{tuple} of C{dark.reads.DNARead} instances, holding
-            the nucleotides of the sequence that is being examined and those
-            of the reference sequence.
+            the nucleotides for the feature as located in the genome being
+            examined and the corresponding nucleotides from the reference
+            genome.
         """
-        return self.sequence, self.reference
+        if self.genomeNt:
+            assert self.referenceNt
+            return self.genomeNt, self.referenceNt
+
+        name = self.feature['name']
+
+        subsequence = self.genome.sequence[
+            max(0, self.feature['start'] - self.window):
+            self.feature['stop'] + self.window]
+
+        genomeRead = DNARead(
+            self.genome.id + f' ({name})', subsequence)
+        referenceRead = DNARead(
+            self.referenceId + f' ({name})', self.feature['sequence'])
+
+        assert len(genomeRead) >= len(referenceRead)
+
+        if DEBUG:
+            print('NT MATCH:')
+            print('gen  nt:', genomeRead.sequence[SLICE])
+            print('ref  nt:', referenceRead.sequence[SLICE])
+
+        self.genomeNt, self.referenceNt = self._align(genomeRead,
+                                                      referenceRead)
+
+        # Figure out where the found feature falls in the genome. This
+        # assumes the first occurrence of the feature string in the genome
+        # is the right one.
+        self.genomeOffset = self.genome.sequence.find(
+            self.genomeNt.sequence.replace('-', ''))
+        assert self.genomeOffset > -1
+
+        return self.genomeNt, self.referenceNt
 
     def aaSequences(self):
         """
-        Match the sequence and the reference at the amino acid level.
+        Match the genome and the reference at the amino acid level.
 
         @return: A 2-C{tuple} of C{dark.reads.AARead} instances, holding
-            the amino acids of the sequence that is being examined and those
+            the amino acids of the genome that is being examined and those
             of the reference sequence.
         """
-        name = self.name
+        if self.genomeAa:
+            assert self.referenceAa
+            return self.genomeAa, self.referenceAa
 
-        sequenceRead = AARead(
-            self.sequence.id,
-            translate(self.sequence.sequence.replace('-', ''), name))
+        # We can't do the protein work unless we've already figured out
+        # where the feature is at the nucelotide level.
+        if not self.genomeNt:
+            self.genomeNt, self.referenceNt = self.ntSequences()
 
-        features = self.features[name]
-        referenceTranslation = features.get(
-            'translation', translate(features['sequence'], name))
-        referenceRead = AARead(self.reference.id, referenceTranslation)
+        name = self.feature['name']
+
+        genomeRead = AARead(
+            self.genome.id + f' ({name})',
+            translate(self.genomeNt.sequence.replace('-', ''), name))
+
+        referenceTranslation = self.feature.get(
+            'translation', translate(self.feature['sequence'], name))
+        referenceRead = AARead(self.referenceId + f' ({name})',
+                               referenceTranslation)
 
         if DEBUG:
             print(f'AA MATCH {name}:')
-            print('seq  nt:', self.sequence.sequence[SLICE])
+            print('gen  nt:', self.genome.sequence[SLICE])
             print('ref  nt:', self.reference.sequence[SLICE])
-            print('seq  aa:', sequenceRead.sequence[SLICE])
+            print('gen  aa:', genomeRead.sequence[SLICE])
             print('ref  aa:', referenceRead.sequence[SLICE])
 
-        return align(sequenceRead, referenceRead, nt=False)
+        self.genomeAa, self.referenceAa = self._align(
+            genomeRead, referenceRead, nt=False)
 
+        return self.genomeAa, self.referenceAa
 
-def align(sequenceRead, referenceRead, nt=True):
-    """
-    Align two sequences to find where the reference read fits in the sequence
-    read.
+    def _align(self, genomeRead, referenceRead, nt=True):
+        """
+        Align two sequences to find where the reference read fits in the
+        genome read.
 
-    @param sequenceRead: A C{dark.reads.Read} instance.
-    @param referenceRead: A C{dark.reads.Read} instance.
-    @param nt: If C{True} the sequences are nucleotide. Else protein.
-    @return: A 2-C{tuple} of aligned C{dark.reads.Read} instances, with the
-        sequence result and the reference result. Both may contain gaps ('-').
-    """
-    alignment = mafft(
-        Reads([sequenceRead, referenceRead]),
-        options='--anysymbol --preservecase' + (
-            ' --nuc' if nt else ' --amino'))
+        @param genomeRead: A C{dark.reads.Read} instance.
+        @param referenceRead: A C{dark.reads.Read} instance.
+        @param nt: If C{True} the sequences are nucleotide. Else protein.
+        @return: A 2-C{tuple} of aligned C{dark.reads.Read} instances, with the
+            genome and the reference sequences. Both may contain gaps ('-').
+        """
+        alignment = mafft(
+            Reads([genomeRead, referenceRead]),
+            options='--anysymbol --preservecase' + (
+                ' --nuc' if nt else ' --amino'))
 
-    sequenceResult, referenceResult = list(alignment)
-    if DEBUG:
-        print('process alignment')
-
-    if (sequenceResult.sequence.startswith('-') or
-            sequenceResult.sequence.endswith('-')):
+        genomeResult, referenceResult = list(alignment)
         if DEBUG:
-            print('Sequence result has leading/trailing gaps!')
+            print('process alignment')
 
-    # One but not both of the sequence and reference can start with a
-    # gap.  Same goes for ends. The reason is that an aligner has no
-    # reason to put gaps at the extremes of both sequences at once.
-    assert not (sequenceResult.sequence.startswith('-') and
-                referenceResult.sequence.startswith('-'))
-    assert not (sequenceResult.sequence.endswith('-') and
-                referenceResult.sequence.endswith('-'))
+        # One but not both of the genome and reference can begin with a
+        # gap, and the same goes for the sequence ends. The reason is that
+        # an aligner has no reason to put gaps at the extremes of both
+        # sequences at once.
+        assert not (genomeResult.sequence.startswith('-') and
+                    referenceResult.sequence.startswith('-'))
+        assert not (genomeResult.sequence.endswith('-') and
+                    referenceResult.sequence.endswith('-'))
 
-    # In the alignment, the reference will have a bunch of leading and
-    # trailing '-' chars. The length of these gives us the offsets in
-    # the original full-length sequence where the match is.
-
-    # offset = max(
-    #     (len(referenceResult) - len(referenceResult.sequence.lstrip('-'))),
-    #     (len(sequenceResult) - len(sequenceResult.sequence.lstrip('-'))))
-    # length = len(referenceResult.sequence.strip('-'))
-    # assert length == len(referenceRead)
-
-    # sequenceTrimmed = sequenceResult[offset:offset + length]
-
-    if DEBUG:
-        print('seq   al', sequenceResult.sequence[SLICE])
-        print('ref   al', referenceResult.sequence[SLICE])
-        with open('/tmp/align-%s.fasta' % ('nt' if nt else 'aa'), 'w') as fp:
-            print('seq', sequenceResult.sequence, file=fp)
-            print('res', referenceResult.sequence, file=fp)
-
-    if referenceResult.sequence.startswith('-'):
-        offset = (len(referenceResult) -
-                  len(referenceResult.sequence.lstrip('-')))
-        sequenceResult = sequenceResult[offset:]
-        referenceResult = referenceResult[offset:]
+        # In the alignment, the reference may have leading and/or trailing '-'
+        # chars. The length of these gives us the offsets in the original
+        # full-length genome where the match is.
 
         if DEBUG:
-            print(f'CLIPPED {offset} on left')
-            print('seq   al', sequenceResult.sequence[SLICE])
+            print('gen   al', genomeResult.sequence[SLICE])
             print('ref   al', referenceResult.sequence[SLICE])
+            with open('/tmp/align-%s.fasta' %
+                      ('nt' if nt else 'aa'), 'w') as fp:
+                print('seq', genomeResult.sequence, file=fp)
+                print('res', referenceResult.sequence, file=fp)
 
-    if referenceResult.sequence.endswith('-'):
-        offset = (len(referenceResult) -
-                  len(referenceResult.sequence.rstrip('-')))
+        if referenceResult.sequence.startswith('-'):
+            offset = (len(referenceResult) -
+                      len(referenceResult.sequence.lstrip('-')))
+            genomeResult = genomeResult[offset:]
+            referenceResult = referenceResult[offset:]
+
+            if DEBUG:
+                print(f'CLIPPED {offset} on left')
+                print('gen   al', genomeResult.sequence[SLICE])
+                print('ref   al', referenceResult.sequence[SLICE])
+
+        if referenceResult.sequence.endswith('-'):
+            offset = (len(referenceResult) -
+                      len(referenceResult.sequence.rstrip('-')))
+
+            if DEBUG:
+                print(f'CLIPPING {offset} on right')
+                print('gen   al', genomeResult.sequence)
+                print('ref   al', referenceResult.sequence)
+
+            genomeResult = genomeResult[:len(referenceResult) - offset]
+            referenceResult = referenceResult[:len(referenceResult) - offset]
+
+            if DEBUG:
+                print(f'CLIPPED {offset} on right')
+                print('gen   al', genomeResult.sequence[SLICE])
+                print('ref   al', referenceResult.sequence[SLICE])
 
         if DEBUG:
-            print(f'CLIPPING {offset} on right')
-            print('seq   al', sequenceResult.sequence)
-            print('ref   al', referenceResult.sequence)
+            print('gen  end', genomeResult.sequence[SLICE])
+            print('ref  end', referenceResult.sequence[SLICE])
+            print('END process alignment')
 
-        sequenceResult = sequenceResult[:len(referenceResult) - offset]
-        referenceResult = referenceResult[:len(referenceResult) - offset]
-
-        if DEBUG:
-            print(f'CLIPPED {offset} on right')
-            print('seq   al', sequenceResult.sequence[SLICE])
-            print('ref   al', referenceResult.sequence[SLICE])
-
-    if DEBUG:
-        print('seq  end', sequenceResult.sequence[SLICE])
-        print('ref  end', referenceResult.sequence[SLICE])
-        print('END process alignment')
-
-    return sequenceResult, referenceResult
+        return genomeResult, referenceResult

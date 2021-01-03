@@ -128,7 +128,6 @@ class TestEPI_ISL_601443(TestCase, _TestMixin):
     def testNucleocapsidMutationsNt(self):
         """
         The nucleocapsid genome should have the expected changes.
-        Note that the UK report does not include mention of R203K or G204R.
         """
         # The 704 below is due to a change at the 1-based amino acid
         # location 235. That's a 0-based offset of 234 = 702 in the

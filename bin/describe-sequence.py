@@ -91,7 +91,8 @@ def main(args):
             print('  AA:')
             print(aaMatchToString(match, referenceAa, sequenceAa,
                                   indent='   '))
-            if match['match']['nonGapMismatchCount']:
+            if (match['match']['nonGapMismatchCount'] or
+                    match['match']['gapMismatchCount']):
                 printDiffs(referenceAa, sequenceAa, indent='     ')
 
             outDir = args.outDir

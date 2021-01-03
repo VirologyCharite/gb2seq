@@ -36,9 +36,13 @@ def translate(seq, name):
         if DEBUG:
             print(f'LEN: {len(seq)}, OFFSET: {offset}, STOP: {stop}')
         assert offset > -1 and stop > -1 and stop - offset < 20
-        return Seq(seq[:offset + slipperyLen] + seq[offset:]).translate()
-    else:
-        return Seq(seq).translate()
+        seq = seq[:offset + slipperyLen] + seq[offset:]
+
+    # Pad with 'N' to avoid a 'BiopythonWarning: Partial codon' warning.
+    remainder = len(seq) % 3
+    seq += 'N' * (3 - remainder if remainder else 0)
+
+    return Seq(seq).translate()
 
 
 class Alignment:

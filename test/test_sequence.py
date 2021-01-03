@@ -49,7 +49,7 @@ class _TestMixin:
             self.checkLocation(sequence, location, change[-1])
 
 
-class TestEPI_ISL_402125(TestCase):
+class Test_EPI_ISL_402125(TestCase):
     """
     Test the EPI_ISL_402125 sequence. This should be the same as the NCBI
     reference.
@@ -64,7 +64,7 @@ class TestEPI_ISL_402125(TestCase):
             getSequence(join(DATA_DIR, 'NC_045512.2.fasta')).sequence)
 
 
-class TestEPI_ISL_601443(TestCase, _TestMixin):
+class Test_EPI_ISL_601443(TestCase, _TestMixin):
     """
     Test the EPI_ISL_601433 sequence. This is the variant of concern
     (VOC 202012/01) referred to in https://www.gov.uk/government/publications/
@@ -167,7 +167,90 @@ class TestEPI_ISL_601443(TestCase, _TestMixin):
             self.checkLocation(self.read, location, nt)
 
 
-class TestNC_045512(TestCase, _TestMixin):
+class Test_BavPat2(TestCase, _TestMixin):
+    """
+    Test the BavPat2 sequence. This is Bavarian patient #2.
+    """
+    read = getSequence(join(DATA_DIR, 'BavPat2.fasta'))
+    seq = SARS2Sequence(read, FEATURES)
+
+    def testSpikeMutationsNt(self):
+        """
+        The spike genome should have the expected change.
+        """
+        self.checkChanges('A1841G',
+                          *self.seq.feature('spike').ntSequences())
+
+    def testSpikeMutationsAa(self):
+        """
+        The spike protein should have the expected amino acid change.
+        """
+        self.checkChanges('D614G',
+                          *self.seq.feature('spike').aaSequences())
+
+    def testORF1aMutationsNt(self):
+        """
+        The ORF1a genome should have the expected change.
+        """
+        self.checkChanges('C2772T',
+                          *self.seq.feature('orf1a').ntSequences())
+
+    def testORF1abInsertionsAa(self):
+        """
+        The ORF1ab protein should have the expected insertions.
+        """
+        self.checkChanges('-4402F -4403K',
+                          *self.seq.feature('orf1ab').aaSequences())
+
+    def testNucleocapsidIdentical(self):
+        """
+        The nucleocapsid genome should be identical to the reference.
+        """
+        sequenceNt, referenceNt = self.seq.feature('N').ntSequences()
+        self.assertEqual(sequenceNt.sequence, referenceNt.sequence)
+
+    def testORF8Identical(self):
+        """
+        The ORF8 genome should be identical to the reference.
+        """
+        sequenceNt, referenceNt = self.seq.feature('orf8').ntSequences()
+        self.assertEqual(sequenceNt.sequence, referenceNt.sequence)
+
+        sequenceAa, referenceAa = self.seq.feature('orf8').aaSequences()
+        self.assertEqual(sequenceAa.sequence, referenceAa.sequence)
+
+    def testEnvelopeIdentical(self):
+        """
+        The envelope should be identical to the reference.
+        """
+        sequenceNt, referenceNt = self.seq.feature('E').ntSequences()
+        self.assertEqual(sequenceNt.sequence, referenceNt.sequence)
+
+        sequenceAa, referenceAa = self.seq.feature('E').aaSequences()
+        self.assertEqual(sequenceAa.sequence, referenceAa.sequence)
+
+    def testMembraneIdentical(self):
+        """
+        The membrane should be identical to the reference.
+        """
+        sequenceNt, referenceNt = self.seq.feature('M').ntSequences()
+        self.assertEqual(sequenceNt.sequence, referenceNt.sequence)
+
+        sequenceAa, referenceAa = self.seq.feature('M').aaSequences()
+        self.assertEqual(sequenceAa.sequence, referenceAa.sequence)
+
+    def testRdRpIdentical(self):
+        """
+        The polymerase should be identical to the reference.
+        """
+        sequenceNt, referenceNt = self.seq.feature('rdrp').ntSequences()
+        self.assertEqual(sequenceNt.sequence, referenceNt.sequence)
+
+        sequenceAa, referenceAa = self.seq.feature('rdrp').aaSequences()
+        self.assertEqual(sequenceAa.sequence, referenceAa.sequence)
+
+
+class Test_NC_045512(TestCase, _TestMixin):
     """
     Test the NC_045512.2 sequence, which should test as equal seeing as it is
     the default feature reference.

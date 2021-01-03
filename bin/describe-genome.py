@@ -12,6 +12,7 @@ from dark.reads import Read, Reads
 
 from sars2seq.features import Features
 from sars2seq.genome import SARS2Genome
+from sars2seq.variants import spikeDeletion, VOC_20201201_UK, N501Y
 
 
 def save(genome, reference, read, feature, outDir, nt):
@@ -62,6 +63,21 @@ def printDiffs(read1, read2, indent=''):
         print('No sequence differences found.')
 
 
+def printVariantSummary(genome):
+    """
+    Print a summary of whether the genome fulfils the various
+    variant properties.
+
+    @param genome: A C{SARS2Genome} instance.
+    """
+    print('Variant summary:')
+    for variant, desc in ((spikeDeletion, 'Spike deletion'),
+                          (VOC_20201201_UK, 'UK VOC202012/01'),
+                          (N501Y, 'N501K change')):
+        _, errorCount, _ = genome.checkVariant(variant)
+        print(f'  {desc}:', 'Yes' if errorCount == 0 else 'No')
+
+
 def main(args):
     """
     Describe a SARS-CoV-2 genome.
@@ -69,14 +85,18 @@ def main(args):
     @param args: A C{Namespace} instance as returned by argparse with
         values for command-line options.
     """
+    features = Features(args.gbFile)
     for read in FastaReads(args.genome):
-        seq = SARS2Genome(read, Features(args.gbFile))
+        genome = SARS2Genome(read, features)
 
-        features = args.feature or seq.featureNames()
+        if args.summarizeVariants:
+            printVariantSummary(genome)
 
-        for feature in features:
-            print(f'Matching {feature}')
-            result = seq.feature(feature)
+        wantedFeatures = args.feature or list(features.featuresDict())
+
+        for feature in wantedFeatures:
+            print(f'Summary for {feature!r}')
+            result = genome.feature(feature)
 
             genomeNt, referenceNt = result.ntSequences()
             match = compareDNAReads(referenceNt, genomeNt)
@@ -120,6 +140,11 @@ if __name__ == '__main__':
     parser.add_argument(
         '--outDir', metavar='DIR',
         help='The directory to write alignments and sequences to.')
+
+    parser.add_argument(
+        '--summarizeVariants', default=False, action='store_true',
+        help=('Summarize whether the genome fulfils any of the known variant '
+              'profiles.'))
 
     parser.add_argument(
         '--gbFile', metavar='file.gb', default=Features.REF_GB,

@@ -1,9 +1,7 @@
 from unittest import TestCase
 
 from sars2seq.features import Features
-from sars2seq.variants import spikeDeletion, VOC_20201201_UK, N501Y
-
-VARIANTS = spikeDeletion, VOC_20201201_UK, N501Y
+from sars2seq.variants import VARIANTS
 
 
 class TestVariants(TestCase):
@@ -16,13 +14,22 @@ class TestVariants(TestCase):
         """
         features = Features()
         for variant in VARIANTS:
-            for featureName in variant:
+            for featureName in VARIANTS[variant]['changes']:
                 self.assertIsInstance(features.getFeature(featureName), dict)
+
+    def testKeys(self):
+        """
+        All variants must have 'changes' and 'description' keys.
+        """
+        for info in VARIANTS.values():
+            self.assertIn('changes', info)
+            self.assertIn('description', info)
 
     def testOnlyNtOrAa(self):
         """
         Only 'aa' or 'nt' are permitted as sub-keys.
         """
         for variant in VARIANTS:
-            for featureName, specification in variant.items():
+            for featureName in VARIANTS[variant]['changes']:
+                specification = VARIANTS[variant]['changes'][featureName]
                 self.assertEqual(set(), set(specification) - {'aa', 'nt'})

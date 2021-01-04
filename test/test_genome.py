@@ -6,7 +6,6 @@ import sars2seq
 from sars2seq.fasta import getSequence
 from sars2seq.features import Features
 from sars2seq.genome import SARS2Genome
-from sars2seq.variants import spikeDeletion, VOC_20201201_UK, N501Y
 
 
 DATA_DIR = join(dirname(dirname(sars2seq.__file__)), 'data')
@@ -87,7 +86,8 @@ class Test_EPI_ISL_601443(TestCase, _Mixin):
         The genome must fulfil all the requirements of a spike deletion
         variant.
         """
-        testCount, errorCount, result = self.genome.checkVariant(spikeDeletion)
+        testCount, errorCount, result = self.genome.checkVariant(
+            'spikeDeletion')
         self.assertEqual(2, testCount)
         self.assertEqual(0, errorCount)
         self.assertEqual(
@@ -106,7 +106,7 @@ class Test_EPI_ISL_601443(TestCase, _Mixin):
         """
         The genome must be an N501Y variant.
         """
-        testCount, errorCount, result = self.genome.checkVariant(N501Y)
+        testCount, errorCount, result = self.genome.checkVariant('N501Y')
         self.assertEqual(1, testCount)
         self.assertEqual(0, errorCount)
         self.assertEqual(
@@ -125,7 +125,7 @@ class Test_EPI_ISL_601443(TestCase, _Mixin):
         The genome must fulfil all the requirements of the UK variant of
         concern 202012/01.
         """
-        testCount, errorCount, _ = self.genome.checkVariant(VOC_20201201_UK)
+        testCount, errorCount, _ = self.genome.checkVariant('VOC_20201201_UK')
         self.assertEqual(20, testCount)
         self.assertEqual(0, errorCount)
 
@@ -235,7 +235,8 @@ class Test_BavPat2(TestCase, _Mixin):
         """
         The genome is not a spike deletion variant.
         """
-        testCount, errorCount, result = self.genome.checkVariant(spikeDeletion)
+        testCount, errorCount, result = self.genome.checkVariant(
+            'spikeDeletion')
         self.assertEqual(2, testCount)
         self.assertEqual(2, errorCount)
         self.assertEqual(
@@ -254,7 +255,7 @@ class Test_BavPat2(TestCase, _Mixin):
         """
         The genome must not be an N501Y variant.
         """
-        testCount, errorCount, result = self.genome.checkVariant(N501Y)
+        testCount, errorCount, result = self.genome.checkVariant('N501Y')
         self.assertEqual(1, testCount)
         self.assertEqual(1, errorCount)
         self.assertEqual(
@@ -273,7 +274,7 @@ class Test_BavPat2(TestCase, _Mixin):
         The genome must not have any of the UK variant of concern 202012/01
         changes.
         """
-        testCount, errorCount, _ = self.genome.checkVariant(VOC_20201201_UK)
+        testCount, errorCount, _ = self.genome.checkVariant('VOC_20201201_UK')
         self.assertEqual(20, testCount)
         self.assertEqual(20, errorCount)
 
@@ -353,7 +354,8 @@ class Test_NC_045512(TestCase, _Mixin):
         """
         The genome is not a spike deletion variant.
         """
-        testCount, errorCount, result = self.genome.checkVariant(spikeDeletion)
+        testCount, errorCount, result = self.genome.checkVariant(
+            'spikeDeletion')
         self.assertEqual(2, testCount)
         self.assertEqual(2, errorCount)
         self.assertEqual(
@@ -372,7 +374,7 @@ class Test_NC_045512(TestCase, _Mixin):
         """
         The genome must not be an N501Y variant.
         """
-        testCount, errorCount, result = self.genome.checkVariant(N501Y)
+        testCount, errorCount, result = self.genome.checkVariant('N501Y')
         self.assertEqual(1, testCount)
         self.assertEqual(1, errorCount)
         self.assertEqual(
@@ -391,6 +393,6 @@ class Test_NC_045512(TestCase, _Mixin):
         The genome must not have any of the UK variant of concern 202012/01
         changes.
         """
-        testCount, errorCount, _ = self.genome.checkVariant(VOC_20201201_UK)
+        testCount, errorCount, _ = self.genome.checkVariant('VOC_20201201_UK')
         self.assertEqual(20, testCount)
         self.assertEqual(20, errorCount)

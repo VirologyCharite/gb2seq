@@ -1,4 +1,5 @@
 from sars2seq.alignment import Alignment
+from sars2seq.variants import VARIANTS
 
 
 class SARS2Genome:
@@ -31,7 +32,7 @@ class SARS2Genome:
         Check that a set of changes in different features all happened as
         expected.
 
-        @param variant: A C{dict}, as in variants.py
+        @param variant: The C{str} name of a key in the VARIANTS C{dict}.
         @return: A 3-C{tuple} with the number of checks done, the number of
             errors, and a C{dict} keyed by changes in C{changes}, with values
             a 2-C{tuple} of Booleans to indicate success or failure of the
@@ -39,13 +40,14 @@ class SARS2Genome:
         """
         result = {}
         testCountTotal = errorCountTotal = 0
+        changeDict = VARIANTS[variant]['changes']
 
-        for featureName in variant:
+        for featureName in changeDict:
             alignment = self.feature(featureName)
             result[featureName] = {}
             for what in 'aa', 'nt':
                 try:
-                    changes = variant[featureName][what]
+                    changes = changeDict[featureName][what]
                 except KeyError:
                     pass
                 else:

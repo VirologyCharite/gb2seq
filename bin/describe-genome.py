@@ -14,7 +14,7 @@ from dark.reads import Read, Reads
 
 from sars2seq.features import Features
 from sars2seq.genome import SARS2Genome
-from sars2seq.variants import spikeDeletion, VOC_20201201_UK, N501Y
+from sars2seq.variants import VARIANTS
 
 
 @contextmanager
@@ -119,20 +119,21 @@ def printDiffs(read1, read2, fp, indent=''):
         print('No sequence differences found.', file=fp)
 
 
-def printVariantSummary(genome, fp):
+def printVariantSummary(genome, fp, args):
     """
     Print a summary of whether the genome fulfils the various
     variant properties.
 
     @param genome: A C{SARS2Genome} instance.
     @param fp: An open file pointer to write to.
+    @param args: A C{Namespace} instance as returned by argparse with
+        values for command-line options.
     """
     print('Variant summary:', file=fp)
-    for variant, desc in ((spikeDeletion, 'Spike deletion'),
-                          (VOC_20201201_UK, 'UK VOC202012/01'),
-                          (N501Y, 'N501K change')):
+    for variant in args.checkVariant:
         _, errorCount, _ = genome.checkVariant(variant)
-        print(f'  {desc}:', 'Yes' if errorCount == 0 else 'No', file=fp)
+        print(f'  {VARIANTS[variant]["description"]}:',
+              'Yes' if errorCount == 0 else 'No', file=fp)
 
 
 def processFeature(feature, genome, fps, args):
@@ -202,9 +203,9 @@ def main(args):
     for read in FastaReads(args.genome):
         genome = SARS2Genome(read, features)
 
-        if args.summarizeVariants:
+        if args.checkVariant:
             with genomeFilePointer(read, args, '-variant-summary.txt') as fp:
-                printVariantSummary(genome, fp)
+                printVariantSummary(genome, fp, args)
 
         for feature in wantedFeatures:
             with featureFilePointers(read, feature, args) as fps:
@@ -231,9 +232,8 @@ if __name__ == '__main__':
               'specified, standard output is used.'))
 
     parser.add_argument(
-        '--summarizeVariants', default=False, action='store_true',
-        help=('Summarize whether the genome fulfils any of the known variant '
-              'profiles.'))
+        '--checkVariant', action='append', choices=sorted(VARIANTS),
+        help='Check whether the genome fulfils a known variant.')
 
     parser.add_argument(
         '--printNtSequence', default=False, action='store_true',

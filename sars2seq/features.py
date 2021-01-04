@@ -197,6 +197,30 @@ class Features:
 
         return result
 
+    def canonicalName(self, name):
+        """
+        Get the canonical name for a feature.
+
+        @param name: A C{str} feature name to look up.
+        @raise KeyError: If the name is unknown.
+        @return: A C{str} canonical name.
+        """
+        featuresDict = self.featuresDict()
+        if name in featuresDict:
+            return name
+
+        nameLower = name.lower()
+        for featureName in featuresDict:
+            if nameLower == featureName.lower():
+                return featuresDict[featureName]
+
+        alias = ALIASES.get(nameLower)
+        if alias:
+            assert alias in featuresDict
+            return alias
+
+        raise KeyError(name)
+
     def getFeature(self, name):
         """
         Find a feature by name.

@@ -30,3 +30,44 @@ class TestFeatures(TestCase):
         self.assertNotIn('membrane', featuresDict)
         self.assertEqual(_FEATURES.getFeature('membrane'),
                          _FEATURES.getFeature('membrane glycoprotein'))
+
+    def testMembrane(self):
+        """
+        Test the return value when requesting the membrane protein.
+        """
+        self.assertEqual(
+            _FEATURES.getFeature('membrane'),
+            {
+                'name': 'membrane glycoprotein',
+                'start': 26522,
+                'stop': 27191,
+                'note': 'ORF5; structural protein',
+                'product': 'membrane glycoprotein',
+                'sequence': (
+                    'ATGGCAGATTCCAACGGTACTATTACCGTTGAAGAGCTTAAAAAGCTCCTTGAAC'
+                    'AATGGAACCTAGTAATAGGTTTCCTATTCCTTACATGGATTTGTCTTCTACAATT'
+                    'TGCCTATGCCAACAGGAATAGGTTTTTGTATATAATTAAGTTAATTTTCCTCTGG'
+                    'CTGTTATGGCCAGTAACTTTAGCTTGTTTTGTGCTTGCTGCTGTTTACAGAATAA'
+                    'ATTGGATCACCGGTGGAATTGCTATCGCAATGGCTTGTCTTGTAGGCTTGATGTG'
+                    'GCTCAGCTACTTCATTGCTTCTTTCAGACTGTTTGCGCGTACGCGTTCCATGTGG'
+                    'TCATTCAATCCAGAAACTAACATTCTTCTCAACGTGCCACTCCATGGCACTATTC'
+                    'TGACCAGACCGCTTCTAGAAAGTGAACTCGTAATCGGAGCTGTGATCCTTCGTGG'
+                    'ACATCTTCGTATTGCTGGACACCATCTAGGACGCTGTGACATCAAGGACCTGCCT'
+                    'AAAGAAATCACTGTTGCTACATCACGAACGCTTTCTTATTACAAATTGGGAGCTT'
+                    'CGCAGCGTGTAGCAGGTGACTCAGGTTTTGCTGCATACAGTCGCTACAGGATTGG'
+                    'CAACTATAAATTAAACACAGACCATTCCAGTAGCAGTGACAATATTGCTTTGCTT'
+                    'GTACAGTAA'),
+                'translation': (
+                    'MADSNGTITVEELKKLLEQWNLVIGFLFLTWICLLQFAYANRNRFLYIIKLIFLW'
+                    'LLWPVTLACFVLAAVYRINWITGGIAIAMACLVGLMWLSYFIASFRLFARTRSMW'
+                    'SFNPETNILLNVPLHGTILTRPLLESELVIGAVILRGHLRIAGHHLGRCDIKDLP'
+                    'KEITVATSRTLSYYKLGASQRVAGDSGFAAYSRYRIGNYKLNTDHSSSSDNIALL'
+                    'VQ'),
+            })
+
+    def testCanonicalName(self):
+        """
+        Abbreviated names must be found.
+        """
+        self.assertEqual(_FEATURES.canonicalName('m'), 'membrane glycoprotein')
+        self.assertEqual(_FEATURES.canonicalName('e'), 'envelope protein')

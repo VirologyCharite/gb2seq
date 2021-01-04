@@ -1,9 +1,11 @@
 #!/usr/bin/env python
 
+import sys
 import os
 import argparse
 from math import log10
 from os.path import exists, join
+from contextlib import contextmanager
 
 from dark.fasta import FastaReads
 from dark.aa import compareAaReads, matchToString as aaMatchToString
@@ -15,30 +17,85 @@ from sars2seq.genome import SARS2Genome
 from sars2seq.variants import spikeDeletion, VOC_20201201_UK, N501Y
 
 
-def save(genome, reference, read, feature, outDir, nt):
+@contextmanager
+def genomeFilePointer(read, args, suffix):
     """
-    Save the sequences and alignment.
+    Open a file whose name is derived from the reference read, the feature
+    being examined and whether nucelotides or amino acids are involved.
 
-    @param genome: A C{dark.reads.Read} instance (aligned, so with gaps).
-    @param reference: A C{dark.reads.Read} instance (aligned, so with gaps).
+    @param read: The C{dark.reads.Read} that was read from the input FASTA file
+        (this is the overall genome from which the feature was obtained).
+    @param args: A C{Namespace} instance as returned by argparse with
+        values for command-line options.
+    @param suffix: The C{str} suffix for the filename.
+    @return: This is a context manager decorator, so it yields a file pointer
+        and then closes it.
+    """
+    if args.outDir:
+        prefix = read.id.split()[0].replace('/', '_')
+        filename = join(args.outDir, f"{prefix}{suffix}")
+        with open(filename, 'w') as fp:
+            yield fp
+    else:
+        yield sys.stdout
+
+
+@contextmanager
+def featureFilePointers(read, feature, args=None):
+    """
+    Return a dictionary of file pointers for output streams on a per-read
+    (i.e., per input genome) basis.
+
     @param read: The C{dark.reads.Read} that was read from the input FASTA file
         (this is the overall genome from which the feature was obtained).
     @param feature: The C{str} name of the feature.
-    @param outDir: The C{str} output directory (must already exist).
-    @param nt: If C{True} the sequences are nucelotide, else protein.
+    @param args: A C{Namespace} instance as returned by argparse with
+        values for command-line options.
     """
-    filenameBase = join(
-        outDir,
-        read.id.split()[0] + '-' + feature + ('-nt' if nt else '-aa'))
+    def fp(suffix, nt):
+        """
+        Get a file pointer.
 
-    Reads([genome, reference]).save(filenameBase + '-align.fasta')
+        @param suffix: A C{str} file name suffix.
+        @param nt: If C{True} the sequences are nucelotide, else protein.
+        @return: An file pointer open for writing.
+        """
+        if args.outDir:
+            prefix = read.id.split()[0].replace('/', '_')
+            filename = join(
+                args.outDir,
+                f"{prefix}-{feature}{('-nt' if nt else '-aa')}{suffix}")
+            return open(filename, 'w')
+        else:
+            return sys.stdout
 
-    genomeNoGaps = Read(genome.id, genome.sequence.replace('-', ''))
-    referenceNoGaps = Read(reference.id, reference.sequence.replace('-', ''))
-    Reads([genomeNoGaps, referenceNoGaps]).save(filenameBase + '.fasta')
+    fps = {}
+
+    try:
+        if args.printNtMatch:
+            fps['nt-match'] = fp('-match.txt', True)
+        if args.printAaMatch:
+            fps['aa-match'] = fp('-match.txt', False)
+
+        if args.printNtSequence:
+            fps['nt-sequence'] = fp('-sequence.fasta', True)
+        if args.printAaSequence:
+            fps['aa-sequence'] = fp('-sequence.fasta', False)
+
+        if args.printNtAlignment:
+            fps['nt-align'] = fp('-align.fasta', True)
+        if args.printAaAlignment:
+            fps['aa-align'] = fp('-align.fasta', False)
+
+        yield fps
+
+    finally:
+        if args.outDir:
+            for fp in fps.values():
+                fp.close()
 
 
-def printDiffs(read1, read2, indent=''):
+def printDiffs(read1, read2, fp, indent=''):
     """
     Print differences between sequences.
 
@@ -46,7 +103,6 @@ def printDiffs(read1, read2, indent=''):
     @param read2: A C{dark.reads.Read} instance.
     @param indent: A C{str} prefix for each output line.
     """
-    # Print all sites where the sequences differ.
     len1, len2 = len(read1), len(read2)
     width = int(log10(max(len1, len2))) + 1
     headerPrinted = False
@@ -57,25 +113,68 @@ def printDiffs(read1, read2, indent=''):
                 print('%sDifferences (site, %s, %s):' % (
                     indent, read1.id, read2.id))
                 headerPrinted = True
-            print('%s  %*d %s %s' % (indent, width, site, a, b))
+            print('%s  %*d %s %s' % (indent, width, site, a, b), file=fp)
 
     if not headerPrinted:
-        print('No sequence differences found.')
+        print('No sequence differences found.', file=fp)
 
 
-def printVariantSummary(genome):
+def printVariantSummary(genome, fp):
     """
     Print a summary of whether the genome fulfils the various
     variant properties.
 
     @param genome: A C{SARS2Genome} instance.
+    @param fp: An open file pointer to write to.
     """
-    print('Variant summary:')
+    print('Variant summary:', file=fp)
     for variant, desc in ((spikeDeletion, 'Spike deletion'),
                           (VOC_20201201_UK, 'UK VOC202012/01'),
                           (N501Y, 'N501K change')):
         _, errorCount, _ = genome.checkVariant(variant)
-        print(f'  {desc}:', 'Yes' if errorCount == 0 else 'No')
+        print(f'  {desc}:', 'Yes' if errorCount == 0 else 'No', file=fp)
+
+
+def processFeature(feature, genome, fps, args):
+    """
+    Process a feature from a genome.
+
+    @param feature: A C{str} feature name.
+    @param genome: A C{SARS2Genome} instance.
+    @param fps: A C{dict} of file pointers for the various output streams.
+    @param args: A C{Namespace} instance as returned by argparse with
+        values for command-line options.
+    """
+    result = genome.feature(feature)
+    genomeNt, referenceNt = result.ntSequences()
+    genomeAa, referenceAa = result.aaSequences()
+
+    if args.printNtMatch:
+        fp = fps['nt-match']
+        match = compareDNAReads(referenceNt, genomeNt)
+        print(dnaMatchToString(match, referenceNt, genomeNt,
+                               matchAmbiguous=False), file=fp)
+        printDiffs(referenceNt, genomeNt, fp, indent='  ')
+
+    if args.printAaMatch:
+        fp = fps['aa-match']
+        match = compareAaReads(referenceAa, genomeAa)
+        print(aaMatchToString(match, referenceAa, genomeAa), file=fp)
+        printDiffs(referenceAa, genomeAa, fp, indent='  ')
+
+    if args.printNtSequence:
+        noGaps = Read(genomeNt.id, genomeNt.sequence.replace('-', ''))
+        Reads([noGaps]).save(fps['nt-sequence'])
+
+    if args.printAaSequence:
+        noGaps = Read(genomeAa.id, genomeAa.sequence.replace('-', ''))
+        Reads([noGaps]).save(fps['aa-sequence'])
+
+    if args.printNtAlignment:
+        Reads([genomeNt, referenceNt]).save(fps['nt-align'])
+
+    if args.printAaAlignment:
+        Reads([genomeAa, referenceAa]).save(fps['aa-align'])
 
 
 def main(args):
@@ -85,42 +184,31 @@ def main(args):
     @param args: A C{Namespace} instance as returned by argparse with
         values for command-line options.
     """
+    outDir = args.outDir
+    if outDir:
+        if not exists(outDir):
+            os.makedirs(outDir)
+
     features = Features(args.gbFile)
+
+    if args.feature:
+        if args.canonicalNames:
+            wantedFeatures = map(features.canonicalName, args.feature)
+        else:
+            wantedFeatures = args.feature
+    else:
+        wantedFeatures = sorted(features.featuresDict())
+
     for read in FastaReads(args.genome):
         genome = SARS2Genome(read, features)
 
         if args.summarizeVariants:
-            printVariantSummary(genome)
-
-        wantedFeatures = args.feature or list(features.featuresDict())
+            with genomeFilePointer(read, args, '-variant-summary.txt') as fp:
+                printVariantSummary(genome, fp)
 
         for feature in wantedFeatures:
-            print(f'Summary for {feature!r}')
-            result = genome.feature(feature)
-
-            genomeNt, referenceNt = result.ntSequences()
-            match = compareDNAReads(referenceNt, genomeNt)
-            print('  DNA:')
-            print(dnaMatchToString(match, referenceNt, genomeNt,
-                                   matchAmbiguous=False, indent='   '))
-            if match['match']['nonGapMismatchCount']:
-                printDiffs(referenceNt, genomeNt, indent='     ')
-
-            genomeAa, referenceAa = result.aaSequences()
-            match = compareAaReads(referenceAa, genomeAa)
-            print('  AA:')
-            print(aaMatchToString(match, referenceAa, genomeAa,
-                                  indent='   '))
-            if (match['match']['nonGapMismatchCount'] or
-                    match['match']['gapMismatchCount']):
-                printDiffs(referenceAa, genomeAa, indent='     ')
-
-            outDir = args.outDir
-            if outDir:
-                if not exists(outDir):
-                    os.makedirs(outDir)
-                save(genomeNt, referenceNt, read, feature, outDir, True)
-                save(genomeAa, referenceAa, read, feature, outDir, False)
+            with featureFilePointers(read, feature, args) as fps:
+                processFeature(feature, genome, fps, args)
 
 
 if __name__ == '__main__':
@@ -139,12 +227,43 @@ if __name__ == '__main__':
 
     parser.add_argument(
         '--outDir', metavar='DIR',
-        help='The directory to write alignments and sequences to.')
+        help=('The directory to write alignments and sequences to. If not '
+              'specified, standard output is used.'))
 
     parser.add_argument(
         '--summarizeVariants', default=False, action='store_true',
         help=('Summarize whether the genome fulfils any of the known variant '
               'profiles.'))
+
+    parser.add_argument(
+        '--printNtSequence', default=False, action='store_true',
+        help='Print the nucleotide sequence.')
+
+    parser.add_argument(
+        '--printAaSequence', default=False, action='store_true',
+        help='Print the amino acid sequence.')
+
+    parser.add_argument(
+        '--printNtMatch', default=False, action='store_true',
+        help='Print details of the nucleotide match with the reference.')
+
+    parser.add_argument(
+        '--printAaMatch', default=False, action='store_true',
+        help='Print details of the amino acid match with the reference.')
+
+    parser.add_argument(
+        '--printNtAlignment', default=False, action='store_true',
+        help='Print the nucleotide alignment with the reference.')
+
+    parser.add_argument(
+        '--printAaAlignment', default=False, action='store_true',
+        help='Print the amino acid alignment with the reference.')
+
+    parser.add_argument(
+        '--canonicalNames', default=False, action='store_true',
+        help=('Use canonical feature names for output files, as oppposed to '
+              'aliases that might be given on the command line. This can be '
+              'used to ensure that output files have predictable names.'))
 
     parser.add_argument(
         '--gbFile', metavar='file.gb', default=Features.REF_GB,

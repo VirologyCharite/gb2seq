@@ -147,10 +147,11 @@ class Test_EPI_ISL_601443(TestCase, _Mixin):
         """
         self.check('orf1ab', 'S3675- G3676- F3677-', False)
 
-    # TODO: Is this actually correct???
     def testORF1abInsertionsAa(self):
         """
-        The ORF1ab protein should have the expected insertions.
+        The ORF1ab protein should have the expected insertions.  R & V in the
+        UK sequence. The 4402/3 locations here correspond to the ribosomal
+        frame shift site (starting after (13465 - 265) / 3 = 4401).
         """
         self.check('orf1ab', '-4402F -4403K', False)
 
@@ -188,16 +189,19 @@ class Test_EPI_ISL_601443(TestCase, _Mixin):
         The SNPs in Table 1 of the report mentioned the docstring of this class
         should all be present.
         """
-        # Table 1 seems incorrect. Instead of C5388A, the sequence has a
-        # G. Instead of C23271A the sequence has a G. Instead of C23604A
-        # the sequence has a T. That's as far as I checked. I checked at
-        # the given offset and also +/- 18 nucleotides due to the
-        # deletions. They don't say what their SNPs/deletions are relative
-        # to or how they got their offsets.
+        # The locations checked here are not the same as those given in
+        # Table 1 because the VOC starts at an offset of 54 bases into the
+        # Wuhan reference and there are deletions (rising to a total of 18
+        # in the higher offsets) that have to be adjusted for.
         reference = self.genomeRead.sequence
-        for location, nt in ((3267, 'T'), (5388, 'G'), (6954, 'C'),
-                             (23063, 'T'), (23271, 'G'), (23604, 'T')):
-            self.assertEqual(nt, reference[location - 1])
+        for location, nt in (
+                (3267, 'T'), (5388, 'A'), (6954, 'C'), (23045, 'T'),
+                (23253, 'A'), (23686, 'A'), (23691, 'T'), (24488, 'G'),
+                (24896, 'C'), (27954, 'T'), (28030, 'T'), (28093, 'G'),
+                (28262, 'C'), (28263, 'T'), (28264, 'A'), (28959, 'T')):
+            self.assertEqual(nt, reference[location - 54 - 1],
+                             f'Failed on {location}{nt}, saw '
+                             f'{self.genomeRead.sequence[location - 54 - 1]}')
 
 
 class Test_BavPat2(TestCase, _Mixin):

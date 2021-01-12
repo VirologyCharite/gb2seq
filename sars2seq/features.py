@@ -132,7 +132,6 @@ class Features:
                 end = int(feature.location.end)
                 key = start, end
                 product = feature.qualifiers['product'][0]
-                # print('mat:', product, 'location', feature.location)
                 sequence = str(record.seq)[start:end]
                 info = {
                     'product': product,

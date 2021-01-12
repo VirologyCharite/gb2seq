@@ -95,28 +95,34 @@ def featureFilePointers(read, feature, args=None):
                 fp.close()
 
 
-def printDiffs(read1, read2, fp, indent=''):
+def printDiffs(read1, read2, nt, referenceOffset, fp, indent=''):
     """
     Print differences between sequences.
 
     @param read1: A C{dark.reads.Read} instance.
     @param read2: A C{dark.reads.Read} instance.
+    @param nt: If C{True} the sequences are nucelotide, else protein.
+    @param referenceOffset: The C{int} 0-based offset of the feature in the
+        reference.
     @param indent: A C{str} prefix for each output line.
     """
     len1, len2 = len(read1), len(read2)
     width = int(log10(max(len1, len2))) + 1
     headerPrinted = False
-    for site, (a, b) in enumerate(zip(read1.sequence, read2.sequence),
-                                  start=1):
+    multiplier = 1 if nt else 3
+    what = 'nt' if nt else 'aa'
+    header = '%sDifferences: site, %s1, %s2, ref nt %s' % (
+        indent, what, what, 'site' if nt else 'codon start')
+
+    print('referenceOffset', referenceOffset)
+    for site, (a, b) in enumerate(zip(read1.sequence, read2.sequence)):
         if a != b:
             if not headerPrinted:
-                print('%sDifferences (site, %s, %s):' % (
-                    indent, read1.id, read2.id))
+                print(header)
                 headerPrinted = True
-            print('%s  %*d %s %s' % (indent, width, site, a, b), file=fp)
-
-    if not headerPrinted:
-        print('No sequence differences found.', file=fp)
+            print('%s  %*d %s %s %5d' % (
+                indent, width, site + 1, a, b,
+                referenceOffset + (multiplier * site) + 1), file=fp)
 
 
 def printVariantSummary(genome, fp, args):
@@ -136,32 +142,50 @@ def printVariantSummary(genome, fp, args):
               'Yes' if errorCount == 0 else 'No', file=fp)
 
 
-def processFeature(feature, genome, fps, args):
+def processFeature(featureName, features, genome, fps, featureNumber, args):
     """
     Process a feature from a genome.
 
-    @param feature: A C{str} feature name.
+    @param featureName: A C{str} feature name.
+    @param features: A C{Features} instance.
     @param genome: A C{SARS2Genome} instance.
     @param fps: A C{dict} of file pointers for the various output streams.
+    @param featureNumber: The C{int} 0-based count of the features requested.
+        This will be zero for the first feature, 1 for the second, etc.
     @param args: A C{Namespace} instance as returned by argparse with
         values for command-line options.
     """
-    result = genome.feature(feature)
+    result = genome.feature(featureName)
+    feature = features.getFeature(featureName)
     genomeNt, referenceNt = result.ntSequences()
     genomeAa, referenceAa = result.aaSequences()
 
+    newlineNeeded = False
+
     if args.printNtMatch:
         fp = fps['nt-match']
+        if featureNumber:
+            print(file=fp)
+        print(f'Feature: {featureName} nucleotide match', file=fp)
+        print(f'  Reference nt location {feature["start"] + 1}, genome nt '
+              f'location {result.genomeOffset + 1}', file=fp)
         match = compareDNAReads(referenceNt, genomeNt)
         print(dnaMatchToString(match, referenceNt, genomeNt,
-                               matchAmbiguous=False), file=fp)
-        printDiffs(referenceNt, genomeNt, fp, indent='  ')
+                               matchAmbiguous=False, indent='  '), file=fp)
+        printDiffs(referenceNt, genomeNt, True, feature['start'], fp,
+                   indent='    ')
+        newlineNeeded = True
 
     if args.printAaMatch:
         fp = fps['aa-match']
+        if newlineNeeded or featureNumber:
+            print(file=fp)
+        print(f'Feature: {featureName} amino acid match', file=fp)
         match = compareAaReads(referenceAa, genomeAa)
-        print(aaMatchToString(match, referenceAa, genomeAa), file=fp)
-        printDiffs(referenceAa, genomeAa, fp, indent='  ')
+        print(aaMatchToString(match, referenceAa, genomeAa, indent='  '),
+              file=fp)
+        printDiffs(referenceAa, genomeAa, False, feature['start'], fp,
+                   indent='    ')
 
     if args.printNtSequence:
         noGaps = Read(genomeNt.id, genomeNt.sequence.replace('-', ''))
@@ -207,9 +231,9 @@ def main(args):
             with genomeFilePointer(read, args, '-variant-summary.txt') as fp:
                 printVariantSummary(genome, fp, args)
 
-        for feature in wantedFeatures:
-            with featureFilePointers(read, feature, args) as fps:
-                processFeature(feature, genome, fps, args)
+        for i, featureName in enumerate(wantedFeatures):
+            with featureFilePointers(read, featureName, args) as fps:
+                processFeature(featureName, features, genome, fps, i, args)
 
 
 if __name__ == '__main__':

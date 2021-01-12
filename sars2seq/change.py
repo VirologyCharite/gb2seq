@@ -3,13 +3,13 @@ def splitChange(s):
     Split a change string.
 
     @param s: The change C{str} to split. This has the format RNG, where R is
-        a reference base, N is a 1-based location, and G is a sequence base.
-        So, e.g., 'L28S P1003Q' indicates that we expected a change from 'L'
-        to 'S' at offset 28 and from 'P' in the reference to 'Q' in the genome
-        we're examining at offset 1003. The reference or genome base (but not
-        both) may be absent.
-    @return: A 3-C{tuple} with reference base or None, 0-based C{int}
-        offset, genome base or None.
+        a reference base, N is a 1-based location, and G is a genome sequence
+        base. So, e.g., 'L28S P1003Q' indicates that we expected a change from
+        'L' to 'S' at offset 28 and from 'P' in the reference to 'Q' in the
+        genome we're examining at offset 1003. The reference or genome base
+        (but not both) may be absent.
+    @return: A 3-C{tuple} with reference base or C{None}, 0-based C{int}
+        offset, genome base or C{None}.
     """
     try:
         location = int(s)

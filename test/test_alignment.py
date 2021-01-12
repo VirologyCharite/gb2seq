@@ -24,6 +24,8 @@ class TestAlignment(TestCase):
 
         genomeNt, referenceNt = alignment.ntSequences()
 
+        self.assertEqual(2, alignment.genomeOffset)
+
         self.assertEqual('ATTC', genomeNt.sequence)
         self.assertEqual('genome (spike)', genomeNt.id)
 
@@ -99,6 +101,8 @@ class TestAlignment(TestCase):
 
         genomeNt, referenceNt = alignment.ntSequences()
 
+        self.assertEqual(5, alignment.genomeOffset)
+
         expected = 'TGGCGTGGA' + ('T' * 9) + 'A' + ('T' * 10) + 'CAAATCGG'
         self.assertEqual(expected, genomeNt.sequence)
         self.assertEqual('genome (spike)', genomeNt.id)
@@ -129,7 +133,13 @@ class TestAlignment(TestCase):
         alignment = Alignment(DNARead('genome', genomeSequence),
                               'referenceId', feature)
 
+        # The genome offset is initialized to None and isn't set until
+        # after ntSequences is called.
+        self.assertEqual(None, alignment.genomeOffset)
+
         genomeNt, referenceNt = alignment.ntSequences()
+
+        self.assertEqual(5, alignment.genomeOffset)
 
         expected = 'TGGCGTGGA-' + ('T' * 19) + 'CAAATCGG'
         self.assertEqual(expected, genomeNt.sequence)

@@ -135,8 +135,8 @@ class Alignment:
         """
         alignment = mafft(
             Reads([genomeRead, referenceRead]),
-            options='--anysymbol --preservecase' + (
-                ' --nuc' if nt else ' --amino'))
+            options='--anysymbol --preservecase ' + (
+                '--nuc' if nt else '--amino'))
 
         genomeResult, referenceResult = list(alignment)
         if DEBUG:
@@ -198,6 +198,28 @@ class Alignment:
 
         return genomeResult, referenceResult
 
+    def _checkChange(self, base, offset, read, change):
+        """
+        Check that a base occurs at an offset.
+
+        @param base: A C{str} nucleotide base (or amino acid), or C{None}
+            in which case there was no expectation that the read had any
+            particular value and C{True} is returned.
+        @param offset: A 0-based C{int} offset into C{sequence}.
+        @param read: A C{dark.reads.Read} instance.
+        @param change: The C{str} or C{tuple} change specification.
+        @raise IndexError: If the offset is out of range.
+        @return: A C{bool} indicating whether the read sequence has C{base} at
+            C{offset}, or C{True} if C{base} is C{None}.
+        """
+        try:
+            return base is None or read.sequence[offset] == base
+        except IndexError:
+            raise IndexError(f'Index {offset} out of range trying to access '
+                             f'feature {self.feature["name"]!r} of length '
+                             f'{len(read)} sequence {read.id!r} via '
+                             f'expected change specification {change!r}.')
+
     def check(self, changes, nt):
         """
         Check that a set of changes all happened as expected.
@@ -215,13 +237,14 @@ class Alignment:
             1-based locations whereas the tuple format uses 0-based offsets.
         @param nt: If C{True} check nucleotide sequences. Else protein.
         @raise ValueError: If a change string cannot be parsed.
+        @raise IndexError: If the offset of a change exceeds the length of the
+            sequence being checked.
         @return: A 3-C{tuple} with the number of checks done, the number of
             errors, and a C{dict} keyed by changes in C{changes}, with values
             a 2-C{tuple} of Booleans to indicate success or failure of the
             check for the reference and the genome respectively.
         """
         genome, reference = self.ntSequences() if nt else self.aaSequences()
-        genome, reference = genome.sequence, reference.sequence
         result = {}
         testCount = errorCount = 0
 
@@ -229,13 +252,14 @@ class Alignment:
             for change in changes.split():
                 refBase, offset, genBase = splitChange(change)
                 result[change] = (
-                    refBase is None or reference[offset] == refBase,
-                    genBase is None or genome[offset] == genBase)
+                    self._checkChange(refBase, offset, reference, change),
+                    self._checkChange(genBase, offset, genome, change))
         else:
             for change in changes:
                 refBase, offset, genBase = change
-                result[change] = (reference[offset] == refBase,
-                                  genome[offset] == genBase)
+                result[change] = (
+                    self._checkChange(refBase, offset, reference, change),
+                    self._checkChange(genBase, offset, genome, change))
 
         errorCount = len([v for v in result.values() if v != (True, True)])
         testCount = len(result)

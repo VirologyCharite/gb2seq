@@ -400,3 +400,99 @@ class Test_NC_045512(TestCase, _Mixin):
         testCount, errorCount, _ = self.genome.checkVariant('VOC_20201201_UK')
         self.assertEqual(20, testCount)
         self.assertEqual(20, errorCount)
+
+
+class Test_EPI_ISL_678597(TestCase, _Mixin):
+    """
+    Test the EPI_ISL_678597 sequence. This is the South African variant of
+    concern.
+    """
+    genomeRead = getSequence(join(DATA_DIR, 'EPI_ISL_678597.fasta'))
+    genome = SARS2Genome(genomeRead, FEATURES)
+
+    def testSpikeDeletionsAa(self):
+        """
+        The spike protein should have the three deletions.
+        """
+        self.check('spike', 'L241- L242- A243-', nt=False)
+
+    def testSpikeMutationsAa(self):
+        """
+        The spike protein should have the expected amino acid changes.
+        """
+        self.check('spike', 'D80A D215G K417N E484K N501Y D614G A701V',
+                   False)
+
+    def testSpikeDeletionVariant(self):
+        """
+        The genome is not a spike deletion variant.
+        """
+        testCount, errorCount, result = self.genome.checkVariant(
+            'spikeDeletion')
+        self.assertEqual(2, errorCount)
+
+    def testN501YVariant(self):
+        """
+        The genome is an N501Y variant.
+        """
+        testCount, errorCount, result = self.genome.checkVariant('N501Y')
+        self.assertEqual(1, testCount)
+        self.assertEqual(0, errorCount)
+        self.assertEqual(
+            {
+                'spike': {
+                    'aa': {
+                        'N501Y': (True, True),
+                    },
+                },
+            },
+            result
+        )
+
+    def test501YV2Variant(self):
+        """
+        The genome must be a 501Y.V2 variant.
+        """
+        testCount, errorCount, _ = self.genome.checkVariant('501Y.V2')
+        self.assertEqual(8, testCount)
+        self.assertEqual(0, errorCount)
+
+    def testNotVariantOfConcern20201201(self):
+        """
+        The genome is not a UK variant of concern 202012/01.
+        """
+        testCount, errorCount, _ = self.genome.checkVariant('VOC_20201201_UK')
+        self.assertEqual(20, testCount)
+        self.assertEqual(16, errorCount)
+        self.check('spike', 'N501Y', False)
+        self.check('orf1ab', 'S3675- G3676- F3677-', False)
+
+    def testORF1aDeletionsAa(self):
+        """
+        The ORF1a protein should have the expected deletions.
+        """
+        self.check('orf1a', 'S3675- G3676- F3677-', False)
+
+    def testORF1aMutationsAa(self):
+        """
+        The ORF1a protein should have the expected amino acid changes.
+        """
+        self.check('orf1a', 'T265I K1655N K3353R', False)
+
+    def testNucleocapsidMutationsNt(self):
+        """
+        The nucleocapsid genome should have the expected changes.
+        """
+        self.check('N', 'C614T', True)
+
+    def testNucleocapsidMutationsAa(self):
+        """
+        The nucleocapsid protein should have the expected amino acid changes.
+        """
+        self.check('N', 'T205I', False)
+
+    def testORF3aMutationsAa(self):
+        """
+        The ORF3a protein should have the expected amino acid changes.
+        """
+        self.check('orf3a', 'Q57H S171L', False)

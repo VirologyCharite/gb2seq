@@ -67,5 +67,5 @@ def isVOC_20201201Lineage(genome):
     """
     Does a genome fall into the VOC_20201201_UK lineage.
     """
-    testCount, errorCount, _ = self.genome.checkVariant('VOC_20201201_UK')
+    testCount, errorCount, _ = genome.checkVariant('VOC_20201201_UK')
     assert testCount == 20

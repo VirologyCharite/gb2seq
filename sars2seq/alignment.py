@@ -209,16 +209,19 @@ class Alignment:
         @param read: A C{dark.reads.Read} instance.
         @param change: The C{str} or C{tuple} change specification.
         @raise IndexError: If the offset is out of range.
-        @return: A C{bool} indicating whether the read sequence has C{base} at
-            C{offset}, or C{True} if C{base} is C{None}.
+        @return: A C{list} containing a C{bool} indicating whether the read
+            sequence has C{base} at C{offset} (or C{True} if C{base} is
+            C{None}) and the base found at the offset.
         """
         try:
-            return base is None or read.sequence[offset] == base
+            actual = read.sequence[offset]
         except IndexError:
             raise IndexError(f'Index {offset} out of range trying to access '
                              f'feature {self.feature["name"]!r} of length '
                              f'{len(read)} sequence {read.id!r} via '
                              f'expected change specification {change!r}.')
+        else:
+            return [(base is None or actual == base), actual]
 
     def check(self, changes, nt):
         """
@@ -251,17 +254,18 @@ class Alignment:
         if isinstance(changes, str):
             for change in changes.split():
                 refBase, offset, genBase = splitChange(change)
-                result[change] = (
-                    self._checkChange(refBase, offset, reference, change),
+                result[change] = tuple(
+                    self._checkChange(refBase, offset, reference, change) +
                     self._checkChange(genBase, offset, genome, change))
         else:
             for change in changes:
                 refBase, offset, genBase = change
-                result[change] = (
-                    self._checkChange(refBase, offset, reference, change),
+                result[change] = tuple(
+                    self._checkChange(refBase, offset, reference, change) +
                     self._checkChange(genBase, offset, genome, change))
 
-        errorCount = len([v for v in result.values() if v != (True, True)])
+        errorCount = sum((v[0] is False or v[2] is False)
+                         for v in result.values())
         testCount = len(result)
 
         return testCount, errorCount, result

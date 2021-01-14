@@ -6,6 +6,7 @@ import argparse
 from math import log10
 from os.path import exists, join
 from contextlib import contextmanager
+from collections import Counter
 
 from dark.fasta import FastaReads
 from dark.aa import compareAaReads, matchToString as aaMatchToString
@@ -15,6 +16,14 @@ from dark.reads import Read, Reads
 from sars2seq.features import Features
 from sars2seq.genome import SARS2Genome
 from sars2seq.variants import VARIANTS
+
+CHANGE_SETS = {
+    'UK': {'69-', '70-', 'N501Y', 'D614G', 'P681H'},
+    'ZA': {'K417N', 'E484K', 'N501Y', 'D614G'},
+    'Nigeria': {'D614G', 'P681H'},
+    'Japan': {'K417T', 'E484K', 'N501Y', 'D614G'},
+    'Mink': {'69-', '70-', 'Y453F', 'D614G'},
+}
 
 
 @contextmanager
@@ -125,6 +134,10 @@ def printDiffs(read1, read2, nt, referenceOffset, fp, indent=''):
                 referenceOffset + (multiplier * site) + 1), file=fp)
 
 
+def key(s):
+    return int(s.split('(')[0][1:-1])
+
+
 def printVariantSummary(genome, fp, args):
     """
     Print a summary of whether the genome fulfils the various
@@ -135,23 +148,69 @@ def printVariantSummary(genome, fp, args):
     @param args: A C{Namespace} instance as returned by argparse with
         values for command-line options.
     """
-    print('Variant summary:', file=fp)
+    matches = Counter()
+
     for variant in args.checkVariant:
-        testCount, errorCount, tests = genome.checkVariant(variant)
+        testCount, errorCount, tests = genome.checkVariant(variant,
+                                                           args.window)
         successCount = testCount - errorCount
-        print(f'  {VARIANTS[variant]["description"]}:', file=fp)
-        print(f'  {testCount} checks, {successCount} passed.')
-        if successCount == 0:
-            continue
+
         for feature in tests:
             for type_ in tests[feature]:
                 found = set()
-                for change, (_, _, genOK, _) in tests[feature][type_].items():
-                    if genOK:
+                nonRef = set()
+                notCovered = set()
+                for change, (refOK, refBase, genOK, genBase) in tests[
+                        feature][type_].items():
+                    if not refOK:
+                        print(f'  Ref mismatch for {change}: {refBase}',
+                              file=fp)
+                    if genOK is True:
                         found.add(change)
+                    else:
+                        if genBase != refBase:
+                            if (type_, genBase) in (('aa', 'X'), ('nt', 'N')):
+                                notCovered.add(change)
+                            else:
+                                # The '(' in this string is used for splitting
+                                # in the sort 'key' function above.
+                                nonRef.add(f'{change}({genBase})')
+
                 if found:
-                    print(f'    {feature} {type_}: ',
-                          ', '.join(sorted(found)), file=fp)
+                    assert successCount == len(found)
+                    print(f'  {successCount}/{testCount} changes found:',
+                          ', '.join(sorted(found, key=key)), file=fp)
+                else:
+                    print(f'  0/{testCount} changes found.', file=fp)
+
+                if nonRef:
+                    print('  Unexpected:', ', '.join(sorted(nonRef, key=key)),
+                          file=fp)
+
+                if notCovered:
+                    print('  No coverage:',
+                          ', '.join(sorted(notCovered, key=key)), file=fp)
+
+                if type_ == 'aa':
+                    matched = set()
+                    for changeSet, changes in CHANGE_SETS.items():
+                        if not (changes - found):
+                            extras = found - changes
+                            if extras:
+                                matched.add(changeSet + ' + ' +
+                                            ', '.join(sorted(extras, key=key)))
+                            else:
+                                matched.add(changeSet)
+
+                    if matched:
+                        matches.update(matched)
+                        print('  Matched:',
+                              ', '.join(sorted(matched)), file=fp)
+                    else:
+                        if len(found - {'D614G'}):
+                            print('  Unknown combination.', file=fp)
+
+    return matches
 
 
 def processFeature(featureName, features, genome, fps, featureNumber, args):
@@ -239,17 +298,31 @@ def main(args):
         else:
             wantedFeatures = sorted(features.featuresDict())
 
+    matches = Counter()
+
     for read in FastaReads(args.genome):
         genome = SARS2Genome(read, features)
 
         if args.checkVariant:
             with genomeFilePointer(read, args, '-variant-summary.txt') as fp:
-                print(read.id, file=fp)
-                printVariantSummary(genome, fp, args)
+                nCount = genome.genome.sequence.count('N')
+                genomeLen = len(genome.genome)
+                nonNCount = genomeLen - nCount
+                coverage = nonNCount / genomeLen
+                print(f'{read.id} (coverage {nonNCount}/{genomeLen} = '
+                      f'{coverage * 100.0:.2f} %)', file=fp)
+                matches.update(
+                    printVariantSummary(genome, fp, args))
+                print(file=fp)
 
         for i, featureName in enumerate(wantedFeatures):
             with featureFilePointers(read, featureName, args) as fps:
                 processFeature(featureName, features, genome, fps, i, args)
+
+    if matches:
+        print('Known variant combinations matched (count):')
+        for match in sorted(matches):
+            print(f'  {match}: {matches[match]}')
 
 
 if __name__ == '__main__':
@@ -274,6 +347,11 @@ if __name__ == '__main__':
     parser.add_argument(
         '--checkVariant', action='append', choices=sorted(VARIANTS),
         help='Check whether the genome fulfils a known variant.')
+
+    parser.add_argument(
+        '--window', type=int, default=500,
+        help=('The size of the window (of nucleotides) surrounding the '
+              'feature (in the reference) to examine in the genome.'))
 
     parser.add_argument(
         '--printNtSequence', default=False, action='store_true',

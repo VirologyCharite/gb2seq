@@ -60,6 +60,16 @@ VARIANTS = {
             },
         },
     },
+
+    'victorSpike': {
+        'description': 'Spike amino acid changes of interest to Victor',
+        'changes': {
+            'spike': {
+                'aa': ('H69- V70- K417T K417N N439K Y453F E484K N501Y D614G '
+                       'P681H V1176F'),
+            },
+        },
+    },
 }
 
 

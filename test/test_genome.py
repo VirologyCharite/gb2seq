@@ -94,8 +94,8 @@ class Test_EPI_ISL_601443(TestCase, _Mixin):
             {
                 'spike': {
                     'aa': {
-                        '69-': (True, True),
-                        '70-': (True, True),
+                        '69-': (True, 'H', True, '-'),
+                        '70-': (True, 'V', True, '-'),
                     },
                 },
             },
@@ -113,7 +113,7 @@ class Test_EPI_ISL_601443(TestCase, _Mixin):
             {
                 'spike': {
                     'aa': {
-                        'N501Y': (True, True),
+                        'N501Y': (True, 'N', True, 'Y'),
                     },
                 },
             },
@@ -247,8 +247,8 @@ class Test_BavPat2(TestCase, _Mixin):
             {
                 'spike': {
                     'aa': {
-                        '69-': (True, False),
-                        '70-': (True, False),
+                        '69-': (True, 'H', False, 'H'),
+                        '70-': (True, 'V', False, 'V'),
                     },
                 },
             },
@@ -266,7 +266,7 @@ class Test_BavPat2(TestCase, _Mixin):
             {
                 'spike': {
                     'aa': {
-                        'N501Y': (True, False),
+                        'N501Y': (True, 'N', False, 'N'),
                     },
                 },
             },
@@ -366,8 +366,8 @@ class Test_NC_045512(TestCase, _Mixin):
             {
                 'spike': {
                     'aa': {
-                        '69-': (True, False),
-                        '70-': (True, False),
+                        '69-': (True, 'H', False, 'H'),
+                        '70-': (True, 'V', False, 'V'),
                     },
                 },
             },
@@ -385,7 +385,7 @@ class Test_NC_045512(TestCase, _Mixin):
             {
                 'spike': {
                     'aa': {
-                        'N501Y': (True, False),
+                        'N501Y': (True, 'N', False, 'N'),
                     },
                 },
             },
@@ -442,7 +442,7 @@ class Test_EPI_ISL_678597(TestCase, _Mixin):
             {
                 'spike': {
                     'aa': {
-                        'N501Y': (True, True),
+                        'N501Y': (True, 'N', True, 'Y'),
                     },
                 },
             },

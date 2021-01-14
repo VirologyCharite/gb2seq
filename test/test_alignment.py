@@ -52,10 +52,10 @@ class TestAlignment(TestCase):
 
         self.assertEqual(4, testCount)
         self.assertEqual(3, errorCount)
-        self.assertEqual((True, True), result['A1A'])
-        self.assertEqual((True, False), result['T2A'])
-        self.assertEqual((False, True), result['A3T'])
-        self.assertEqual((False, False), result['T4T'])
+        self.assertEqual((True, 'A', True, 'A'), result['A1A'])
+        self.assertEqual((True, 'T', False, 'T'), result['T2A'])
+        self.assertEqual((False, 'T', True, 'T'), result['A3T'])
+        self.assertEqual((False, 'C', False, 'C'), result['T4T'])
 
     def testNtSequencesChangesTuple(self):
         """
@@ -77,10 +77,10 @@ class TestAlignment(TestCase):
 
         self.assertEqual(4, testCount)
         self.assertEqual(3, errorCount)
-        self.assertEqual((True, True), result[('A', 0, 'A')])
-        self.assertEqual((True, False), result[('T', 1, 'A')])
-        self.assertEqual((False, True), result[('A', 2, 'T')])
-        self.assertEqual((False, False), result[('T', 3, 'T')])
+        self.assertEqual((True, 'A', True, 'A'), result[('A', 0, 'A')])
+        self.assertEqual((True, 'T', False, 'T'), result[('T', 1, 'A')])
+        self.assertEqual((False, 'T', True, 'T'), result[('A', 2, 'T')])
+        self.assertEqual((False, 'C', False, 'C'), result[('T', 3, 'T')])
 
     def testNtSequencesGenomeSNP(self):
         """
@@ -114,7 +114,7 @@ class TestAlignment(TestCase):
 
         self.assertEqual(1, testCount)
         self.assertEqual(0, errorCount)
-        self.assertEqual((True, True), result['T19A'])
+        self.assertEqual((True, 'T', True, 'A'), result['T19A'])
 
     def testNtSequencesGenomeGap(self):
         """
@@ -152,4 +152,4 @@ class TestAlignment(TestCase):
 
         self.assertEqual(1, testCount)
         self.assertEqual(0, errorCount)
-        self.assertEqual((True, True), result['T10-'])
+        self.assertEqual((True, 'T', True, '-'), result['T10-'])

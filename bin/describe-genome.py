@@ -114,11 +114,10 @@ def printDiffs(read1, read2, nt, referenceOffset, fp, indent=''):
     header = '%sDifferences: site, %s1, %s2, ref nt %s' % (
         indent, what, what, 'site' if nt else 'codon start')
 
-    print('referenceOffset', referenceOffset)
     for site, (a, b) in enumerate(zip(read1.sequence, read2.sequence)):
         if a != b:
             if not headerPrinted:
-                print(header)
+                print(header, file=fp)
                 headerPrinted = True
             print('%s  %*d %s %s %5d' % (
                 indent, width, site + 1, a, b,
@@ -140,7 +139,8 @@ def printVariantSummary(genome, fp, args):
         testCount, errorCount, tests = genome.checkVariant(variant)
         successCount = testCount - errorCount
         print(f'  {VARIANTS[variant]["description"]}:', file=fp)
-        print(f'  {testCount} checks, {successCount} passed.')
+        print(f'  {testCount} checks, {successCount} passed.',
+              file=fp)
         if successCount == 0:
             continue
         for feature in tests:

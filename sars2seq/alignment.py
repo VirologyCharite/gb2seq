@@ -97,7 +97,7 @@ class Alignment:
         # We can't do the protein work unless we've already figured out
         # where the feature is at the nucelotide level.
         if not self.genomeNt:
-            self.genomeNt, self.referenceNt = self.ntSequences()
+            self.ntSequences()
 
         name = self.feature['name']
 

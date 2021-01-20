@@ -1,3 +1,5 @@
+from dark.reads import DNARead
+
 from sars2seq.alignment import Alignment
 from sars2seq.variants import VARIANTS
 
@@ -10,7 +12,9 @@ class SARS2Genome:
     @param features: An C{Features} instance.
     """
     def __init__(self, genome, features):
-        self.genome = genome
+        # Geneious uses ? to indicate unknown nucleotides, at least when it
+        # exports a consensus / alignment. Replace with N.
+        self.genome = DNARead(genome.id, genome.sequence.replace('?', 'N'))
         self.features = features
         self._featuresDict = features.featuresDict()
 

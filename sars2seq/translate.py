@@ -1,6 +1,28 @@
 from Bio.Seq import Seq
 
 
+class TranslationError(Exception):
+    'No slippery sequence could be found in a genome.'
+
+
+class NoSlipperySequenceError(TranslationError):
+    'No slippery sequence could be found in a genome.'
+
+
+class NoStopCodonError(TranslationError):
+    'No stop codon was found downstream from the slippery sequence.'
+
+
+class StopCodonTooDistantError(TranslationError):
+    'The stop codon following the slippery sequence was too far away.'
+
+
+# The maximum difference (number of nucleotides) to allow between the
+# offset of the start of the slippery sequence and the downstream stop
+# codon.
+_MAX_DISTANCE_TO_STOP = 20
+
+
 def translate(seq, name=None):
     """
     Translate a sequence.
@@ -22,12 +44,23 @@ def translate(seq, name=None):
         # before 13468 - 265.  There are various occurrences of the
         # slippery sequence in the reference genome (and hence probably in
         # other CoV genomes), but only one in this region and with a stop
-        # codon shortly (<20 nt) downstream.
+        # codon shortly (up to _MAX_DISTANCE_TO_STOP nucleotides) downstream.
         slipperySeq = 'TTTAAAC'
         slipperyLen = len(slipperySeq)
         offset = seq.find(slipperySeq, 13000)
         stop = seq.find('TAA', offset + slipperyLen)
-        assert offset > -1 and stop > -1 and stop - offset < 20
+        if offset == -1:
+            raise NoSlipperySequenceError('No slippery sequence found.')
+        if stop == -1:
+            raise NoStopCodonError(
+                f'Could not find a stop codon downstream from the start of '
+                f'the slippery sequence at location {offset + 1}.')
+        if stop - offset > _MAX_DISTANCE_TO_STOP:
+            raise StopCodonTooDistantError(
+                f'The stop codon was too far ({stop - offset} nucleotides) '
+                f'downstream (max allowed distance is {_MAX_DISTANCE_TO_STOP} '
+                f'from the start of the slippery sequence at location '
+                f'{offset + 1}.')
         seq = seq[:offset + slipperyLen] + seq[offset:]
 
     # Pad with 'N' to avoid a 'BiopythonWarning: Partial codon' warning.

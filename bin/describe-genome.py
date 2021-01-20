@@ -14,6 +14,7 @@ from dark.reads import Read, Reads
 
 from sars2seq.features import Features
 from sars2seq.genome import SARS2Genome
+from sars2seq.translate import TranslationError
 from sars2seq.variants import VARIANTS
 
 
@@ -136,7 +137,8 @@ def printVariantSummary(genome, fp, args):
     """
     print('Variant summary:', file=fp)
     for variant in args.checkVariant:
-        testCount, errorCount, tests = genome.checkVariant(variant)
+        testCount, errorCount, tests = genome.checkVariant(variant,
+                                                           args.window)
         successCount = testCount - errorCount
         print(f'  {VARIANTS[variant]["description"]}:', file=fp)
         print(f'  {testCount} checks, {successCount} passed.',
@@ -167,10 +169,17 @@ def processFeature(featureName, features, genome, fps, featureNumber, args):
     @param args: A C{Namespace} instance as returned by argparse with
         values for command-line options.
     """
-    result = genome.feature(featureName)
+    result = genome.feature(featureName, args.window)
     feature = features.getFeature(featureName)
     genomeNt, referenceNt = result.ntSequences()
-    genomeAa, referenceAa = result.aaSequences()
+
+    if args.printAaMatch or args.printAaSequence or args.printAaAlignment:
+        try:
+            genomeAa, referenceAa = result.aaSequences()
+        except TranslationError as e:
+            print(f'Could not translate feature {featureName} in genome '
+                  f'{genome.genome.id}: {e}', file=sys.stderr)
+            genomeAa = referenceAa = None
 
     newlineNeeded = False
 
@@ -188,7 +197,7 @@ def processFeature(featureName, features, genome, fps, featureNumber, args):
                    indent='    ')
         newlineNeeded = True
 
-    if args.printAaMatch:
+    if args.printAaMatch and genomeAa:
         fp = fps['aa-match']
         if newlineNeeded or featureNumber:
             print(file=fp)
@@ -203,14 +212,14 @@ def processFeature(featureName, features, genome, fps, featureNumber, args):
         noGaps = Read(genomeNt.id, genomeNt.sequence.replace('-', ''))
         Reads([noGaps]).save(fps['nt-sequence'])
 
-    if args.printAaSequence:
+    if args.printAaSequence and genomeAa:
         noGaps = Read(genomeAa.id, genomeAa.sequence.replace('-', ''))
         Reads([noGaps]).save(fps['aa-sequence'])
 
     if args.printNtAlignment:
         Reads([genomeNt, referenceNt]).save(fps['nt-align'])
 
-    if args.printAaAlignment:
+    if args.printAaAlignment and genomeAa:
         Reads([genomeAa, referenceAa]).save(fps['aa-align'])
 
 
@@ -292,11 +301,13 @@ if __name__ == '__main__':
         help='Print details of the amino acid match with the reference.')
 
     parser.add_argument(
-        '--printNtAlignment', default=False, action='store_true',
+        '--printNtAlignment', '--printNTAlignment', default=False,
+        action='store_true',
         help='Print the nucleotide alignment with the reference.')
 
     parser.add_argument(
-        '--printAaAlignment', default=False, action='store_true',
+        '--printAaAlignment', '--printAAAlignment', default=False,
+        action='store_true',
         help='Print the amino acid alignment with the reference.')
 
     parser.add_argument(
@@ -312,6 +323,11 @@ if __name__ == '__main__':
     parser.add_argument(
         '--gbFile', metavar='file.gb', default=Features.REF_GB,
         help='The Genbank file to read for SARS-CoV-2 features.')
+
+    parser.add_argument(
+        '--window', type=int, default=500,
+        help=('The size of the window (of nucleotides) surrounding the '
+              'feature (in the reference) to examine in the genome.'))
 
     args = parser.parse_args()
 

@@ -1,3 +1,4 @@
+import sys
 from dark.aligners import mafft
 from dark.reads import AARead, DNARead, Reads
 
@@ -76,9 +77,16 @@ class Alignment:
         # Figure out where the found feature falls in the genome. This
         # assumes the first occurrence of the feature string in the genome
         # is the right one.
-        self.genomeOffset = self.genome.sequence.find(
-            self.genomeNt.sequence.replace('-', ''))
-        assert self.genomeOffset > -1
+        genomeFragment = self.genomeNt.sequence.replace('-', '')
+        self.genomeOffset = self.genome.sequence.replace('-', '').find(
+            genomeFragment)
+
+        if self.genomeOffset == -1:
+            print(f'Could not find aligned ("-" stripped) genome sequence '
+                  f'from alignment in the original genome!\nLooked for: '
+                  f'{genomeFragment}\nIn genome: {self.genome.sequence}.\n '
+                  f'Aligned genome: {self.genomeNt.sequence}.',
+                  file=sys.stderr)
 
         return self.genomeNt, self.referenceNt
 
@@ -195,6 +203,11 @@ class Alignment:
             print('gen  end', genomeResult.sequence[SLICE])
             print('ref  end', referenceResult.sequence[SLICE])
             print('END process alignment')
+
+        if referenceResult.sequence.count('-'):
+            print('REFERENCE HAS A GAP!')
+            print('gen   al', genomeResult.sequence)
+            print('ref   al', referenceResult.sequence)
 
         return genomeResult, referenceResult
 

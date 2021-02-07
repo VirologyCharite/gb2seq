@@ -105,3 +105,32 @@ class Test_EPI_ISL_601443(TestCase):
                    AAChecker('spike', 'N501Y H69- V70- Y144-'))
 
         self.assertTrue(checker(self.genome))
+
+    def testAndOperator(self):
+        """
+        The Checker object should stay unchanged after using the & operator
+        """
+        checker1 = AAChecker('spike', 'N501Y')
+        checker1_func_id = id(checker1._func)
+        checker2 = AAChecker('spike', 'H69-')
+
+        checker3 = checker1 & checker2
+
+        self.assertNotEqual(checker1, checker3)
+        self.assertIsNot(checker1,checker3)
+        self.assertEqual(id(checker1._func), checker1_func_id)
+
+    def testOrOperator(self):
+        """
+        The Checker object should stay unchanged after using the | operator
+        """
+        checker1 = AAChecker('spike', 'N501Y')
+        checker1_func_id = id(checker1._func)
+        checker2 = AAChecker('spike', 'H69-')
+
+        checker3 = checker1 | checker2
+
+        self.assertNotEqual(checker1, checker3)
+        self.assertIsNot(checker1, checker3)
+        self.assertEqual(id(checker1._func), checker1_func_id)
+

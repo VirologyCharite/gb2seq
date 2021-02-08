@@ -152,8 +152,7 @@ def printVariantSummary(genome, fp, args):
     shortId = genome.genome.id.split()[0]
 
     for variant in args.checkVariant:
-        testCount, errorCount, tests = genome.checkVariant(variant,
-                                                           args.window)
+        testCount, errorCount, tests = genome.checkVariant(variant)
         successCount = testCount - errorCount
 
         for feature in tests:
@@ -397,11 +396,6 @@ if __name__ == '__main__':
     parser.add_argument(
         '--checkVariant', action='append', choices=sorted(VARIANTS),
         help='Check whether the genome fulfils a known variant.')
-
-    parser.add_argument(
-        '--window', type=int, default=500,
-        help=('The size of the window (of nucleotides) surrounding the '
-              'feature (in the reference) to examine in the genome.'))
 
     parser.add_argument(
         '--printNtSequence', default=False, action='store_true',

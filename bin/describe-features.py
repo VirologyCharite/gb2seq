@@ -13,13 +13,12 @@ def main(args):
         values for command-line options.
     """
     features = Features(args.gbFile)
-    featuresDict = features.featuresDict()
 
-    print(f'Features for {features.id}:')
+    print(f'Features for {features.reference.id}:')
 
-    for name in sorted(featuresDict):
-        feature = featuresDict[name]
-        print(f'{name}:')
+    for featureName in sorted(features):
+        feature = features[featureName]
+        print(f'{featureName}:')
         print('  start:', feature['start'])
         print('  stop:', feature['stop'])
         print('  length:', feature['stop'] - feature['start'])
@@ -34,7 +33,8 @@ def main(args):
 
         sequence = feature['sequence']
         print(f'  sequence    (len {len(sequence):5d} nt):',
-              (sequence[:70] + '...') if len(sequence) > 70 else sequence)
+              (sequence[:args.maxLen] + '...') if len(sequence) > args.maxLen
+              else sequence)
 
         try:
             translation = feature['translation']
@@ -43,8 +43,8 @@ def main(args):
             pass
         else:
             print(f'  translation (len {len(translation):5d} aa):',
-                  (translation[:70] + '...') if len(translation) > 70
-                  else translation)
+                  (translation[:args.maxLen] + '...')
+                  if len(translation) > args.maxLen else translation)
 
 
 if __name__ == '__main__':
@@ -56,6 +56,11 @@ if __name__ == '__main__':
     parser.add_argument(
         '--gbFile', metavar='file.gb', default=Features.REF_GB,
         help='The Genbank file to examine.')
+
+    parser.add_argument(
+        '--maxLen', type=int, default=80,
+        help=('The maximum sequence length to print. Longer sequences will '
+              'be truncated.'))
 
     args = parser.parse_args()
 

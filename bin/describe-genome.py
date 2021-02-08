@@ -137,8 +137,7 @@ def printVariantSummary(genome, fp, args):
     """
     print('Variant summary:', file=fp)
     for variant in args.checkVariant:
-        testCount, errorCount, tests = genome.checkVariant(variant,
-                                                           args.window)
+        testCount, errorCount, tests = genome.checkVariant(variant)
         successCount = testCount - errorCount
         print(f'  {VARIANTS[variant]["description"]}:', file=fp)
         print(f'  {testCount} checks, {successCount} passed.',
@@ -156,12 +155,11 @@ def printVariantSummary(genome, fp, args):
                           ', '.join(sorted(found)), file=fp)
 
 
-def processFeature(featureName, features, genome, fps, featureNumber, args):
+def processFeature(featureName, genome, fps, featureNumber, args):
     """
     Process a feature from a genome.
 
     @param featureName: A C{str} feature name.
-    @param features: A C{Features} instance.
     @param genome: A C{SARS2Genome} instance.
     @param fps: A C{dict} of file pointers for the various output streams.
     @param featureNumber: The C{int} 0-based count of the features requested.
@@ -169,13 +167,12 @@ def processFeature(featureName, features, genome, fps, featureNumber, args):
     @param args: A C{Namespace} instance as returned by argparse with
         values for command-line options.
     """
-    result = genome.feature(featureName, args.window)
-    feature = features.getFeature(featureName)
-    genomeNt, referenceNt = result.ntSequences()
+    genomeNt, referenceNt = genome.ntSequences(featureName)
+    feature = genome.features[featureName]
 
     if args.printAaMatch or args.printAaSequence or args.printAaAlignment:
         try:
-            genomeAa, referenceAa = result.aaSequences()
+            genomeAa, referenceAa = genome.aaSequences(featureName)
         except TranslationError as e:
             print(f'Could not translate feature {featureName} in genome '
                   f'{genome.genome.id}: {e}', file=sys.stderr)
@@ -188,8 +185,7 @@ def processFeature(featureName, features, genome, fps, featureNumber, args):
         if featureNumber:
             print(file=fp)
         print(f'Feature: {featureName} nucleotide match', file=fp)
-        print(f'  Reference nt location {feature["start"] + 1}, genome nt '
-              f'location {result.genomeOffset + 1}', file=fp)
+        print(f'  Reference nt location {feature["start"] + 1}', file=fp)
         match = compareDNAReads(referenceNt, genomeNt)
         print(dnaMatchToString(match, referenceNt, genomeNt,
                                matchAmbiguous=False, indent='  '), file=fp)
@@ -258,7 +254,7 @@ def main(args):
 
         for i, featureName in enumerate(wantedFeatures):
             with featureFilePointers(read, featureName, args) as fps:
-                processFeature(featureName, features, genome, fps, i, args)
+                processFeature(featureName, genome, fps, i, args)
 
 
 if __name__ == '__main__':
@@ -323,11 +319,6 @@ if __name__ == '__main__':
     parser.add_argument(
         '--gbFile', metavar='file.gb', default=Features.REF_GB,
         help='The Genbank file to read for SARS-CoV-2 features.')
-
-    parser.add_argument(
-        '--window', type=int, default=500,
-        help=('The size of the window (of nucleotides) surrounding the '
-              'feature (in the reference) to examine in the genome.'))
 
     args = parser.parse_args()
 

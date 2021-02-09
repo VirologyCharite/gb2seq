@@ -16,8 +16,7 @@ def main(args):
 
     print(f'Features for {features.reference.id}:')
 
-    for featureName in sorted(features):
-        feature = features[featureName]
+    for featureName, feature in sorted(features.items()):
         print(f'{featureName}:')
         print('  start:', feature['start'])
         print('  stop:', feature['stop'])

@@ -6,7 +6,7 @@ import argparse
 from math import log10
 from os.path import exists, join
 from contextlib import contextmanager
-from collections import Counter
+from collections import defaultdict
 
 from dark.fasta import FastaReads
 from dark.aa import compareAaReads, matchToString as aaMatchToString
@@ -18,11 +18,10 @@ from sars2seq.genome import SARS2Genome
 from sars2seq.variants import VARIANTS
 
 CHANGE_SETS = {
-    'UK': {'69-', '70-', 'N501Y', 'D614G', 'P681H'},
+    'UK': {'H69-', 'V70-', 'N501Y', 'D614G', 'P681H'},
     'ZA': {'K417N', 'E484K', 'N501Y', 'D614G'},
-    'Nigeria': {'D614G', 'P681H'},
     'Japan': {'K417T', 'E484K', 'N501Y', 'D614G'},
-    'Mink': {'69-', '70-', 'Y453F', 'D614G'},
+    'Mink': {'H69-', 'V70-', 'Y453F', 'D614G'},
 }
 
 
@@ -148,11 +147,12 @@ def printVariantSummary(genome, fp, args):
     @param args: A C{Namespace} instance as returned by argparse with
         values for command-line options.
     """
-    matches = Counter()
+    namedMatches = defaultdict(list)
+    foundSets = defaultdict(list)
+    shortId = genome.genome.id.split()[0]
 
     for variant in args.checkVariant:
-        testCount, errorCount, tests = genome.checkVariant(variant,
-                                                           args.window)
+        testCount, errorCount, tests = genome.checkVariant(variant)
         successCount = testCount - errorCount
 
         for feature in tests:
@@ -172,20 +172,22 @@ def printVariantSummary(genome, fp, args):
                             if (type_, genBase) in (('aa', 'X'), ('nt', 'N')):
                                 notCovered.add(change)
                             else:
-                                # The '(' in this string is used for splitting
-                                # in the sort 'key' function above.
+                                # Note that the '(' in the string made here
+                                # will be used for splitting in the sort
+                                # 'key' function above.
                                 nonRef.add(f'{change}({genBase})')
 
                 if found:
                     assert successCount == len(found)
                     print(f'  {successCount}/{testCount} changes found:',
                           ', '.join(sorted(found, key=key)), file=fp)
+                    foundSets[tuple(sorted(found))].append(shortId)
                 else:
                     print(f'  0/{testCount} changes found.', file=fp)
 
                 if nonRef:
-                    print('  Unexpected:', ', '.join(sorted(nonRef, key=key)),
-                          file=fp)
+                    print('  Unexpected changes:', ', '.join(
+                        sorted(nonRef, key=key)), file=fp)
 
                 if notCovered:
                     print('  No coverage:',
@@ -203,14 +205,15 @@ def printVariantSummary(genome, fp, args):
                                 matched.add(changeSet)
 
                     if matched:
-                        matches.update(matched)
+                        for match in matched:
+                            namedMatches[match].append(shortId)
                         print('  Matched:',
                               ', '.join(sorted(matched)), file=fp)
                     else:
                         if len(found - {'D614G'}):
-                            print('  Unknown combination.', file=fp)
+                            print('  Unnamed combination of changes.', file=fp)
 
-    return matches
+    return namedMatches, foundSets
 
 
 def processFeature(featureName, features, genome, fps, featureNumber, args):
@@ -298,9 +301,27 @@ def main(args):
         else:
             wantedFeatures = sorted(features.featuresDict())
 
-    matches = Counter()
+    namedMatches = defaultdict(list)
+    foundSets = defaultdict(list)
 
-    for read in FastaReads(args.genome):
+    reads = list(FastaReads(args.genome))
+
+    print('SEQUENCE SHORT NAMES\n')
+    maxLen = 0
+    nameSummary = []
+    for read in reads:
+        shortId = read.id.split()[0]
+        if len(shortId) > maxLen:
+            maxLen = len(shortId)
+        nameSummary.append((shortId, read.id))
+        read.id = shortId
+
+    for shortId, longId in nameSummary:
+        print(f'{shortId:{maxLen}s} = {longId}')
+
+    print('\nPER-SEQUENCE RESULTS\n')
+
+    for read in reads:
         genome = SARS2Genome(read, features)
 
         if args.checkVariant:
@@ -311,18 +332,46 @@ def main(args):
                 coverage = nonNCount / genomeLen
                 print(f'{read.id} (coverage {nonNCount}/{genomeLen} = '
                       f'{coverage * 100.0:.2f} %)', file=fp)
-                matches.update(
-                    printVariantSummary(genome, fp, args))
+
+                theseNamedMatches, theseFoundSets = printVariantSummary(
+                    genome, fp, args)
+
+                for match, ids in theseNamedMatches.items():
+                    namedMatches[match].extend(ids)
+
+                for match, ids in theseFoundSets.items():
+                    foundSets[match].extend(ids)
+
                 print(file=fp)
 
         for i, featureName in enumerate(wantedFeatures):
             with featureFilePointers(read, featureName, args) as fps:
                 processFeature(featureName, features, genome, fps, i, args)
 
-    if matches:
+    print('\nSUMMARY\n')
+
+    if namedMatches:
+        print('Named change sets:')
+        for changeSet in sorted(CHANGE_SETS):
+            desc = ', '.join(sorted(CHANGE_SETS[changeSet], key=key))
+            print(f'  {changeSet}: {desc}')
+        print()
+
         print('Known variant combinations matched (count):')
-        for match in sorted(matches):
-            print(f'  {match}: {matches[match]}')
+        for match in sorted(namedMatches):
+            print(f'  {match} ({len(namedMatches[match])}):')
+            for name in sorted(namedMatches[match]):
+                print(f'    {name}')
+        if foundSets:
+            print()
+
+    if foundSets:
+        print('Sets of changes found (count):')
+        for match in sorted(foundSets):
+            desc = ', '.join(sorted(match, key=key))
+            print(f'  {desc} ({len(foundSets[match])}):')
+            for name in sorted(foundSets[match]):
+                print(f'    {name}')
 
 
 if __name__ == '__main__':
@@ -347,11 +396,6 @@ if __name__ == '__main__':
     parser.add_argument(
         '--checkVariant', action='append', choices=sorted(VARIANTS),
         help='Check whether the genome fulfils a known variant.')
-
-    parser.add_argument(
-        '--window', type=int, default=500,
-        help=('The size of the window (of nucleotides) surrounding the '
-              'feature (in the reference) to examine in the genome.'))
 
     parser.add_argument(
         '--printNtSequence', default=False, action='store_true',

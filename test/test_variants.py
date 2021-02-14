@@ -15,7 +15,7 @@ class TestVariants(TestCase):
         features = Features()
         for variant in VARIANTS:
             for featureName in VARIANTS[variant]['changes']:
-                self.assertIsInstance(features.getFeature(featureName), dict)
+                self.assertIsInstance(features[featureName], dict)
 
     def testKeys(self):
         """

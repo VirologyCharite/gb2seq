@@ -14,6 +14,7 @@ from dark.reads import Read, Reads
 
 from sars2seq.features import Features
 from sars2seq.genome import SARS2Genome
+from sars2seq.translate import TranslationError
 from sars2seq.variants import VARIANTS
 
 
@@ -154,12 +155,11 @@ def printVariantSummary(genome, fp, args):
                           ', '.join(sorted(found)), file=fp)
 
 
-def processFeature(featureName, features, genome, fps, featureNumber, args):
+def processFeature(featureName, genome, fps, featureNumber, args):
     """
     Process a feature from a genome.
 
     @param featureName: A C{str} feature name.
-    @param features: A C{Features} instance.
     @param genome: A C{SARS2Genome} instance.
     @param fps: A C{dict} of file pointers for the various output streams.
     @param featureNumber: The C{int} 0-based count of the features requested.
@@ -167,10 +167,16 @@ def processFeature(featureName, features, genome, fps, featureNumber, args):
     @param args: A C{Namespace} instance as returned by argparse with
         values for command-line options.
     """
-    result = genome.feature(featureName)
-    feature = features.getFeature(featureName)
-    genomeNt, referenceNt = result.ntSequences()
-    genomeAa, referenceAa = result.aaSequences()
+    genomeNt, referenceNt = genome.ntSequences(featureName)
+    feature = genome.features[featureName]
+
+    if args.printAaMatch or args.printAaSequence or args.printAaAlignment:
+        try:
+            genomeAa, referenceAa = genome.aaSequences(featureName)
+        except TranslationError as e:
+            print(f'Could not translate feature {featureName} in genome '
+                  f'{genome.genome.id}: {e}', file=sys.stderr)
+            genomeAa = referenceAa = None
 
     newlineNeeded = False
 
@@ -179,8 +185,7 @@ def processFeature(featureName, features, genome, fps, featureNumber, args):
         if featureNumber:
             print(file=fp)
         print(f'Feature: {featureName} nucleotide match', file=fp)
-        print(f'  Reference nt location {feature["start"] + 1}, genome nt '
-              f'location {result.genomeOffset + 1}', file=fp)
+        print(f'  Reference nt location {feature["start"] + 1}', file=fp)
         match = compareDNAReads(referenceNt, genomeNt)
         print(dnaMatchToString(match, referenceNt, genomeNt,
                                matchAmbiguous=False, indent='  '), file=fp)
@@ -188,7 +193,7 @@ def processFeature(featureName, features, genome, fps, featureNumber, args):
                    indent='    ')
         newlineNeeded = True
 
-    if args.printAaMatch:
+    if args.printAaMatch and genomeAa:
         fp = fps['aa-match']
         if newlineNeeded or featureNumber:
             print(file=fp)
@@ -203,14 +208,14 @@ def processFeature(featureName, features, genome, fps, featureNumber, args):
         noGaps = Read(genomeNt.id, genomeNt.sequence.replace('-', ''))
         Reads([noGaps]).save(fps['nt-sequence'])
 
-    if args.printAaSequence:
+    if args.printAaSequence and genomeAa:
         noGaps = Read(genomeAa.id, genomeAa.sequence.replace('-', ''))
         Reads([noGaps]).save(fps['aa-sequence'])
 
     if args.printNtAlignment:
         Reads([genomeNt, referenceNt]).save(fps['nt-align'])
 
-    if args.printAaAlignment:
+    if args.printAaAlignment and genomeAa:
         Reads([genomeAa, referenceAa]).save(fps['aa-align'])
 
 
@@ -249,7 +254,7 @@ def main(args):
 
         for i, featureName in enumerate(wantedFeatures):
             with featureFilePointers(read, featureName, args) as fps:
-                processFeature(featureName, features, genome, fps, i, args)
+                processFeature(featureName, genome, fps, i, args)
 
 
 if __name__ == '__main__':
@@ -292,11 +297,13 @@ if __name__ == '__main__':
         help='Print details of the amino acid match with the reference.')
 
     parser.add_argument(
-        '--printNtAlignment', default=False, action='store_true',
+        '--printNtAlignment', '--printNTAlignment', default=False,
+        action='store_true',
         help='Print the nucleotide alignment with the reference.')
 
     parser.add_argument(
-        '--printAaAlignment', default=False, action='store_true',
+        '--printAaAlignment', '--printAAAlignment', default=False,
+        action='store_true',
         help='Print the amino acid alignment with the reference.')
 
     parser.add_argument(

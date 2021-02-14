@@ -16,8 +16,9 @@ wc:
 	find $(PYDIRS) -name '*.py' -print0 | xargs -0 wc -l
 
 clean:
-	find . \( -name '*.pyc' -o -name '*~' \) -print0 | xargs -0 rm
-	find . -name '__pycache__' -type d -print0 | xargs -0 rmdir
+	find . \( -name '*.pyc' -o -name '*~' \) -print0 | $(XARGS) -0 rm
+	find . -name '__pycache__' -type d -print0 | $(XARGS) -0 rmdir
+	rm -fr .pytest_cache
 	python setup.py clean
 	rm -f data/*.fai
 

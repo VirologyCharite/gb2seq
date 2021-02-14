@@ -2,9 +2,10 @@ from unittest import TestCase
 
 from os.path import dirname, join
 
+from .fasta import getSequence
+
 import sars2seq
 from sars2seq.checker import Checker, AAChecker, NTChecker
-from sars2seq.fasta import getSequence
 from sars2seq.features import Features
 from sars2seq.genome import SARS2Genome
 
@@ -117,7 +118,7 @@ class Test_EPI_ISL_601443(TestCase):
         checker3 = checker1 & checker2
 
         self.assertNotEqual(checker1, checker3)
-        self.assertIsNot(checker1,checker3)
+        self.assertIsNot(checker1, checker3)
         self.assertEqual(id(checker1._func), checker1_func_id)
 
     def testOrOperator(self):
@@ -133,4 +134,3 @@ class Test_EPI_ISL_601443(TestCase):
         self.assertNotEqual(checker1, checker3)
         self.assertIsNot(checker1, checker3)
         self.assertEqual(id(checker1._func), checker1_func_id)
-

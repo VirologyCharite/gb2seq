@@ -231,8 +231,8 @@ def processFeature(featureName, features, genome, fps, featureNumber, args):
     """
     result = genome.feature(featureName)
     feature = features.getFeature(featureName)
-    genomeNt, referenceNt = result.ntSequences()
-    genomeAa, referenceAa = result.aaSequences()
+    referenceNt, genomeNt = result.ntSequences()
+    referenceAa, genomeAa = result.aaSequences()
 
     newlineNeeded = False
 

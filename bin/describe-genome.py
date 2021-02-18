@@ -167,16 +167,16 @@ def processFeature(featureName, genome, fps, featureNumber, args):
     @param args: A C{Namespace} instance as returned by argparse with
         values for command-line options.
     """
-    genomeNt, referenceNt = genome.ntSequences(featureName)
+    referenceNt, genomeNt = genome.ntSequences(featureName)
     feature = genome.features[featureName]
 
     if args.printAaMatch or args.printAaSequence or args.printAaAlignment:
         try:
-            genomeAa, referenceAa = genome.aaSequences(featureName)
+            referenceAa, genomeAa = genome.aaSequences(featureName)
         except TranslationError as e:
             print(f'Could not translate feature {featureName} in genome '
                   f'{genome.genome.id}: {e}', file=sys.stderr)
-            genomeAa = referenceAa = None
+            referenceAa = genomeAa = None
 
     newlineNeeded = False
 

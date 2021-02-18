@@ -76,7 +76,7 @@ class SARS2Genome:
                              'genomeAligned can be given, not a mix.')
         self.genome = DNARead(genome.id, genome.sequence.replace('?', 'N'))
         self.features = features
-        self._getAlignment()
+        self._getAlignment(referenceAligned, genomeAligned)
         self._cache = {'aa': {}, 'nt': {}}
 
     def _getAlignment(self, referenceAligned=None, genomeAligned=None):
@@ -104,6 +104,17 @@ class SARS2Genome:
             self.referenceAligned, self.genomeAligned = mafft(
                 Reads([self.features.reference, self.genome]),
                 options=MAFFT_OPTIONS)
+
+            if DEBUG:
+                print('ALIGNING')
+                print(f'ref {self.features.reference.id:10s}: '
+                      f'{self.features.reference.sequence}')
+                print(f'gen {self.genome.id:10s}: {self.genome.sequence}')
+                print('ALIGNED')
+                print(f'ref {self.referenceAligned.id:10s}: '
+                      f'{self.referenceAligned.sequence}')
+                print(f'gen {self.genomeAligned.id:10s}: '
+                      f'{self.genomeAligned.sequence}')
 
         # One but not both of the aligned genome and reference can begin
         # with a gap, and the same goes for the sequence ends. The reason

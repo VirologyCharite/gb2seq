@@ -169,16 +169,16 @@ class TestAlignment(TestCase):
         self.assertEqual(referenceSequence[5:], referenceNt.sequence)
         self.assertEqual('refId (spike)', referenceNt.id)
 
-        expected = 'TGGA-' + ('T' * 19) + 'CAAATCGG'
+        expected = 'TGGA' + ('T' * 19) + 'CAAA-TCGG'
         self.assertEqual(expected, genomeNt.sequence)
         self.assertEqual('genId (spike)', genomeNt.id)
 
         testCount, errorCount, result = genome.checkFeature(
-            'spike', 'T5-', True)
+            'spike', 'A28-', True)
 
         self.assertEqual(1, testCount)
         self.assertEqual(0, errorCount)
-        self.assertEqual((True, 'T', True, '-'), result['T5-'])
+        self.assertEqual((True, 'A', True, '-'), result['A28-'])
 
 
 class TestAlignmentEnd(TestCase):

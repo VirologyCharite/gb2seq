@@ -299,7 +299,7 @@ def main(args):
         if args.noFeatures:
             wantedFeatures = []
         else:
-            wantedFeatures = sorted(features.featuresDict())
+            wantedFeatures = sorted(features)
 
     namedMatches = defaultdict(list)
     foundSets = defaultdict(list)

@@ -242,7 +242,7 @@ def main(args):
         if args.noFeatures:
             wantedFeatures = []
         else:
-            wantedFeatures = sorted(features.featuresDict())
+            wantedFeatures = sorted(features)
 
     for read in FastaReads(args.genome):
         genome = SARS2Genome(read, features)

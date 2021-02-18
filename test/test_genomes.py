@@ -13,6 +13,7 @@ from .fasta import getSequence
 import sars2seq
 from sars2seq.features import Features
 from sars2seq.genome import SARS2Genome
+from sars2seq.variants import VARIANTS
 
 
 DATA_DIR = join(dirname(dirname(sars2seq.__file__)), 'data')
@@ -134,6 +135,16 @@ class Test_EPI_ISL_601443(TestCase, _Mixin):
         concern 202012/01.
         """
         testCount, errorCount, _ = self.genome.checkVariant('VOC_20201201_UK')
+        self.assertEqual(20, testCount)
+        self.assertEqual(0, errorCount)
+
+    def testVariantOfConcern20201201ByDict(self):
+        """
+        The genome must fulfil all the requirements of the UK variant of
+        concern 202012/01 when a dictionary describing the variant is passed.
+        """
+        changes = VARIANTS['VOC_20201201_UK']['changes']
+        testCount, errorCount, _ = self.genome.checkVariant(changes)
         self.assertEqual(20, testCount)
         self.assertEqual(0, errorCount)
 

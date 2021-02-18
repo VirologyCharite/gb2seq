@@ -33,9 +33,7 @@ class TestAlignment(TestCase):
 
         genome = SARS2Genome(DNARead('genId', 'GGATTCGG'), features)
 
-        genomeNt, referenceNt = genome.ntSequences('spike')
-
-        # self.assertEqual(2, alignment.genomeOffset)
+        referenceNt, genomeNt = genome.ntSequences('spike')
 
         self.assertEqual('ATTC', genomeNt.sequence)
         self.assertEqual('genId (spike)', genomeNt.id)
@@ -123,9 +121,7 @@ class TestAlignment(TestCase):
 
         genome = SARS2Genome(DNARead('genId', genomeSequence), features)
 
-        genomeNt, referenceNt = genome.ntSequences('spike')
-
-        # self.assertEqual(5, alignment.genomeOffset)
+        referenceNt, genomeNt = genome.ntSequences('spike')
 
         expected = 'TGGCGTGGA' + ('T' * 9) + 'A' + ('T' * 10) + 'CAAATCGG'
         self.assertEqual(expected, genomeNt.sequence)
@@ -166,23 +162,23 @@ class TestAlignment(TestCase):
         # after ntSequences is called.
         # self.assertEqual(None, alignment.genomeOffset)
 
-        genomeNt, referenceNt = genome.ntSequences('spike')
+        referenceNt, genomeNt = genome.ntSequences('spike')
 
         # self.assertEqual(5, alignment.genomeOffset)
 
         self.assertEqual(referenceSequence[5:], referenceNt.sequence)
         self.assertEqual('refId (spike)', referenceNt.id)
 
-        expected = 'TGGA-' + ('T' * 19) + 'CAAATCGG'
+        expected = 'TGGA' + ('T' * 19) + 'CAAA-TCGG'
         self.assertEqual(expected, genomeNt.sequence)
         self.assertEqual('genId (spike)', genomeNt.id)
 
         testCount, errorCount, result = genome.checkFeature(
-            'spike', 'T5-', True)
+            'spike', 'A28-', True)
 
         self.assertEqual(1, testCount)
         self.assertEqual(0, errorCount)
-        self.assertEqual((True, 'T', True, '-'), result['T5-'])
+        self.assertEqual((True, 'A', True, '-'), result['A28-'])
 
 
 class TestAlignmentEnd(TestCase):

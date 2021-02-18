@@ -8,6 +8,8 @@ from sars2seq.variants import VARIANTS
 DEBUG = False
 SLICE = slice(300)
 
+MAFFT_OPTIONS = '--anysymbol --preservecase --retree 1 --reorder --auto'
+
 
 def getNonGapOffsets(s):
     """
@@ -54,32 +56,86 @@ class SARS2Genome:
 
     @param genome: A C{dark.reads.Read} instance.
     @param features: An C{Features} instance.
+    @param referenceAligned: A C{dark.reads.Read} instance with an aligned
+        reference sequence, or C{None} if the alignment should be done here.
+        If not C{None} then C{genomeAligned} must also be given.
+    @param genomeAligned: A C{dark.reads.Read} instance with an aligned
+        genome sequence, or C{None} if the alignment should be done here.
+        If not C{None} then C{referenceAligned} must also be given.
+    @raise ValueError: If one of genomeAligned or referenceAligned is given
+        but the other is not.
     @raise ReferenceWithGapsError: If the reference has gaps.
     """
-    def __init__(self, genome, features):
+    def __init__(self, genome, features, referenceAligned=None,
+                 genomeAligned=None):
         # Geneious uses ? to indicate unknown nucleotides, at least when it
         # exports a consensus / alignment. Replace with N.
+        if (referenceAligned and not genomeAligned or
+                not referenceAligned and genomeAligned):
+            raise ValueError('Either both or neither of referenceAligned and '
+                             'genomeAligned can be given, not a mix.')
         self.genome = DNARead(genome.id, genome.sequence.replace('?', 'N'))
         self.features = features
-        self.getAlignment()
+        self._getAlignment(referenceAligned, genomeAligned)
         self._cache = {'aa': {}, 'nt': {}}
 
-    def getAlignment(self):
+    def _getAlignment(self, referenceAligned=None, genomeAligned=None):
         """
         Align the reference and the genome.
+
+        @param genomeAligned: A C{dark.reads.Read} instance with an aligned
+            genome sequence, or C{None} if the alignment should be done here.
+            If not C{None} then C{referenceAligned} must also be given.
+        @param referenceAligned: A C{dark.reads.Read} instance with an aligned
+            reference sequence, or C{None} if the alignment should be done
+            here. If not C{None} then C{genomeAligned} must also be given.
+        @raise AssertionError: If an already aligned genome is given but no
+            aligned reference is also given, or vice versa.
+        @raise ValueError: If the genome and reference sequences both start or
+            end with '-' characters.
         """
-        self.genomeAligned, self.referenceAligned = mafft(
-            Reads([self.genome, self.features.reference]),
-            options='--anysymbol --preservecase --nuc')
+
+        if referenceAligned:
+            assert genomeAligned
+            self.referenceAligned = referenceAligned
+            self.genomeAligned = genomeAligned
+        else:
+            assert not genomeAligned
+            self.referenceAligned, self.genomeAligned = mafft(
+                Reads([self.features.reference, self.genome]),
+                options=MAFFT_OPTIONS)
+
+            if DEBUG:
+                print('ALIGNING')
+                print(f'ref {self.features.reference.id:10s}: '
+                      f'{self.features.reference.sequence}')
+                print(f'gen {self.genome.id:10s}: {self.genome.sequence}')
+                print('ALIGNED')
+                print(f'ref {self.referenceAligned.id:10s}: '
+                      f'{self.referenceAligned.sequence}')
+                print(f'gen {self.genomeAligned.id:10s}: '
+                      f'{self.genomeAligned.sequence}')
 
         # One but not both of the aligned genome and reference can begin
         # with a gap, and the same goes for the sequence ends. The reason
         # is that an aligner has no reason to put gaps at the extremes of
-        # both sequences at once.
-        assert not (self.genomeAligned.sequence.startswith('-') and
-                    self.referenceAligned.sequence.startswith('-'))
-        assert not (self.genomeAligned.sequence.endswith('-') and
-                    self.referenceAligned.sequence.endswith('-'))
+        # both sequences at once.  Note that this could happen when making
+        # a multiple sequence alignment involving more than just these two
+        # sequences, but we're not (yet?) trying to handle that case
+        # (wherein, I think, it would be necessary to walk both sequences
+        # and elide all sites where both have a gap, but I'm not 100% sure
+        # that doing that would be optimal since the alignment between the
+        # two sequences of specific interest would have been calculated in
+        # the presence of other sequences, so may not be pairwise optimal).
+        if (self.referenceAligned.sequence.startswith('-') and
+                self.genomeAligned.sequence.startswith('-')):
+            raise ValueError('The reference and genome alignment sequences '
+                             'both start with a "-" character.')
+
+        if (self.referenceAligned.sequence.endswith('-') and
+                self.genomeAligned.sequence.endswith('-')):
+            raise ValueError('The reference and genome alignment sequences '
+                             'both end with a "-" character.')
 
         self.offsetMap = getNonGapOffsets(self.referenceAligned.sequence)
 
@@ -89,9 +145,9 @@ class SARS2Genome:
 
         @param featureName: A C{str} feature name.
         @return: A 2-C{tuple} of C{dark.reads.DNARead} instances, holding
-            the nucleotides for the feature as located in the genome being
-            examined and the corresponding nucleotides from the reference
-            genome.
+            the nucleotides for the feature as located in the reference
+            genome and then the corresponding nucleotides from the genome being
+            examined.
         """
         try:
             return self._cache['nt'][featureName]
@@ -104,19 +160,20 @@ class SARS2Genome:
         offset = self.offsetMap[feature['start']]
         end = alignmentEnd(self.referenceAligned.sequence, offset, length)
 
-        genomeRead = DNARead(self.genome.id + f' ({name})',
-                             self.genomeAligned.sequence[offset:end])
-
         referenceRead = DNARead(self.features.reference.id + f' ({name})',
                                 self.referenceAligned.sequence[offset:end])
 
+        genomeRead = DNARead(self.genome.id + f' ({name})',
+                             self.genomeAligned.sequence[offset:end])
+
         if DEBUG:
             print('NT MATCH:')
-            print('gen  nt:', genomeRead.sequence[SLICE])
             print('ref  nt:', referenceRead.sequence[SLICE])
+            print('gen  nt:', genomeRead.sequence[SLICE])
 
-        self._cache['nt'][featureName] = genomeRead, referenceRead
-        return genomeRead, referenceRead
+        self._cache['nt'][featureName] = referenceRead, genomeRead
+
+        return referenceRead, genomeRead
 
     def aaSequences(self, featureName):
         """
@@ -124,41 +181,41 @@ class SARS2Genome:
 
         @param featureName: A C{str} feature name.
         @return: A 2-C{tuple} of C{dark.reads.AARead} instances, holding
-            the amino acids of the genome that is being examined and those
-            of the reference sequence.
+            the amino acids for the feature as located in the reference
+            genome and then the corresponding amino acids from the genome being
+            examined.
         """
         try:
             return self._cache['aa'][featureName]
         except KeyError:
             pass
 
-        genomeRead, referenceRead = self.ntSequences(featureName)
+        referenceNtRead, genomeNtRead = self.ntSequences(featureName)
 
         feature = self.features[featureName]
         name = feature['name']
 
-        genomeRead = AARead(
-            self.genome.id + f' ({name})',
-            translate(genomeRead.sequence.replace('-', ''), name))
-
         referenceTranslation = feature.get(
             'translation', translate(feature['sequence'], name))
-        referenceRead = AARead(self.features.reference.id + f' ({name})',
-                               referenceTranslation)
+        referenceAaRead = AARead(self.features.reference.id + f' ({name})',
+                                 referenceTranslation)
+
+        genomeAaRead = AARead(
+            self.genome.id + f' ({name})',
+            translate(genomeNtRead.sequence.replace('-', ''), name))
 
         if DEBUG:
             print(f'AA MATCH {name}:')
-            print('gen  nt:', self.genome.sequence[SLICE])
             print('ref  nt:', self.features.reference.sequence[SLICE])
-            print('gen  aa:', genomeRead.sequence[SLICE])
-            print('ref  aa:', referenceRead.sequence[SLICE])
+            print('gen  nt:', self.genome.sequence[SLICE])
+            print('ref  aa:', referenceAaRead.sequence[SLICE])
+            print('gen  aa:', genomeAaRead.sequence[SLICE])
 
-        genomeAa, referenceAa = mafft(
-            Reads([genomeRead, referenceRead]),
-            options='--anysymbol --preservecase --amino')
+        referenceAaAligned, genomeAaAligned = mafft(
+            Reads([referenceAaRead, genomeAaRead]), options=MAFFT_OPTIONS)
 
-        self._cache['aa'][featureName] = genomeAa, referenceAa
-        return genomeAa, referenceAa
+        self._cache['aa'][featureName] = referenceAaAligned, genomeAaAligned
+        return referenceAaAligned, genomeAaAligned
 
     def _checkChange(self, base, offset, read, change, featureName):
         """
@@ -211,7 +268,7 @@ class SARS2Genome:
             a 2-C{tuple} of Booleans to indicate success or failure of the
             check for the reference and the genome respectively.
         """
-        genome, reference = (self.ntSequences(featureName) if nt else
+        reference, genome = (self.ntSequences(featureName) if nt else
                              self.aaSequences(featureName))
         result = {}
         testCount = errorCount = 0
@@ -244,7 +301,9 @@ class SARS2Genome:
         Check that a set of changes in different features all happened as
         expected.
 
-        @param variant: The C{str} name of a key in the VARIANTS C{dict}.
+        @param variant: Either the C{str} name of a key in the known VARIANTS
+            C{dict} or else a C{dict} with the same structure as the 'changes'
+            value C{dict} in the known variants (see variants.py).
         @return: A 3-C{tuple} with the number of checks done, the number of
             errors, and a C{dict} keyed by changes in C{changes}, with values
             a 2-C{tuple} of Booleans to indicate success or failure of the
@@ -252,7 +311,12 @@ class SARS2Genome:
         """
         result = {}
         testCountTotal = errorCountTotal = 0
-        changeDict = VARIANTS[variant]['changes']
+
+        if isinstance(variant, str):
+            changeDict = VARIANTS[variant]['changes']
+        else:
+            assert isinstance(variant, dict)
+            changeDict = variant
 
         for featureName in changeDict:
             result[featureName] = {}

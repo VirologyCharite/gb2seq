@@ -22,6 +22,10 @@ class StopCodonTooDistantError(TranslationError):
 # codon.
 _MAX_DISTANCE_TO_STOP = 20
 
+SLIPPERY_SEQUENCE = 'TTTAAAC'
+
+_SLIPPERY_LEN = len(SLIPPERY_SEQUENCE)
+
 
 def translate(seq, name=None):
     """
@@ -45,10 +49,8 @@ def translate(seq, name=None):
         # slippery sequence in the reference genome (and hence probably in
         # other CoV genomes), but only one in this region and with a stop
         # codon shortly (up to _MAX_DISTANCE_TO_STOP nucleotides) downstream.
-        slipperySeq = 'TTTAAAC'
-        slipperyLen = len(slipperySeq)
-        offset = seq.find(slipperySeq, 13000)
-        stop = seq.find('TAA', offset + slipperyLen)
+        offset = seq.find(SLIPPERY_SEQUENCE, 13000)
+        stop = seq.find('TAA', offset + _SLIPPERY_LEN)
         if offset == -1:
             raise NoSlipperySequenceError('No slippery sequence found.')
         if stop == -1:
@@ -58,10 +60,10 @@ def translate(seq, name=None):
         if stop - offset > _MAX_DISTANCE_TO_STOP:
             raise StopCodonTooDistantError(
                 f'The stop codon was too far ({stop - offset} nucleotides) '
-                f'downstream (max allowed distance is {_MAX_DISTANCE_TO_STOP} '
-                f'from the start of the slippery sequence at location '
-                f'{offset + 1}.')
-        seq = seq[:offset + slipperyLen] + seq[offset:]
+                f'downstream (max allowed distance is '
+                f'{_MAX_DISTANCE_TO_STOP}) from the start of the slippery '
+                f'sequence at location {offset + 1}.')
+        seq = seq[:offset + _SLIPPERY_LEN] + seq[offset:]
 
     # Pad with 'N' to avoid a 'BiopythonWarning: Partial codon' warning.
     remainder = len(seq) % 3

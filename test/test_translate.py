@@ -1,12 +1,45 @@
 from unittest import TestCase
 
-from sars2seq.translate import translate
+from sars2seq.translate import (
+    translate, NoSlipperySequenceError, NoStopCodonError,
+    StopCodonTooDistantError, SLIPPERY_SEQUENCE)
 
 
 class TestTranslate(TestCase):
     """
     Test the translate function.
     """
+    def testNoSlipperySequencs(self):
+        """
+        An ORF1ab polyprotein sequence must have a slippery sequence.
+        """
+        error = r'^No slippery sequence found\.$'
+        self.assertRaisesRegex(NoSlipperySequenceError, error, translate,
+                               'AAATTT', 'ORF1ab polyprotein')
+
+    def testNoStopCodonFollowingTheSlipperySequence(self):
+        """
+        An ORF1ab polyprotein sequence must have a stop codon after the
+        slippery sequence.
+        """
+        error = (r'^Could not find a stop codon downstream from the start of '
+                 r'the slippery sequence at location 13001\.$')
+        sequence = 'A' * 13000 + SLIPPERY_SEQUENCE
+        self.assertRaisesRegex(NoStopCodonError, error, translate,
+                               sequence, 'ORF1ab polyprotein')
+
+    def testDistantStopCodonFollowingTheSlipperySequence(self):
+        """
+        An ORF1ab polyprotein sequence must have a stop codon not too far
+        downstream of the slippery sequence.
+        """
+        error = (r'The stop codon was too far \(107 nucleotides\) downstream '
+                 r'\(max allowed distance is 20\) from the start of the '
+                 r'slippery sequence at location 13001\.$')
+        sequence = 'A' * 13000 + SLIPPERY_SEQUENCE + 'A' * 100 + 'TAA'
+        self.assertRaisesRegex(StopCodonTooDistantError, error, translate,
+                               sequence, 'ORF1ab polyprotein')
+
     def testEmpty(self):
         """
         An empty nt sequence must translate to an empty aa sequence.

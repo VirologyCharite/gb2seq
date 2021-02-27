@@ -10,11 +10,12 @@ from dark.reads import DNARead
 
 from sars2seq.features import Features
 from sars2seq.genome import SARS2Genome, getNonGapOffsets, alignmentEnd
+from sars2seq.translate import NoSlipperySequenceError
 
 
-class TestAlignment(TestCase):
+class TestSARS2Genome(TestCase):
     """
-    Test the Alignment class.
+    Test the SARS2Genome class.
     """
     def testNtSequences(self):
         """
@@ -179,6 +180,28 @@ class TestAlignment(TestCase):
         self.assertEqual(1, testCount)
         self.assertEqual(0, errorCount)
         self.assertEqual((True, 'A', True, '-'), result['A28-'])
+
+    def testAaSequencesTranslationNoSlipperySequence(self):
+        """
+        The aaSequences function must raise if it can't translate an
+        'ORF1ab polyprotein' sequence due to a missing slippery sequence.
+        """
+        features = Features(
+            {
+                'ORF1ab polyprotein': {
+                    'name': 'ORF1ab polyprotein',
+                    'sequence': 'ATTC',
+                    'start': 0,
+                    'stop': 4,
+                },
+            },
+            DNARead('refId', 'ATTC'))
+
+        genome = SARS2Genome(DNARead('genId', 'GGATTCGG'), features)
+
+        error = r'^No slippery sequence found\.$'
+        self.assertRaisesRegex(NoSlipperySequenceError, error,
+                               genome.aaSequences, 'ORF1ab polyprotein')
 
 
 class TestAlignmentEnd(TestCase):

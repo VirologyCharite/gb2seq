@@ -137,22 +137,29 @@ def printVariantSummary(genome, fp, args):
     """
     print('Variant summary:', file=fp)
     for variant in args.checkVariant:
-        testCount, errorCount, tests = genome.checkVariant(variant)
+        testCount, errorCount, tests = genome.checkVariant(
+            variant, args.onError, sys.stderr)
         successCount = testCount - errorCount
         print(f'  {VARIANTS[variant]["description"]}:', file=fp)
         print(f'  {testCount} checks, {successCount} passed.',
               file=fp)
-        if successCount == 0:
-            continue
         for feature in tests:
             for type_ in tests[feature]:
-                found = set()
+                passed = set()
+                failed = set()
                 for change, (_, _, genOK, _) in tests[feature][type_].items():
                     if genOK:
-                        found.add(change)
-                if found:
-                    print(f'    {feature} {type_}: ',
-                          ', '.join(sorted(found)), file=fp)
+                        passed.add(change)
+                    else:
+                        failed.add(change)
+                print(f'    {feature} {type_}:', file=fp, end='')
+                if passed:
+                    print(' PASS:', ', '.join(sorted(passed)), file=fp,
+                          end='')
+                if failed:
+                    print(' FAIL:', ', '.join(sorted(failed)), file=fp,
+                          end='')
+                print(file=fp)
 
 
 def processFeature(featureName, genome, fps, featureNumber, args):
@@ -174,8 +181,11 @@ def processFeature(featureName, genome, fps, featureNumber, args):
         try:
             referenceAa, genomeAa = genome.aaSequences(featureName)
         except TranslationError as e:
-            print(f'Could not translate feature {featureName} in genome '
-                  f'{genome.genome.id}: {e}', file=sys.stderr)
+            if args.onError == 'raise':
+                raise
+            elif args.onError == 'print':
+                print(f'Could not translate feature {featureName} in genome '
+                      f'{genome.genome.id}: {e}', file=sys.stderr)
             referenceAa = genomeAa = None
 
     newlineNeeded = False
@@ -225,6 +235,7 @@ def main(args):
 
     @param args: A C{Namespace} instance as returned by argparse with
         values for command-line options.
+    @return: An C{int} exit status.
     """
     outDir = args.outDir
     if outDir:
@@ -244,7 +255,23 @@ def main(args):
         else:
             wantedFeatures = sorted(features)
 
-    for read in FastaReads(args.genome):
+    if not (args.checkVariant or wantedFeatures):
+        print('No action specified - I have nothing to do!', file=sys.stderr)
+        return 1
+
+    count = ignoredDueToCoverageCount = 0
+
+    for count, read in enumerate(FastaReads(args.genome), start=1):
+        if args.minReferenceCoverage is not None:
+            coverage = ((len(read) - read.sequence.upper().count('N')) /
+                        len(features.reference))
+            if coverage < args.minReferenceCoverage:
+                ignoredDueToCoverageCount += 1
+                print(f'Genome {read.id!r} ignored due to low '
+                      f'({coverage * 100.0:.2f}%) coverage of the reference.',
+                      file=sys.stderr)
+                continue
+
         genome = SARS2Genome(read, features)
 
         if args.checkVariant:
@@ -255,6 +282,14 @@ def main(args):
         for i, featureName in enumerate(wantedFeatures):
             with featureFilePointers(read, featureName, args) as fps:
                 processFeature(featureName, genome, fps, i, args)
+
+    print(f'Examined {count} genomes.')
+
+    if args.minReferenceCoverage is not None:
+        print(f'Ignored {ignoredDueToCoverageCount} genomes due to low '
+              f'coverage.')
+
+    return 0
 
 
 if __name__ == '__main__':
@@ -320,6 +355,21 @@ if __name__ == '__main__':
         '--gbFile', metavar='file.gb', default=Features.REF_GB,
         help='The Genbank file to read for SARS-CoV-2 features.')
 
+    parser.add_argument(
+        '--minReferenceCoverage', metavar='coverage', type=float,
+        help=('The fraction of non-N bases required in the genome(s) in order '
+              'for them to be processed. Genomes with lower coverage will be '
+              'ignored, with a message printed to standard error. Note that '
+              'the denominator used to compute the coverage fraction is the '
+              'length of the reference. I.e., coverage is computed as number '
+              'of non-N bases in the genome divided by the length of the '
+              'reference.'))
+
+    parser.add_argument(
+        '--onError', choices=('print', 'ignore', 'raise'), default='print',
+        help=('What to do if an eror occurs (e.g., due to translating or an '
+              'index out of range.'))
+
     args = parser.parse_args()
 
-    main(args)
+    sys.exit(main(args))

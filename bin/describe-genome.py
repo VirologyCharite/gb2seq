@@ -299,7 +299,8 @@ if __name__ == '__main__':
         description='Describe a SARS-CoV-2 genome (or genomes).')
 
     parser.add_argument(
-        '--genome', metavar='file.fasta',
+        '--genome', metavar='file.fasta', type=argparse.FileType('r'),
+        default=sys.stdin,
         help='The FASTA file containing the SARS-CoV-2 genome(s) to examine.')
 
     parser.add_argument(

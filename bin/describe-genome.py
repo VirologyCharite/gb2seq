@@ -367,8 +367,8 @@ if __name__ == '__main__':
               'reference.'))
 
     parser.add_argument(
-        '--onError', choices=('print', 'ignore', 'raise'), default='print',
-        help=('What to do if an eror occurs (e.g., due to translating or an '
+        '--onError', choices=('ignore', 'print', 'raise'), default='print',
+        help=('What to do if an error occurs (e.g., due to translating or an '
               'index out of range.'))
 
     args = parser.parse_args()

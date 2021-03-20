@@ -8,7 +8,7 @@ from sars2seq.variants import VARIANTS
 DEBUG = False
 SLICE = slice(300)
 
-MAFFT_OPTIONS = '--anysymbol --preservecase --retree 1 --reorder --auto'
+MAFFT_OPTIONS = '--anysymbol --preservecase --retree 1 --reorder'
 
 
 def getNonGapOffsets(s):
@@ -253,6 +253,9 @@ class SARS2Genome:
                 raise IndexError(mesg)
             elif onError == 'print':
                 print(mesg, file=errFp)
+                return [False, None]
+            else:
+                assert onError == 'ignore'
                 return [False, None]
         else:
             return [(base is None or actual == base), actual]

@@ -5,6 +5,7 @@ See test_genomes.py for tests of the specific genomes in ../data
 """
 
 from unittest import TestCase
+from io import StringIO
 
 from dark.reads import DNARead
 
@@ -70,6 +71,98 @@ class TestSARS2Genome(TestCase):
         self.assertEqual((True, 'T', False, 'T'), result['T2A'])
         self.assertEqual((False, 'T', True, 'T'), result['A3T'])
         self.assertEqual((False, 'C', False, 'C'), result['T4T'])
+
+    def testNtSequencesChangesIndexErrorRaise(self):
+        """
+        If we check on nucleotide sequences with an out-of-range
+        check, an IndexError must be raised.
+        """
+        features = Features(
+            {
+                'spike': {
+                    'name': 'spike',
+                    'sequence': 'ATTC',
+                    'start': 0,
+                    'stop': 4,
+                },
+            },
+            DNARead('refId', 'ATTC'))
+
+        genome = SARS2Genome(DNARead('genId', 'GGATTCGG'), features)
+
+        error = (r"^Index 99999 out of range trying to access feature "
+                 r"'spike' of length 4 sequence 'refId \(spike\)' via "
+                 r"expected change specification 'A100000A'\.$")
+        self.assertRaisesRegex(IndexError, error, genome.checkFeature,
+                               'spike', 'A100000A', True)
+
+    def testNtSequencesChangesIndexErrorPrint(self):
+        """
+        If we check on nucleotide sequences with an out-of-range
+        check, an error must be printed if we pass onError='print'
+        and the expected error result must be returned.
+        """
+        features = Features(
+            {
+                'spike': {
+                    'name': 'spike',
+                    'sequence': 'ATTC',
+                    'start': 0,
+                    'stop': 4,
+                },
+            },
+            DNARead('refId', 'ATTC'))
+
+        genome = SARS2Genome(DNARead('genId', 'GGATTCGG'), features)
+
+        err = StringIO()
+
+        # Two lines of error output are printed.
+        error = (
+            r"Index 99999 out of range trying to access feature "
+            r"'spike' of length 4 sequence 'refId (spike)' via "
+            r"expected change specification 'A100000A'."
+            "\n"
+            r"Index 99999 out of range trying to access feature "
+            r"'spike' of length 4 sequence 'genId (spike)' via "
+            r"expected change specification 'A100000A'."
+            "\n"
+        )
+        testCount, errorCount, result = genome.checkFeature(
+            'spike', 'A100000A', nt=True, onError='print', errFp=err)
+        self.assertEqual(error, err.getvalue())
+
+        self.assertEqual(1, testCount)
+        self.assertEqual(1, errorCount)
+        self.assertEqual((False, None, False, None), result['A100000A'])
+
+    def testNtSequencesChangesIndexErrorIgnore(self):
+        """
+        If we check on nucleotide sequences with an out-of-range
+        check, no error should be printed if we pass onError='ignore'
+        and the expected error result must be returned.
+        """
+        features = Features(
+            {
+                'spike': {
+                    'name': 'spike',
+                    'sequence': 'ATTC',
+                    'start': 0,
+                    'stop': 4,
+                },
+            },
+            DNARead('refId', 'ATTC'))
+
+        genome = SARS2Genome(DNARead('genId', 'GGATTCGG'), features)
+
+        err = StringIO()
+        testCount, errorCount, result = genome.checkFeature(
+            'spike', 'A100000A', nt=True, onError='ignore', errFp=err)
+        self.assertEqual('', err.getvalue())
+
+        self.assertEqual(1, testCount)
+        self.assertEqual(1, errorCount)
+        self.assertEqual((False, None, False, None), result['A100000A'])
 
     def testNtSequencesChangesTuple(self):
         """
@@ -143,8 +236,8 @@ class TestSARS2Genome(TestCase):
         The genome must be able to have a gap relative to the reference.
         """
         referenceSequence = 'TGGCGTGGA' + ('T' * 20) + 'CAAATCGG'
-        genomeFeature = 'TGGCGTGGA' + ('T' * 19) + 'CAAATCGG'
-        genomeSequence = 'CCCGG' + genomeFeature + 'CCCCCCC'
+        genomeFeature = 'TGGA' + ('T' * 19) + 'CAAATCGG'
+        genomeSequence = 'CCCGGTGGCG' + genomeFeature + 'CCCCCCC'
 
         features = Features(
             {
@@ -170,18 +263,99 @@ class TestSARS2Genome(TestCase):
         self.assertEqual(referenceSequence[5:], referenceNt.sequence)
         self.assertEqual('refId (spike)', referenceNt.id)
 
-        expected = 'TGGA' + ('T' * 19) + 'CAAA-TCGG'
+        expected = 'TGGA-' + ('T' * 19) + 'CAAATCGG'
         self.assertEqual(expected, genomeNt.sequence)
         self.assertEqual('genId (spike)', genomeNt.id)
 
         testCount, errorCount, result = genome.checkFeature(
-            'spike', 'A28-', True)
+            'spike', 'T5-', True)
 
         self.assertEqual(1, testCount)
         self.assertEqual(0, errorCount)
-        self.assertEqual((True, 'A', True, '-'), result['A28-'])
+        self.assertEqual((True, 'T', True, '-'), result['T5-'])
 
-    def testAaSequencesTranslationNoSlipperySequence(self):
+    def testAaSequencesChangesTranslationErrorRaise(self):
+        """
+        Check that a TranslationError is raised when checking AA
+        sequences.
+        """
+        features = Features(
+            {
+                'orf1ab': {
+                    'name': 'ORF1ab polyprotein',
+                    'sequence': 'ATTC',
+                    'start': 0,
+                    'stop': 4,
+                },
+            },
+            DNARead('refId', 'ATTC'))
+
+        genome = SARS2Genome(DNARead('genId', 'GGATTCGG'), features)
+
+        error = r"^No slippery sequence found\.$"
+        self.assertRaisesRegex(
+            NoSlipperySequenceError, error, genome.checkFeature,
+            'orf1ab', 'A100000A', False)
+
+    def testAaSequencesChangesTranslationErrorPrint(self):
+        """
+        Check that a TranslationError is printed when checking AA
+        sequences and onError='print' and that the expected result
+        is returned.
+        """
+        features = Features(
+            {
+                'orf1ab': {
+                    'name': 'ORF1ab polyprotein',
+                    'sequence': 'ATTC',
+                    'start': 0,
+                    'stop': 4,
+                },
+            },
+            DNARead('refId', 'ATTC'))
+
+        genome = SARS2Genome(DNARead('genId', 'GGATTCGG'), features)
+
+        err = StringIO()
+        error = 'No slippery sequence found.\n'
+
+        testCount, errorCount, result = genome.checkFeature(
+            'orf1ab', 'A100000A', nt=False, onError='print', errFp=err)
+        self.assertEqual(error, err.getvalue())
+
+        self.assertEqual(1, testCount)
+        self.assertEqual(1, errorCount)
+        self.assertEqual((False, None, False, None), result['A100000A'])
+
+    def testAaSequencesChangesTranslationErrorIgnore(self):
+        """
+        Check that no error is printed when checking AA sequences and
+        onError='ignore' and that the expected result is returned.
+        """
+        features = Features(
+            {
+                'orf1ab': {
+                    'name': 'ORF1ab polyprotein',
+                    'sequence': 'ATTC',
+                    'start': 0,
+                    'stop': 4,
+                },
+            },
+            DNARead('refId', 'ATTC'))
+
+        genome = SARS2Genome(DNARead('genId', 'GGATTCGG'), features)
+
+        err = StringIO()
+
+        testCount, errorCount, result = genome.checkFeature(
+            'orf1ab', 'A100000A', nt=False, onError='ignore', errFp=err)
+        self.assertEqual('', err.getvalue())
+
+        self.assertEqual(1, testCount)
+        self.assertEqual(1, errorCount)
+        self.assertEqual((False, None, False, None), result['A100000A'])
+
+    def testAaSequencesTranslationNoSlipperySequenceRaise(self):
         """
         The aaSequences function must raise if it can't translate an
         'ORF1ab polyprotein' sequence due to a missing slippery sequence.

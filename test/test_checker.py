@@ -23,6 +23,18 @@ class Test_EPI_ISL_601443(TestCase):
     genomeRead = getSequence(join(DATA_DIR, 'EPI_ISL_601443.fasta'))
     genome = SARS2Genome(genomeRead, FEATURES)
 
+    def testIndexError(self):
+        """
+        If an check on a non-existent index is attempted, an IndexError must
+        be raised.
+        """
+        checker = Checker('spike', 'N500001Y', False)
+        error = (r"^Index 500000 out of range trying to access feature "
+                 r"'spike' of length 1274 sequence 'NC_045512.2 \(surface "
+                 r"glycoprotein\)' via expected change specification "
+                 r"'N500001Y'\.")
+        self.assertRaisesRegex(IndexError, error, checker, self.genome)
+
     def testN501Y(self):
         """
         The variant has the N501Y change.

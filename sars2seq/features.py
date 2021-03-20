@@ -108,7 +108,7 @@ class Features(UserDict):
 
         @param record: A BioPython C{SeqRecord} sequence record.
         """
-        self.reference = DNARead(record.id, record.seq)
+        self.reference = DNARead(record.id, str(record.seq))
 
         for feature in record.features:
             type_ = feature.type

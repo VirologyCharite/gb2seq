@@ -2,13 +2,13 @@ from dark.aligners import mafft
 from dark.reads import AARead, DNARead, Reads
 
 from sars2seq.change import splitChange
-from sars2seq.translate import translate
+from sars2seq.translate import translate, TranslationError
 from sars2seq.variants import VARIANTS
 
 DEBUG = False
 SLICE = slice(300)
 
-MAFFT_OPTIONS = '--anysymbol --preservecase --retree 1 --reorder --auto'
+MAFFT_OPTIONS = '--anysymbol --preservecase --retree 1 --reorder'
 
 
 def getNonGapOffsets(s):
@@ -180,6 +180,8 @@ class SARS2Genome:
         Match the genome and the reference at the amino acid level.
 
         @param featureName: A C{str} feature name.
+        @raise TranslationError: or one of its sub-classes (see translate.py)
+            if a feature nucleotide sequence cannot be translated.
         @return: A 2-C{tuple} of C{dark.reads.AARead} instances, holding
             the amino acids for the feature as located in the reference
             genome and then the corresponding amino acids from the genome being
@@ -217,7 +219,8 @@ class SARS2Genome:
         self._cache['aa'][featureName] = referenceAaAligned, genomeAaAligned
         return referenceAaAligned, genomeAaAligned
 
-    def _checkChange(self, base, offset, read, change, featureName):
+    def _checkChange(self, base, offset, read, change, featureName, onError,
+                     errFp):
         """
         Check that a base occurs at an offset.
 
@@ -228,24 +231,38 @@ class SARS2Genome:
         @param read: A C{dark.reads.Read} instance.
         @param change: The C{str} or C{tuple} change specification.
         @param featureName: A C{str} feature name.
+        @param onError: A C{str} indicating what to do if an error is
+            encountered. Must be one of 'raise', 'ignore', or 'print' (in which
+            case an error message will be printed to C{errFp}.
+        @param errFp: An open file pointer to write error messages to, if any.
+            Only used if C{onError} is 'print'.
         @raise IndexError: If the offset is out of range.
         @return: A C{list} containing a C{bool} indicating whether the read
             sequence has C{base} at C{offset} (or C{True} if C{base} is
-            C{None}) and the base found at the offset.
+            C{None}) and the base found at the offset. If there is an error
+            (and C{onError} is not 'raise'), return [False, None].
         """
         try:
             actual = read.sequence[offset]
         except IndexError:
-            raise IndexError(f'Index {offset} out of range trying to access '
-                             f'feature {featureName!r} of length '
-                             f'{len(read)} sequence {read.id!r} via '
-                             f'expected change specification {change!r}.')
+            mesg = (f'Index {offset} out of range trying to access feature '
+                    f'{featureName!r} of length {len(read)} sequence '
+                    f'{read.id!r} via expected change specification '
+                    f'{change!r}.')
+            if onError == 'raise':
+                raise IndexError(mesg)
+            elif onError == 'print':
+                print(mesg, file=errFp)
+                return [False, None]
+            else:
+                assert onError == 'ignore'
+                return [False, None]
         else:
             return [(base is None or actual == base), actual]
 
-    def checkFeature(self, featureName, changes, nt):
-        """
-        Check that a set of changes all happened as expected.
+    def checkFeature(self, featureName, changes, nt, onError='raise',
+                     errFp=None):
+        """Check that a set of changes all happened as expected.
 
         @param featureName: A C{str} feature name.
         @param changes: Either a C{str} or a iterable of 3-C{tuple}s. If a
@@ -257,38 +274,64 @@ class SARS2Genome:
             The reference or genome base (but not both) may be absent.
             If an iterable of 3-C{tuple}s, each tuple should have a C{str}
             expected reference base, a 0-based offset, and a C{str} expected
-            genome base.  Note that the string format (meant for humans) uses
+            genome base. Note that the string format (meant for humans) uses
             1-based locations whereas the tuple format uses 0-based offsets.
         @param nt: If C{True} check nucleotide sequences. Else protein.
+        @param onError: A C{str} indicating what to do if an error is
+            encountered. Must be one of 'raise', 'ignore', or 'print' (in which
+            case an error message will be printed to C{errFp}.
+        @param errFp: An open file pointer to write error messages to, if any.
+            Only used if C{onError} is 'print'.
         @raise ValueError: If a change string cannot be parsed.
         @raise IndexError: If the offset of a change exceeds the length of the
             sequence being checked.
-        @return: A 3-C{tuple} with the number of checks done, the number of
-            errors, and a C{dict} keyed by changes in C{changes}, with values
-            a 2-C{tuple} of Booleans to indicate success or failure of the
-            check for the reference and the genome respectively.
+        @return: A 3-C{tuple} with the C{int} number of checks done, the
+            C{int} number of errors, and a C{dict} keyed by changes in
+            C{changes}. The C{dict} values are 4-C{tuple}s of (Boolean,
+            reference base, Boolean, genome base) to indicate success or
+            failure of the check for the reference and the refence base found,
+            then the same thing for the genome. E.g., a tuple of (True, 'A',
+            False, 'T') would indicate that the expected reference base was
+            found, that it was an 'A', but that the expected genome base was
+            not found and that instead a 'T' was found. If C{nt} is C{False}
+            and there is a translation error, the 4-tuple will contain
+            (False, None, False, None).
         """
-        reference, genome = (self.ntSequences(featureName) if nt else
-                             self.aaSequences(featureName))
+        def _getChanges(changes):
+            if isinstance(changes, str):
+                for change in changes.split():
+                    referenceBase, offset, genomeBase = splitChange(change)
+                    yield change, referenceBase, offset, genomeBase
+            else:
+                for change in changes:
+                    referenceBase, offset, genomeBase = change
+                    yield change, referenceBase, offset, genomeBase
+
         result = {}
         testCount = errorCount = 0
 
-        if isinstance(changes, str):
-            for change in changes.split():
-                referenceBase, offset, genomeBase = splitChange(change)
-                result[change] = tuple(
-                    self._checkChange(referenceBase, offset, reference, change,
-                                      featureName) +
-                    self._checkChange(genomeBase, offset, genome, change,
-                                      featureName))
+        try:
+            reference, genome = (self.ntSequences(featureName) if nt else
+                                 self.aaSequences(featureName))
+        except TranslationError as e:
+            if onError == 'raise':
+                raise
+            elif onError == 'print':
+                print(e, file=errFp)
+
+            translationError = True
         else:
-            for change in changes:
-                referenceBase, offset, genomeBase = change
+            translationError = False
+
+        for change, referenceBase, offset, genomeBase in _getChanges(changes):
+            if translationError:
+                result[change] = (False, None, False, None)
+            else:
                 result[change] = tuple(
                     self._checkChange(referenceBase, offset, reference, change,
-                                      featureName) +
+                                      featureName, onError, errFp) +
                     self._checkChange(genomeBase, offset, genome, change,
-                                      featureName))
+                                      featureName, onError, errFp))
 
         errorCount = sum((v[0] is False or v[2] is False)
                          for v in result.values())
@@ -296,7 +339,7 @@ class SARS2Genome:
 
         return testCount, errorCount, result
 
-    def checkVariant(self, variant):
+    def checkVariant(self, variant, onError='raise', errFp=None):
         """
         Check that a set of changes in different features all happened as
         expected.
@@ -304,11 +347,22 @@ class SARS2Genome:
         @param variant: Either the C{str} name of a key in the known VARIANTS
             C{dict} or else a C{dict} with the same structure as the 'changes'
             value C{dict} in the known variants (see variants.py).
+        @param onError: A C{str} indicating what to do if an error is
+            encountered. Must be one of 'raise', 'ignore', or 'print' (in which
+            case an error message will be printed to C{errFp}.
+        @param errFp: An open file pointer to write error messages to, if any.
+            Only used if C{onError} is 'print'.
         @return: A 3-C{tuple} with the number of checks done, the number of
             errors, and a C{dict} keyed by changes in C{changes}, with values
             a 2-C{tuple} of Booleans to indicate success or failure of the
-            check for the reference and the genome respectively.
+            check for the reference and the genome respectively. There is no
+            specific indication of any TranslationError when checking amino
+            acid sequences.
         """
+        if onError == 'print' and not errFp:
+            raise RuntimeError('If you pass onError="print" you must also '
+                               'give a file descriptor via errFp.')
+
         result = {}
         testCountTotal = errorCountTotal = 0
 
@@ -326,12 +380,10 @@ class SARS2Genome:
                 except KeyError:
                     pass
                 else:
-                    result[featureName][what] = {}
                     testCount, errorCount, result_ = self.checkFeature(
-                        featureName, changes, what == 'nt')
+                        featureName, changes, what == 'nt', onError, errFp)
                     testCountTotal += testCount
                     errorCountTotal += errorCount
-                    for change, values in result_.items():
-                        result[featureName][what][change] = values
+                    result[featureName][what] = result_
 
         return testCountTotal, errorCountTotal, result

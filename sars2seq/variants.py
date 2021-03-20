@@ -17,6 +17,16 @@ VARIANTS = {
         },
     },
 
+    'B117-typing': {
+        'description': ('UK variant, based on just two tests (as in '
+                        'typing-PCR assays.'),
+        'changes': {
+            'spike': {
+                'aa': '69- 70- N501Y',
+            },
+        },
+    },
+
     'VOC_20201201_UK': {
         'description': 'UK variant of concern (VOC) 202012/01',
         'comment': ('From Table 1 of https://www.gov.uk/government/'

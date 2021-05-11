@@ -11,6 +11,10 @@ SLICE = slice(300)
 MAFFT_OPTIONS = '--anysymbol --preservecase --retree 1 --reorder'
 
 
+class ReferenceInsertionError(Exception):
+    'A genome resulted in MAFFT suggesting a reference insertion.'
+
+
 def getNonGapOffsets(s):
     """
     Make a dictionary mapping non-gap offsets to the equivalent offset in a
@@ -160,20 +164,28 @@ class SARS2Genome:
         offset = self.offsetMap[feature['start']]
         end = alignmentEnd(self.referenceAligned.sequence, offset, length)
 
-        referenceRead = DNARead(self.features.reference.id + f' ({name})',
-                                self.referenceAligned.sequence[offset:end])
+        referenceNt = DNARead(self.features.reference.id + f' ({name})',
+                              self.referenceAligned.sequence[offset:end])
 
-        genomeRead = DNARead(self.genome.id + f' ({name})',
-                             self.genomeAligned.sequence[offset:end])
+        # There should not be insertions to the reference. This could (of
+        # course) happen in theory but hasn't been seen yet. So let's raise
+        # an exception and make sure we handle it properly when/if it does
+        # arise.
+        if '-' in referenceNt.sequence:
+            raise ReferenceInsertionError(
+                f'MAFFT suggests a reference insertion into {featureName!r}.')
+
+        genomeNt = DNARead(self.genome.id + f' ({name})',
+                           self.genomeAligned.sequence[offset:end])
 
         if DEBUG:
             print('NT MATCH:')
-            print('ref  nt:', referenceRead.sequence[SLICE])
-            print('gen  nt:', genomeRead.sequence[SLICE])
+            print('ref  nt:', referenceNt.sequence[SLICE])
+            print('gen  nt:', genomeNt.sequence[SLICE])
 
-        self._cache['nt'][featureName] = referenceRead, genomeRead
+        self._cache['nt'][featureName] = referenceNt, genomeNt
 
-        return referenceRead, genomeRead
+        return referenceNt, genomeNt
 
     def aaSequences(self, featureName):
         """
@@ -192,29 +204,41 @@ class SARS2Genome:
         except KeyError:
             pass
 
-        referenceNtRead, genomeNtRead = self.ntSequences(featureName)
+        referenceNt, genomeNt = self.ntSequences(featureName)
+
+        assert len(referenceNt) == len(genomeNt)
 
         feature = self.features[featureName]
         name = feature['name']
 
-        referenceTranslation = feature.get(
-            'translation', translate(feature['sequence'], name))
-        referenceAaRead = AARead(self.features.reference.id + f' ({name})',
-                                 referenceTranslation)
+        referenceAa = AARead(
+            self.features.reference.id + f' ({name})',
+            feature.get('translation', translate(feature['sequence'], name)))
 
-        genomeAaRead = AARead(
+        genomeAa = AARead(
             self.genome.id + f' ({name})',
-            translate(genomeNtRead.sequence.replace('-', ''), name))
+            translate(genomeNt.sequence.replace('-', ''), name))
+
+        referenceAaAligned, genomeAaAligned = mafft(
+            Reads([referenceAa, genomeAa]), options=MAFFT_OPTIONS)
 
         if DEBUG:
             print(f'AA MATCH {name}:')
-            print('ref  nt:', self.features.reference.sequence[SLICE])
-            print('gen  nt:', self.genome.sequence[SLICE])
-            print('ref  aa:', referenceAaRead.sequence[SLICE])
-            print('gen  aa:', genomeAaRead.sequence[SLICE])
 
-        referenceAaAligned, genomeAaAligned = mafft(
-            Reads([referenceAaRead, genomeAaRead]), options=MAFFT_OPTIONS)
+            print(f'ref nt aligned {len(referenceNt.sequence)}:',
+                  referenceNt.sequence[SLICE])
+            print(f'gen nt aligned {len(genomeNt.sequence)}:',
+                  genomeNt.sequence[SLICE])
+
+            print(f'ref aa        {len(referenceAa.sequence)}:',
+                  referenceAa.sequence[SLICE])
+            print(f'gen aa        {len(genomeAa.sequence)}:',
+                  genomeAa.sequence[SLICE])
+
+            print(f'ref aa aligned {len(referenceAaAligned.sequence)}:',
+                  referenceAaAligned.sequence[SLICE])
+            print(f'gen aa aligned {len(genomeAaAligned.sequence)}:',
+                  genomeAaAligned.sequence[SLICE])
 
         self._cache['aa'][featureName] = referenceAaAligned, genomeAaAligned
         return referenceAaAligned, genomeAaAligned

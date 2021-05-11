@@ -45,7 +45,7 @@ def translate(seq, name=None):
         # just that ORF and does not include the leading ~265 nucleotides
         # of the 5' UTR. As a result, the offset used to begin the search
         # for the slippery sequence is 13000, which is chosen to be a bit
-        # before 13468 - 265.  There are various occurrences of the
+        # before 13462 - 265.  There are various occurrences of the
         # slippery sequence in the reference genome (and hence probably in
         # other CoV genomes), but only one in this region and with a stop
         # codon shortly (up to _MAX_DISTANCE_TO_STOP nucleotides) downstream.
@@ -63,7 +63,8 @@ def translate(seq, name=None):
                 f'downstream (max allowed distance is '
                 f'{_MAX_DISTANCE_TO_STOP}) from the start of the slippery '
                 f'sequence at location {offset + 1}.')
-        seq = seq[:offset + _SLIPPERY_LEN] + seq[offset:]
+
+        seq = seq[:offset + _SLIPPERY_LEN] + seq[offset + _SLIPPERY_LEN - 1:]
 
     # Pad with 'N' to avoid a 'BiopythonWarning: Partial codon' warning.
     remainder = len(seq) % 3

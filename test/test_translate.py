@@ -80,16 +80,16 @@ class TestTranslate(TestCase):
     def testORF1abPolyprotein(self):
         """
         Test an ORF1ab polyprotein. The translation goes all the way through
-        the end of the slippery sequence, then continues at the beginning of
-        the slippery sequence.
+        the end of the slippery sequence, then continues starting at the final
+        nucleotide of the slippery sequence.
         """
         slipperySeq = 'TTTAAAC'
         repeats = int(15000 / 3)
-        seq = 'AA' + ('AAA' * repeats) + slipperySeq + 'CCCCCCTAAAA'
+        seq = 'AA' + ('AAA' * repeats) + slipperySeq + 'CCCTAAAA'
         # The sequence that gets translated is:
-        # AAA 'repeats' times, then AA TTTAAAC TTTAAAC CCCCCCTAAAA
-        # Regrouping:
-        # AAA 'repeats' times, then AAT TTA AAC TTT AAA CCC CCC CTA AAA
-        # K   'repeats' times, then  N   L   N   F   K   P   P   L   K
-        expected = 'K' * repeats + 'NLNFKPPLK'
+        # AAA 'repeats' times, then AA TTTAAAC C CCCTAAAA
+        # Regrouping, we have:
+        # AAA 'repeats' times, then AAT TTA AAC CCC CTA AAA
+        # K   'repeats' times, then  N   L   N   P   L   K
+        expected = 'K' * repeats + 'NLNPLK'
         self.assertEqual(expected, translate(seq, 'ORF1ab polyprotein'))

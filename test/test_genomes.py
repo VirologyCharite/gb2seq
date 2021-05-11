@@ -44,7 +44,7 @@ class _Mixin:
         _, errorCount, result = self.genome.checkFeature(
             featureName, changes, nt)
         if errorCount:
-            for change, (referenceOK, genomeOK) in result.items():
+            for change, (referenceOK, _, genomeOK, _) in result.items():
                 if not referenceOK:
                     self.fail(f'Reference base check failed on {change!r}')
                 if not genomeOK:
@@ -160,25 +160,27 @@ class Test_EPI_ISL_601443(TestCase, _Mixin):
         """
         self.check('orf1a', 'T1001I A1708D I2230T', False)
 
+    def testORF1abTranslationBug(self):
+        """
+        The ORF1ab protein should not have insertions at 4402 or 4403. This
+        ensures that https://github.com/VirologyCharite/sars2seq/issues/9 is
+        fixed and does not revert.
+        """
+        _, errorCount, _ = self.genome.checkFeature(
+            'orf1ab', '-4402F -4403K', False)
+        self.assertEqual(2, errorCount)
+
     def testORF1abDeletionsAa(self):
         """
         The ORF1ab protein should have the expected deletions.
         """
         self.check('orf1ab', 'S3675- G3676- F3677-', False)
 
-    def testORF1abInsertionsAa(self):
-        """
-        The ORF1ab protein should have the expected insertions.  R & V in the
-        UK sequence. The 4402/3 locations here correspond to the ribosomal
-        frame shift site (starting after (13465 - 265) / 3 = 4401).
-        """
-        self.check('orf1ab', '-4402F -4403K', False)
-
     def testORF1abMutationsAa(self):
         """
         The ORF1ab protein should have the expected amino acid changes.
         """
-        self.check('orf1ab', 'T1001I A1708D I2230T P4717L', False)
+        self.check('orf1ab', 'T1001I A1708D I2230T', False)
 
     def testNucleocapsidMutationsNt(self):
         """
@@ -247,12 +249,6 @@ class Test_BavPat2(TestCase, _Mixin):
         The ORF1a genome should have the expected change.
         """
         self.check('orf1a', 'C2772T', True)
-
-    def testORF1abInsertionsAa(self):
-        """
-        The ORF1ab protein should have the expected insertions.
-        """
-        self.check('orf1ab', '-4402F -4403K', False)
 
     def testSpikeDeletionVariant(self):
         """

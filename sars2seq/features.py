@@ -83,12 +83,11 @@ class Features(UserDict):
         spec = self.REF_GB if spec is None else spec
 
         if isinstance(spec, str):
+            assert reference is None
             if exists(spec):
-                assert reference is None
                 with open(spec) as fp:
                     record = SeqIO.read(fp, 'genbank')
             else:
-                assert reference is None
                 print(f'Fetching Genbank record for {spec!r}.',
                       file=sys.stderr)
                 client = Entrez.efetch(db='nucleotide', rettype='gb',

@@ -2,7 +2,7 @@ from dark.aligners import mafft
 from dark.reads import AARead, DNARead, Reads
 
 from sars2seq.change import splitChange
-from sars2seq.translate import translate, TranslationError
+from sars2seq.translate import translate, TranslationError, translateSpike
 from sars2seq.variants import VARIANTS
 
 DEBUG = False
@@ -194,6 +194,8 @@ class SARS2Genome:
         @param featureName: A C{str} feature name.
         @raise TranslationError: or one of its sub-classes (see translate.py)
             if a feature nucleotide sequence cannot be translated.
+        @raise AssertionError: if the Spike amino acid sequences have different
+            lengths.
         @return: A 2-C{tuple} of C{dark.reads.AARead} instances, holding
             the amino acids for the feature as located in the reference
             genome and then the corresponding amino acids from the genome being
@@ -211,16 +213,25 @@ class SARS2Genome:
         feature = self.features[featureName]
         name = feature['name']
 
-        referenceAa = AARead(
-            self.features.reference.id + f' ({name})',
-            feature.get('translation', translate(feature['sequence'], name)))
+        if (name == 'surface glycoprotein' and genomeNt.count('-') > 0 and
+                genomeNt.count('-') % 3 == 0):
+            referenceAaAligned = translateSpike(referenceNt)
+            genomeAaAligned = translateSpike(genomeNt)
 
-        genomeAa = AARead(
-            self.genome.id + f' ({name})',
-            translate(genomeNt.sequence.replace('-', ''), name))
+            assert len(referenceAaAligned) == genomeAaAligned, (
+                'Genome and reference AA sequences have different lengths.')
+        else:
+            referenceAa = AARead(
+                self.features.reference.id + f' ({name})',
+                feature.get('translation', translate(feature['sequence'],
+                            name)))
 
-        referenceAaAligned, genomeAaAligned = mafft(
-            Reads([referenceAa, genomeAa]), options=MAFFT_OPTIONS)
+            genomeAa = AARead(
+                self.genome.id + f' ({name})',
+                translate(genomeNt.sequence.replace('-', ''), name))
+
+            referenceAaAligned, genomeAaAligned = mafft(
+                Reads([referenceAa, genomeAa]), options=MAFFT_OPTIONS)
 
         if DEBUG:
             print(f'AA MATCH {name}:')

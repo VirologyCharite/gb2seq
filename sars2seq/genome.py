@@ -213,12 +213,17 @@ class SARS2Genome:
         feature = self.features[featureName]
         name = feature['name']
 
-        if (name == 'surface glycoprotein' and genomeNt.count('-') > 0 and
-                genomeNt.count('-') % 3 == 0):
-            referenceAaAligned = translateSpike(referenceNt)
-            genomeAaAligned = translateSpike(genomeNt)
+        gapCount = genomeNt.sequence.count('-')
+        if (name == 'surface glycoprotein' and gapCount > 0 and
+                gapCount % 3 == 0):
+            referenceAaAligned = AARead(
+                self.features.reference.id + f' ({name})',
+                translateSpike(referenceNt.sequence))
+            genomeAaAligned = AARead(
+                self.genome.id + f' ({name})',
+                translateSpike(genomeNt.sequence))
 
-            assert len(referenceAaAligned) == genomeAaAligned, (
+            assert len(referenceAaAligned) == len(genomeAaAligned), (
                 'Genome and reference AA sequences have different lengths.')
         else:
             referenceAa = AARead(

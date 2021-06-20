@@ -1,3 +1,4 @@
+from Bio.Seq import Seq
 from unittest import TestCase
 
 from sars2seq.translate import (
@@ -99,12 +100,22 @@ class TestTranslateSpike(TestCase):
     """
     Tests for the translate.translateSpike function.
     """
-    def testNoGapsCorrectLength(self):
+    def testNoGapsCorrectSequence(self):
         """
-        A sequence with no gaps must have the correct length.
+        A sequence with no gaps must be translated correctly.
         """
         seq = 'TTGGTTGTTTATTACCAC'
-        self.assertEqual(len(seq) / 3, len(translateSpike(seq)))
+        self.assertEqual(Seq(seq).translate(), translateSpike(seq))
+
+    def testNoGapsCorrectSequenceNotMultipleOfThree(self):
+        """
+        A sequence with no gaps that is not a multiple of three must
+        raise an AssertionError.
+        """
+        seq = 'TTGGTTGTTTATTACCA'
+        error = (f'The lenght of a sequence to be translated must '
+                 f'be a multiple of 3 but is {len(seq)!r}.')
+        self.assertRaisesRegex(AssertionError, error, translateSpike, seq)
 
     def testInFrameGapCorrectLength(self):
         """
@@ -134,6 +145,14 @@ class TestTranslateSpike(TestCase):
         seq = 'TTG---GTTTATTACCAC'
         self.assertEqual('L-VYYH', translateSpike(seq))
 
+    def testInFrameGapAmbiguousCorrectLocation(self):
+        """
+        A sequence with an in frame gap and an ambiguity must be translated
+        correcty.
+        """
+        seq = 'TTG---GTTTANTACCAC'
+        self.assertEqual('L-VXYH', translateSpike(seq))
+
     def testPlus1GapCorrectLocation(self):
         """
         A sequence with an out of frame gap (TT-) must be in the correct
@@ -142,13 +161,20 @@ class TestTranslateSpike(TestCase):
         seq = 'TT---GGTTTATTACCAC'
         self.assertEqual('L-VYYH', translateSpike(seq))
 
+    def testPlus1GapAdjacentAmbiguityCorrectLocation(self):
+        """
+        A sequence with an out of frame gap (TT-) must be translated correctly.
+        """
+        seq = 'TT---NGTTTATTACCAC'
+        self.assertEqual('X-VYYH', translateSpike(seq))
+
     def testPlus2GapCorrectLocation(self):
         """
         A sequence with an out of frame gap (G--) must be in the correct
         location.
         """
         seq = 'TTGG---TTTATTACCAC'
-        self.assertEqual('L-VYYH', translateSpike(seq))
+        self.assertEqual('LV-YYH', translateSpike(seq))
 
     def test6970S71FCorrectLocation(self):
         """
@@ -171,4 +197,4 @@ class TestTranslateSpike(TestCase):
         The gap at 156/157 in B.1.617.2 must be in the correct location.
         """
         seq = 'GAAAGTG------GAGTTTATTCTAGT'
-        self.assertEqual('ES--GVYSS', translateSpike(seq))
+        self.assertEqual('ESG--VYSS', translateSpike(seq))

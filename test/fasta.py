@@ -3,7 +3,7 @@ from functools import lru_cache
 from dark.fasta import FastaReads
 
 
-@lru_cache
+@lru_cache()
 def getSequence(filename, id_=None):
     """
     Load a FASTA file.

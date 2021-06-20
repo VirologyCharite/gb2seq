@@ -113,8 +113,8 @@ class TestTranslateSpike(TestCase):
         raise an AssertionError.
         """
         seq = 'TTGGTTGTTTATTACCA'
-        error = (f'The lenght of a sequence to be translated must '
-                 f'be a multiple of 3 but is {len(seq)!r}.')
+        error = (r'^The length of a sequence to be translated must '
+                 r'be a multiple of 3 but is 17\.$')
         self.assertRaisesRegex(AssertionError, error, translateSpike, seq)
 
     def testInFrameGapCorrectLength(self):

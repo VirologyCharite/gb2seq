@@ -94,20 +94,21 @@ def translateSpike(seq):
     current = 0
     seqLen = len(seq)
 
-    assert seqLen % 3 == 0, (f'The lenght of a sequence to be translated must '
+    assert seqLen % 3 == 0, (f'The length of a sequence to be translated must '
                              f'be a multiple of 3 but is {seqLen!r}.')
 
     while current + 3 <= seqLen:
-        codon = seq[current:current+3]
+        codon = seq[current:current + 3]
+        codonGaps = codon.count('-')
         if codon in codons:
             # This is a codon that corresponds to a normal amino acid.
             sequence += codons[codon]
             current += 3
-        elif codon not in codons and codon.count('-') == 0:
+        elif codon not in codons and codonGaps == 0:
             # This is a codon that contains ambiguities.
             sequence += 'X'
             current += 3
-        elif codon.count('-') > 0:
+        elif codonGaps > 0:
             # Count how many gaps there are after the current codon.
             c = 3
             while seq[current + c] == '-':
@@ -115,7 +116,6 @@ def translateSpike(seq):
             subsequentGaps = c - 3
 
             # Find the next nucleotide after the gap.
-            codonGaps = codon.count('-')
             index = 3 + codonGaps
             nextNt = seq[current + subsequentGaps + 3:
                          current + subsequentGaps + index]

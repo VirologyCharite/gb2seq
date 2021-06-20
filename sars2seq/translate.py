@@ -1,5 +1,7 @@
 from Bio.Seq import Seq
 
+from dark.aa import CODONS, STOP_CODONS
+
 
 class TranslationError(Exception):
     'No slippery sequence could be found in a genome.'
@@ -15,6 +17,10 @@ class NoStopCodonError(TranslationError):
 
 class StopCodonTooDistantError(TranslationError):
     'The stop codon following the slippery sequence was too far away.'
+
+
+codons = dict([(codon, aa) for aa, cods in CODONS.items() for codon in cods] +
+              [(codon, '*') for codon in STOP_CODONS] + [('---', '-')])
 
 
 # The maximum difference (number of nucleotides) to allow between the
@@ -71,3 +77,59 @@ def translate(seq, name=None):
     seq += 'N' * (3 - remainder if remainder else 0)
 
     return Seq(seq).translate()
+
+
+def translateSpike(seq):
+    """
+    Translate a Spike sequence, taking into account gaps introduced in the
+    nucleotide alignment. This means that the amino acid sequences do not
+    have to be re-aligned after translating, which avoids the introduction of
+    gaps at the amino acid level that may be different from gaps at the
+    nucleotide level.
+
+    @param seq: A C{str} nucelotide sequence.
+    @return: A translated C{str} amino acid sequence that retains the gaps.
+    """
+    sequence = ''
+    current = 0
+    seqLen = len(seq)
+
+    assert seqLen % 3 == 0, (f'The length of a sequence to be translated must '
+                             f'be a multiple of 3 but is {seqLen!r}.')
+
+    while current + 3 <= seqLen:
+        codon = seq[current:current + 3]
+        codonGaps = codon.count('-')
+        if codon in codons:
+            # This is a codon that corresponds to a normal amino acid.
+            sequence += codons[codon]
+            current += 3
+        elif codon not in codons and codonGaps == 0:
+            # This is a codon that contains ambiguities.
+            sequence += 'X'
+            current += 3
+        elif codonGaps > 0:
+            # Count how many gaps there are after the current codon.
+            c = 3
+            while seq[current + c] == '-':
+                c += 1
+            subsequentGaps = c - 3
+
+            # Find the next nucleotide after the gap.
+            index = 3 + codonGaps
+            nextNt = seq[current + subsequentGaps + 3:
+                         current + subsequentGaps + index]
+
+            newCodon = codon.strip('-') + nextNt
+
+            sequence += codons.get(newCodon, 'X')
+
+            # Add the correct number of gaps after the amino acid.
+            totalGaps = subsequentGaps + codonGaps
+            gapAA = totalGaps // 3
+            sequence += (gapAA * '-')
+
+            # Set current so it starts at the right place after the gap.
+            current += (subsequentGaps + index)
+
+    return sequence

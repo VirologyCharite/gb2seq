@@ -6,6 +6,9 @@ PYDIRS := sars2seq bin test
 pytest:
 	env PYTHONPATH=. pytest -v
 
+tcheck:
+	env PYTHONPATH=. trial test
+
 pycodestyle:
 	find $(PYDIRS) -name '*.py' -print0 | xargs -0 pycodestyle
 

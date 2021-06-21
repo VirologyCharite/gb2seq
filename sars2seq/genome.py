@@ -167,11 +167,11 @@ class SARS2Genome:
         referenceNt = DNARead(self.features.reference.id + f' ({name})',
                               self.referenceAligned.sequence[offset:end])
 
-        # There should not be insertions to the reference. This could (of
-        # course) happen in theory but hasn't been seen yet. So let's raise
-        # an exception and make sure we handle it properly when/if it does
-        # arise.
-        if '-' in referenceNt.sequence:
+        # In general, there should not be insertions to the reference. There
+        # are lineages with insertions in the Spike (e.g. B.1.214.2) that we
+        # can correct for in the downstream processing, therefore the error is
+        # not raised for the Spike.
+        if '-' in referenceNt.sequence and name != 'surface glycoprotein':
             raise ReferenceInsertionError(
                 f'MAFFT suggests a reference insertion into {featureName!r}.')
 

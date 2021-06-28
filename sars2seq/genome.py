@@ -15,6 +15,10 @@ class ReferenceInsertionError(Exception):
     'A genome resulted in MAFFT suggesting a reference insertion.'
 
 
+class TranslatedSequenceLengthError(Exception):
+    'The translated genome and reference are different lengths.'
+
+
 def getNonGapOffsets(s):
     """
     Make a dictionary mapping non-gap offsets to the equivalent offset in a

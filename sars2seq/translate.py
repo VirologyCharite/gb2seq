@@ -1,10 +1,13 @@
+import sys
+
 from Bio.Seq import Seq
+from itertools import groupby
 
 from dark.aa import CODONS, STOP_CODONS
 
 
 class TranslationError(Exception):
-    'No slippery sequence could be found in a genome.'
+    'Error when using custom translation of sequences.'
 
 
 class NoSlipperySequenceError(TranslationError):
@@ -94,8 +97,19 @@ def translateSpike(seq):
     current = 0
     seqLen = len(seq)
 
-    assert seqLen % 3 == 0, (f'The length of a sequence to be translated must '
-                             f'be a multiple of 3 but is {seqLen!r}.')
+    if not seqLen % 3 == 0:
+        raise TranslationError(
+            f'The length of a sequence to be translated must '
+            f'be a multiple of 3 but is {seqLen!r}.')
+
+    groups = groupby(seq)
+    result = [(label, sum([1 for _ in group])) for label, group in groups if
+              label == '-']
+
+    for gapStretch, count in result:
+        if not count % 3 == 0:
+            raise TranslationError(
+                f'Length of stretch of gaps not divisible by 3.')
 
     while current + 3 <= seqLen:
         codon = seq[current:current + 3]
@@ -133,3 +147,25 @@ def translateSpike(seq):
             current += (subsequentGaps + index)
 
     return sequence
+
+
+def checkSpikeInsertions(accession, seq):
+    """
+    Check and parse out known insertions in the Spike protein.
+
+    @param seq: A C{str} amino acid sequence.
+    """
+    seqLen = len(seq)
+    if seqLen == 1274:
+        # There are no insertions
+        return seq
+    if seqLen > 1274:
+        if 'QTKGIALSPR' in seq:
+            return seq[:679] + seq[683:]
+        elif 'NLVRTDRDLPQ' in seq:
+            return seq[:214] + seq[217:]
+        elif 'LVRAAGYLPQ' in seq:
+            return seq[:214] + seq[217:]
+        else:
+            print(f'Sequence with accession {accession} is too long and '
+                  f'does not have a known insertion.', file=sys.stderr)

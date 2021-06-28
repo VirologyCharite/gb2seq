@@ -169,3 +169,5 @@ def checkSpikeInsertions(accession, seq):
         else:
             print(f'Sequence with accession {accession} is too long and '
                   f'does not have a known insertion.', file=sys.stderr)
+    print(f'Sequence with accession {accession} is too short.',
+          file=sys.stderr)

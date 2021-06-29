@@ -1,8 +1,9 @@
+from Bio.Seq import Seq
 from unittest import TestCase
 
 from sars2seq.translate import (
     translate, NoSlipperySequenceError, NoStopCodonError,
-    StopCodonTooDistantError, SLIPPERY_SEQUENCE)
+    StopCodonTooDistantError, SLIPPERY_SEQUENCE, translateSpike)
 
 
 class TestTranslate(TestCase):
@@ -93,3 +94,107 @@ class TestTranslate(TestCase):
         # K   'repeats' times, then  N   L   N   P   L   K
         expected = 'K' * repeats + 'NLNPLK'
         self.assertEqual(expected, translate(seq, 'ORF1ab polyprotein'))
+
+
+class TestTranslateSpike(TestCase):
+    """
+    Tests for the translate.translateSpike function.
+    """
+    def testNoGapsCorrectSequence(self):
+        """
+        A sequence with no gaps must be translated correctly.
+        """
+        seq = 'TTGGTTGTTTATTACCAC'
+        self.assertEqual(Seq(seq).translate(), translateSpike(seq))
+
+    def testNoGapsCorrectSequenceNotMultipleOfThree(self):
+        """
+        A sequence with no gaps that is not a multiple of three must
+        raise an AssertionError.
+        """
+        seq = 'TTGGTTGTTTATTACCA'
+        error = (r'^The length of a sequence to be translated must '
+                 r'be a multiple of 3 but is 17\.$')
+        self.assertRaisesRegex(AssertionError, error, translateSpike, seq)
+
+    def testInFrameGapCorrectLength(self):
+        """
+        A sequence with an in frame gap must have the correct length.
+        """
+        seq = 'TTG---GTTTATTACCAC'
+        self.assertEqual(len(seq) / 3, len(translateSpike(seq)))
+
+    def testPlus1GapCorrectLength(self):
+        """
+        A sequence with an out of frame gap (AA-) must have the correct length.
+        """
+        seq = 'TT---GGTTTATTACCAC'
+        self.assertEqual(len(seq) / 3, len(translateSpike(seq)))
+
+    def testPlus2GapCorrectLength(self):
+        """
+        A sequence with an out of frame gap (A--) must have the correct length.
+        """
+        seq = 'TTGG---TTTATTACCAC'
+        self.assertEqual(len(seq) / 3, len(translateSpike(seq)))
+
+    def testInFrameGapCorrectLocation(self):
+        """
+        A sequence with an in frame gap must be in the correct location.
+        """
+        seq = 'TTG---GTTTATTACCAC'
+        self.assertEqual('L-VYYH', translateSpike(seq))
+
+    def testInFrameGapAmbiguousCorrectLocation(self):
+        """
+        A sequence with an in frame gap and an ambiguity must be translated
+        correcty.
+        """
+        seq = 'TTG---GTTTANTACCAC'
+        self.assertEqual('L-VXYH', translateSpike(seq))
+
+    def testPlus1GapCorrectLocation(self):
+        """
+        A sequence with an out of frame gap (TT-) must be in the correct
+        location.
+        """
+        seq = 'TT---GGTTTATTACCAC'
+        self.assertEqual('L-VYYH', translateSpike(seq))
+
+    def testPlus1GapAdjacentAmbiguityCorrectLocation(self):
+        """
+        A sequence with an out of frame gap (TT-) must be translated correctly.
+        """
+        seq = 'TT---NGTTTATTACCAC'
+        self.assertEqual('X-VYYH', translateSpike(seq))
+
+    def testPlus2GapCorrectLocation(self):
+        """
+        A sequence with an out of frame gap (G--) must be in the correct
+        location.
+        """
+        seq = 'TTGG---TTTATTACCAC'
+        self.assertEqual('LV-YYH', translateSpike(seq))
+
+    def test6970S71FCorrectLocation(self):
+        """
+        The 69-70 deletion with a substitution leading to S71F must be
+        aligned correctly.
+        """
+        seq = 'CATGCTAT------CTTTGGGACC'
+        self.assertEqual('HAI--FGT', translateSpike(seq))
+
+    def test6970G72VCorrectLocation(self):
+        """
+        The 69-70 deletion with a substitution leading to G72V must be
+        aligned correctly.
+        """
+        seq = 'CATGCTAT------CTCTGTGACC'
+        self.assertEqual('HAI--SVT', translateSpike(seq))
+
+    def testB16172_156_157GapCorrectLocation(self):
+        """
+        The gap at 156/157 in B.1.617.2 must be in the correct location.
+        """
+        seq = 'GAAAGTG------GAGTTTATTCTAGT'
+        self.assertEqual('ESG--VYSS', translateSpike(seq))

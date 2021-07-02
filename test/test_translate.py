@@ -3,7 +3,8 @@ from unittest import TestCase
 
 from sars2seq.translate import (
     translate, NoSlipperySequenceError, NoStopCodonError,
-    StopCodonTooDistantError, SLIPPERY_SEQUENCE, translateSpike)
+    StopCodonTooDistantError, SLIPPERY_SEQUENCE, translateSpike,
+    TranslatedSequenceLengthError)
 
 
 class TestTranslate(TestCase):
@@ -115,7 +116,8 @@ class TestTranslateSpike(TestCase):
         seq = 'TTGGTTGTTTATTACCA'
         error = (r'^The length of a sequence to be translated must '
                  r'be a multiple of 3 but is 17\.$')
-        self.assertRaisesRegex(AssertionError, error, translateSpike, seq)
+        self.assertRaisesRegex(TranslatedSequenceLengthError, error,
+                               translateSpike, seq)
 
     def testInFrameGapCorrectLength(self):
         """

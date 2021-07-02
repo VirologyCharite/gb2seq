@@ -1,10 +1,11 @@
 from Bio.Seq import Seq
+from itertools import groupby
 
 from dark.aa import CODONS, STOP_CODONS
 
 
 class TranslationError(Exception):
-    'No slippery sequence could be found in a genome.'
+    'Error when using custom translation of sequences.'
 
 
 class NoSlipperySequenceError(TranslationError):
@@ -17,6 +18,19 @@ class NoStopCodonError(TranslationError):
 
 class StopCodonTooDistantError(TranslationError):
     'The stop codon following the slippery sequence was too far away.'
+
+
+class TranslatedSequenceLengthError(TranslationError):
+    'The translated reference and genome have different lengths.'
+
+
+class TranslatedReferenceAndGenomeLengthError(TranslationError):
+    'The translated reference and genome have different lengths.'
+
+
+class TranslatedGapLengthError(TranslationError):
+    'The sequence to translate has stretches of gaps that are not '
+    'multiples of three.'
 
 
 codons = dict([(codon, aa) for aa, cods in CODONS.items() for codon in cods] +
@@ -94,8 +108,18 @@ def translateSpike(seq):
     current = 0
     seqLen = len(seq)
 
-    assert seqLen % 3 == 0, (f'The length of a sequence to be translated must '
-                             f'be a multiple of 3 but is {seqLen!r}.')
+    if not seqLen % 3 == 0:
+        raise TranslatedSequenceLengthError(
+            f'The length of a sequence to be translated must '
+            f'be a multiple of 3 but is {seqLen!r}.')
+
+    groups = groupby(seq)
+    result = [(label, len(list(group))) for label, group in groups if
+              label == '-']
+
+    if any(length % 3 != 0 for g, length in result):
+        raise TranslatedGapLengthError(
+            'Length of stretch of gaps not divisible by 3.')
 
     while current + 3 <= seqLen:
         codon = seq[current:current + 3]
@@ -133,3 +157,34 @@ def translateSpike(seq):
             current += (subsequentGaps + index)
 
     return sequence
+
+
+def checkSpikeInsertions(accession, seq):
+    """
+    Check and parse out known insertions in the Spike protein.
+
+    @param accession: The C{str} accession number of the sequence.
+    @param seq: A C{str} amino acid sequence.
+
+    @return: The C{str} corrected translated sequence.
+    """
+    seqLen = len(seq)
+    if seqLen == 1274:
+        # There are no insertions
+        return seq
+    if seqLen > 1274:
+        if seq.find('QTKGIALSPR', 650, 700) > -1:
+            return seq[:679] + seq[683:]
+        elif seq.find('NLVRTDRDLPQ', 200, 230) > -1:
+            return seq[:214] + seq[217:]
+        elif seq.find('LVRAAGYLPQ', 200, 230) > -1:
+            return seq[:214] + seq[217:]
+        else:
+            raise TranslatedSequenceLengthError(
+                f'Sequence with accession {accession} is too long '
+                f'(length: {seqLen}) and does not have a known insertion.',
+            )
+    raise TranslatedSequenceLengthError(
+        f'Sequence with accession {accession} is too short '
+        f'(length: {seqLen}.'
+    )

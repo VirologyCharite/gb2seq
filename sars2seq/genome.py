@@ -2,7 +2,8 @@ from dark.aligners import mafft
 from dark.reads import AARead, DNARead, Reads
 
 from sars2seq.change import splitChange
-from sars2seq.translate import translate, TranslationError, translateSpike
+from sars2seq.translate import (translate, TranslationError, translateSpike,
+                                TranslatedReferenceAndGenomeLengthError)
 from sars2seq.variants import VARIANTS
 
 DEBUG = False
@@ -194,8 +195,6 @@ class SARS2Genome:
         @param featureName: A C{str} feature name.
         @raise TranslationError: or one of its sub-classes (see translate.py)
             if a feature nucleotide sequence cannot be translated.
-        @raise AssertionError: if the Spike amino acid sequences have different
-            lengths.
         @return: A 2-C{tuple} of C{dark.reads.AARead} instances, holding
             the amino acids for the feature as located in the reference
             genome and then the corresponding amino acids from the genome being
@@ -223,8 +222,10 @@ class SARS2Genome:
                 self.genome.id + f' ({name})',
                 translateSpike(genomeNt.sequence))
 
-            assert len(referenceAaAligned) == len(genomeAaAligned), (
-                'Genome and reference AA sequences have different lengths.')
+            if not len(referenceAaAligned) == len(genomeAaAligned):
+                raise TranslatedReferenceAndGenomeLengthError(
+                    'Genome and reference AA sequences have different lengths.'
+                )
         else:
             referenceAa = AARead(
                 self.features.reference.id + f' ({name})',

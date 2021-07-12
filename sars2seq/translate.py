@@ -212,13 +212,13 @@ def checkSpikeInsertions(accession, seq):
         elif seq.find('AWNRKRISKRIS', 350, 360) > -1:  # -356K -357R -358I
             return seq[:355] + seq[359:]               # -359S
         elif seq.find('LIGAAEH', 645, 660) > -1:  # -653A
-            return seq[:652] + seq[653]
+            return seq[:652] + seq[653:]
         elif seq.find('ALHRDSWGSY', 240, 250) > -1:  # -247D -248S -249W -250G
             return seq[:246] + seq[250:]
         elif seq.find('CASYQTQTQT', 667, 680) > -1:  # -675Q -676T
             return seq[:674] + seq[676:]
         elif seq.find('GSCCKFKFD', 1250, 1260) > -1:  # -1255K -1256F
-            return seq[:1254] + seq[1256]
+            return seq[:1254] + seq[1256:]
         elif seq.find('MLVFFF', 0, 10) > -1:  # -1M M2L
             return seq[:3] + seq[4:]
         elif seq.find('SQCATLRINLT', 10, 20) > -1:  # -17T -18L -19R -20I
@@ -230,7 +230,7 @@ def checkSpikeInsertions(accession, seq):
         elif seq.find('VLPFNVND', 79, 91) > -1:  # -87N -88V
             return seq[:86] + seq[88:]
         elif seq.find('VLPFNDDDG', 80, 92) > -1:  # -88D -89D
-            return seq[:87] + seq[:89]
+            return seq[:87] + seq[89:]
         elif seq.find('FDNPVLPLPF', 75, 90) > -1:  # -84L -85P
             return seq[:83] + seq[85:]
         elif seq.find('LHRSSSLTYLT', 240, 255) > -1:  # -248S -249S -250L -251T

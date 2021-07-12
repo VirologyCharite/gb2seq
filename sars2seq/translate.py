@@ -159,6 +159,134 @@ def translateSpike(seq):
     return sequence
 
 
+KNOWN_INSERTIONS = (
+    ('QTKGIALSPR', 650, 700, 679, 683),
+    ('NLVRTDRDLP', 200, 230, 214, 217),
+    ('LVRAAGYLPQ', 200, 230, 214, 217),
+    ('HRSSHQNLTP', 240, 255, 247, 250),      # Lineage B.3
+    ('GAAAYYYVG', 260, 270, 264, 265),       # Lineage B.1.1.257 -265Y
+    ('SALLSDLQGTIT', 870, 890, 879, 882),    # -880D -881L -882Q
+    ('TEKSKAENIIR', 93, 103, 98, 101),       # -99K -100A -101E
+    ('MFVFFFVL', 0, 10, 3, 4),               # -4F L6F
+    ('TWLLGSMHIS', 55, 80, 64, 65),          # -65L F66L H67G A68S I69M
+    ('LHRSSHQNLTP', 239, 254, 248, 251),     # -249H -250Q -251N
+    ('NLVRAKKNDLP', 210, 220, 214, 218),     # -215A -216K -217K -218N
+    ('VSQPFFFMD', 167, 182, 174, 175),       # -175F
+    ('NLVRKLGPDLPQG', 207, 221, 214, 218),   # -215K -216L -217G -218P
+    ('LHAPPATV', 515, 525, 520, 521),        # -521P
+    ('LLHAAPPATV', 515, 525, 520, 522),      # -521A -522P
+    ('LHAHPATV', 515, 525, 520, 521),        # -521H
+    ('LLHAPPPATV', 515, 525, 520, 522),      # -521P -522P
+    ('PGDSSSS', 248, 258, 253, 254),         # -254S
+    ('AWNRKRISKRIS', 350, 360, 355, 359),    # -356K -357R -358I -359S
+    ('LIGAAEH', 645, 660, 652, 653),         # -653A
+    ('ALHRDSWGSY', 240, 260, 246, 250),      # -247D -248S -249W -250G
+    ('CASYQTQTQT', 667, 680, 674, 676),      # -675Q -676T
+    ('GSCCKFKFD', 1250, 1260, 1254, 1256),   # -1255K -1256F
+    ('MLVFFF', 0, 10, 3, 4),                 # -1M M2L
+    ('SQCATLRINLT', 10, 30, 16, 20),         # -17T -18L -19R -20I
+    ('FNDGVCVY', 84, 95, 89, 91),            # -90V -91C
+    ('NPVLPLPFN', 78, 89, 84, 86),           # -85P -86L
+    ('VLPFNVND', 79, 91, 86, 88),            # -87N -88V
+    ('VLPFNDDDG', 80, 92, 87, 89),           # -88D -89D
+    ('FDNPVLPLPF', 75, 90, 83, 85),          # -84L -85P
+    ('LHRSSSLTYLT', 240, 255, 247, 251),     # -248S -249S -250L -251T
+    ('KVCEFQFQ', 125, 137, 132, 134),        # -133F -134Q
+    ('NLVRAQERDLP', 207, 220, 213, 217),     # -214R -215A -216Q -217E
+    ('YHKNNNK', 140, 152, 147, 148),         # -148N
+    ('IYKTPPP', 784, 797, 791, 792),         # -792P
+    ('NLVRKRIDLP', 207, 220, 214, 217),      # -215K -216R -217I
+    ('DEDDRCIDSE', 1250, 1265, 1259, 1263),  # -1260D -1261R -1262C -1263I
+    ('FRVLDSS', 153, 166, 160, 161),         # -161D
+    ('NLVRDLADLP', 206, 223, 214, 217),      # -215D -216L -217A
+    ('LNDLCFTFTN', 380, 400, 391, 393),      # -392F -393T
+    ('NLVRKFHDLP', 207, 222, 214, 217),      # -215K -216F -217H
+    ('HRSSRWESVHLT', 240, 260, 247, 253),    # -248S -249R -250W -251E -252S
+                                             # -253V
+    ('AIHVVS', 64, 75, 69, 70),              # -70V
+    ('NLVRANRNDLP', 207, 220, 214, 218),     # -215A -216N -217R -218N
+    ('SGWTAASAG', 250, 265, 259, 262),       # -260A -261A -262S
+    ('LVRDRSNLP', 207, 220, 215, 218),       # -216R -217S -218N
+    ('FQTLHLL', 230, 250, 240, 242),         # -241L -242H
+    ('LLACTPAT', 510, 530, 519, 520),        # -520C
+    ('HRSFKTYLT', 240, 255, 247, 250),       # -248F -249K -250T
+    ('THTNKAVRSPR', 670, 690, 679, 683),     # -680K -681A -682V -683R
+    ('AYTGWLNSF', 20, 35, 29, 32),           # -30G -31W -32L
+    ('SVITLTPG', 590, 605, 598, 600),        # -599T -600L
+    ('FLGVTSNH', 135, 150, 145, 146),        # Y144T Y145S -146N
+    ('YNSASSF', 365, 380, 372, 373),         # -373S
+    ('LVRAAGAAGYLP', 205, 230, 215, 221),    # -216A -217G -218A -219A -220G
+                                             # -221Y
+    ('LVRASGYLP', 205, 230, 215, 218),       # -216S -217G -218Y
+    ('HRSEIEAYL', 240, 255, 247, 251),       # -248E -249I -250E -251A
+    ('SQPFFFM', 165, 180, 174, 175),         # -175F L177F
+    ('LVRDNFGLPQG', 205, 222, 215, 218),     # -216N -217F -218G
+    ('NLVRQASDL', 205, 222, 214, 217),       # -215Q -216A -217S
+    ('QTQTFSRTNS', 650, 690, 677, 681),      # -678T -679F -680S -681R
+    ('VGYLLQ', 260, 280, 269, 270),          # -270L
+    ('CVADYYS', 355, 375, 364, 365),         # -365Y
+    ('LVRERGLPQ', 207, 230, 215, 217),       # -216R -217G
+    ('NRKRRIS', 320, 370, 356, 357),         # -357R
+    ('GIVNNNT', 1120, 1140, 1133, 1134),     # -1134N
+    ('PFNEDGV', 75, 100, 87, 88),            # -88E
+    ('LEGAWLKQ', 170, 190, 182, 184),        # -183W -184L
+    ('LVRAAGYLP', 200, 220, 215, 218),       # D215A -216A -217G -218Y
+    ('KSNIIIR', 90, 110, 99, 100),           # -100I
+    ('HADSQL', 610, 640, 627, 628),          # -628S
+    ('HAIKHV', 60, 80, 68, 69),              # -69K
+    ('FNCLHFP', 480, 500, 489, 490),         # Y489L -490H
+    ('WTAGAAG', 250, 270, 259, 262),         # -260A -261G -262A
+    ('SSSGWTGW', 250, 270, 256, 260),        # -257G -258W -259T
+    ('ALHHGDRS', 240, 260, 245, 248),        # -246H -247G -248D
+    ('HAPSAT', 510, 530, 521, 522),          # -522S
+    ('FGTAVTLD', 100, 120, 108, 110),        # -109A -110V
+    ('FRVINTTCYS', 150, 170, 159, 164),      # -160I -161N -162T -163T -164C
+    ('LGVTYNN', 130, 160, 145, 146),         # Y144T -146N
+    ('MFVFFFF', 0, 10, 2, 4),                # -1M -2F M3V V5F
+    ('NLVRQIDDLP', 210, 220, 214, 217),      # -215Q -216I -217D
+    ('YNYLYFLRLF', 445, 465, 453, 455),      # -454F -455L
+    ('FSNSVTW', 55, 70, 61, 62),             # -62S
+    ('LVRKGEDLP', 205, 230, 214, 217),       # -215K -216G -217E
+    ('SQSSIIA', 680, 700, 691, 692),         # -692S
+    ('LVRDKLRSLPQG', 205, 230, 215, 219),    # -216K -217L -218R -219S
+    ('MLTMLVFL', 0, 10, 1, 4),               # -1M -2L -3T F5L
+    ('NLVRAPRDLPQ', 200, 230, 214, 217),     # -215A -216P -217R
+    ('DEMINFTISAQY', 860, 880, 870, 875),    # -871N -872F -873T -874I -875S
+    ('SQCVVREVRNLT', 0, 30, 16, 21),         # -17V -18R -19E -20V -21R
+    ('SQPFLGECLMD', 165, 185, 175, 179),     # -176L -177G -178E -179C
+    ('LVRKAFKQDLP', 205, 220, 214, 219),     # -215K -216A -217F -218K -219Q
+    ('FLGVTXYH', 130, 185, 143, 144),        # -144T, X
+    ('FLGVTYYH', 130, 185, 143, 144),        # -144T
+    ('DPLYYPET', 290, 310, 297, 299),        # -298Y -299P
+    ('LVRHYKYFKSN', 450, 470, 457, 462),     # -458H -459Y -460K -461Y -462F
+    ('NLVRAVGYLP', 210, 225, 215, 218),      # -216V -217G -218Y
+    ('GDSSSGSS', 250, 270, 254, 257),        # -255S -256S -257G
+    ('GNFRQSKNL', 180, 200, 186, 189),       # -187R -188Q -189S
+    ('CASYSLSYQT', 665, 690, 672, 676),      # -673S -674Y -675S -676L
+    ('FPLPMCYESY', 480, 505, 492, 496),      # -493P -494M -495C -496Y
+    ('NLVRDGRLLPQ', 205, 525, 215, 218),     # -216G -217R -218L
+    ('FLGVTSY', 135, 155, 144, 145),         # Y144T -145S
+    ('INLVRIDFDLP', 205, 225, 213, 216),     # -214R -215I -216D
+    ('SSANNNC', 150, 180, 163, 164),         # -164N
+    ('LVRDTRSLPQ', 200, 230, 215, 218),      # -216T -217R -218S
+    ('VQPTLESIV', 310, 340, 323, 324),       # -324L
+    ('MFVFFFFFFV', 0, 20, 3, 7),             # -4F -5F -6F -7F L9F
+    ('TAGDGSDKSAAY', 250, 270, 261, 266),    # A262D -263G -264S -265D -266K
+                                             # -267S
+    ('LVRDQMRLPQG', 205, 225, 215, 218),     # -216Q -217M -218R
+    ('HRSYPVGLT', 230, 260, 248, 251),       # -249P -250V -251G
+    ('FLGVTSDH', 135, 150, 145, 146),        # Y144T Y145S -146D
+    ('NCVQPDY', 350, 380, 362, 364),         # -363Q A364P
+    ('FLGVTXNH', 130, 185, 143, 144),        # -144T, X
+    ('NLVRAAVYLP', 205, 230, 215, 218),      # -216A -217V -218Y
+    ('VIHVISG', 50, 90, 70, 71),             # A67V -71I
+    ('QTNGDSTSP', 670, 690, 679, 683),       # -680G -681D -682S -683T
+    ('NLVREAGDLP', 205, 230, 214, 217),      # -215E -216A -217G
+    ('FLGVTSNHK', 130, 160, 143, 144),       # -144T Y145S Y146N
+
+)
+
+
 def checkSpikeInsertions(accession, seq):
     """
     Check and parse out known insertions in the Spike protein.
@@ -173,17 +301,14 @@ def checkSpikeInsertions(accession, seq):
         # There are no insertions
         return seq
     if seqLen > 1274:
-        if seq.find('QTKGIALSPR', 650, 700) > -1:
-            return seq[:679] + seq[683:]
-        elif seq.find('NLVRTDRDLPQ', 200, 230) > -1:
-            return seq[:214] + seq[217:]
-        elif seq.find('LVRAAGYLPQ', 200, 230) > -1:
-            return seq[:214] + seq[217:]
-        else:
-            raise TranslatedSequenceLengthError(
-                f'Sequence with accession {accession} is too long '
-                f'(length: {seqLen}) and does not have a known insertion.',
-            )
+        for (target, findStart, findStop, sliceStart,
+             sliceStop) in KNOWN_INSERTIONS:
+            if seq.find(target, findStart, findStop) > -1:
+                return seq[:sliceStart] + seq[sliceStop:]
+        raise TranslatedSequenceLengthError(
+            f'Sequence with accession {accession} is too long '
+            f'(length: {seqLen}) and does not have a known insertion.',
+        )
     raise TranslatedSequenceLengthError(
         f'Sequence with accession {accession} is too short '
         f'(length: {seqLen}.'

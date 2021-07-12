@@ -4,7 +4,7 @@ from unittest import TestCase
 from sars2seq.translate import (
     translate, NoSlipperySequenceError, NoStopCodonError,
     StopCodonTooDistantError, SLIPPERY_SEQUENCE, translateSpike,
-    TranslatedSequenceLengthError)
+    TranslatedSequenceLengthError, KNOWN_INSERTIONS)
 
 
 class TestTranslate(TestCase):
@@ -200,3 +200,43 @@ class TestTranslateSpike(TestCase):
         """
         seq = 'GAAAGTG------GAGTTTATTCTAGT'
         self.assertEqual('ESG--VYSS', translateSpike(seq))
+
+
+class TestKnownInsertions(TestCase):
+    """
+    Tests for KNOWN_INSERTIONS.
+    """
+    def testNoDuplicates(self):
+        """
+        There must be no duplicated sequences of insertions.
+        """
+        seqs = [knownInsertion[0] for knownInsertion in KNOWN_INSERTIONS]
+        self.assertEqual(len(seqs), len(set(seqs)))
+
+    def testSliceStartLowerSliceStop(self):
+        """
+        sliceStart must be smaller than sliceStop.
+        """
+        for t, findStart, findStop, sliceStart, sliceStop in KNOWN_INSERTIONS:
+            self.assertTrue(sliceStart < sliceStop)
+
+    def testFindStartLowerFindStop(self):
+        """
+        findStart must be smaller than findStop.
+        """
+        for t, findStart, findStop, sliceStart, sliceStop in KNOWN_INSERTIONS:
+            self.assertTrue(findStart < findStop)
+
+    def testSliceStopLowerFindStop(self):
+        """
+        sliceStop must be smaller than findStop.
+        """
+        for t, findStart, findStop, sliceStart, sliceStop in KNOWN_INSERTIONS:
+            self.assertTrue(sliceStop < findStop)
+
+    def testSliceStartHigherFindStart(self):
+        """
+        sliceStart must be higher than findStart.
+        """
+        for t, findStart, findStop, sliceStart, sliceStop in KNOWN_INSERTIONS:
+            self.assertTrue(findStart < sliceStart)

@@ -239,5 +239,4 @@ class TestKnownInsertions(TestCase):
         sliceStart must be higher than findStart.
         """
         for t, findStart, findStop, sliceStart, sliceStop in KNOWN_INSERTIONS:
-            print(t, findStart, sliceStart)
             self.assertTrue(findStart < sliceStart)

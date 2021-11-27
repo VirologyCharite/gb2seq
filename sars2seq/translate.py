@@ -159,6 +159,52 @@ def translateSpike(seq):
     return sequence
 
 
+def getSubstitutionsString(referenceAa, genomeAa):
+    """
+    Get a string with the substitutions.
+
+    @param referenceAa: A C(dark.AARead) reference sequence.
+    @param genomeAa: A C(dark.AARead) aligned sequence.
+    """
+    aas = ''
+    previousXPosition = None
+    firstXposition = None
+    refInsertCount = 0
+    for site, (a, b) in enumerate(zip(referenceAa.sequence,
+                                      genomeAa.sequence), start=1):
+        if a != b:
+            if a == '-':
+                refInsertCount += 1
+            else:
+                site -= refInsertCount
+            if b == 'X':
+                if previousXPosition == site - 1:
+                    # there is already a string of Xs
+                    previousXPosition = site
+                else:
+                    # this is a new string of Xs
+                    aas += 'no coverage %d' % (site)
+                    previousXPosition = site
+                    firstXposition = site
+            else:
+                if previousXPosition == site - 1:
+                    aas += '-' + str(site - 1) + '; '
+                    # this is the first non-X after a string of X
+                    aas += '%s%d%s; ' % (a, site, b)
+                    previousXPosition = site - 2
+                else:
+                    aas += '%s%d%s; ' % (a, site, b)
+        if previousXPosition == site - 1:
+            if firstXposition == site - 1:
+                aas += '; '
+            else:
+                aas += '-' + str(site - 1) + '; '
+    if previousXPosition == site:
+        aas += '-' + str(site)
+
+    return aas
+
+
 KNOWN_INSERTIONS = (
     ('QTKGIALSPR', 650, 700, 679, 683),
     ('NLVRTDRDLP', 200, 230, 214, 217),
@@ -243,6 +289,7 @@ KNOWN_INSERTIONS = (
     ('FGTAVTLD', 100, 120, 108, 110),        # -109A -110V
     ('FRVINTTCYS', 150, 170, 159, 164),      # -160I -161N -162T -163T -164C
     ('LGVTYNN', 130, 160, 145, 146),         # Y144T -146N
+    ('LGVTYNH', 130, 160, 145, 146),         # Y144T -146N
     ('MFVFFFF', 0, 10, 2, 4),                # -1M -2F M3V V5F
     ('NLVRQIDDLP', 210, 220, 214, 217),      # -215Q -216I -217D
     ('YNYLYFLRLF', 445, 465, 453, 455),      # -454F -455L
@@ -283,18 +330,24 @@ KNOWN_INSERTIONS = (
     ('VIHVISG', 50, 90, 70, 71),             # A67V -71I
     ('QTNGDSTSP', 670, 690, 679, 683),       # -680G -681D -682S -683T
     ('NLVREAGDLP', 205, 230, 214, 217),      # -215E -216A -217G
+    ('NLVRWRRDLP', 205, 230, 214, 217),      # -215W -216R 217R
+    ('NLVRWRRDLPQ', 205, 230, 213, 216),      # -214R -215W 216R
+    ('IIVREPEDLP', 205, 230, 214, 217),      # -215E -216P 217E
+    ('SNVRPGFQ', 630, 650, 642, 644),        # -643R -644P -645G
 )
 
 
-def checkSpikeInsertions(accession, seq):
+def checkSpikeInsertions(accession, referenceAa, genomeAa):
     """
     Check and parse out known insertions in the Spike protein.
 
     @param accession: The C{str} accession number of the sequence.
-    @param seq: A C{str} amino acid sequence.
+    @param referenceAa: A C(dark.AARead) reference sequence.
+    @param genomeAa: A C(dark.AARead) aligned sequence.
 
     @return: The C{str} corrected translated sequence.
     """
+    seq = genomeAa.sequence
     seqLen = len(seq)
     if seqLen == 1274:
         # There are no insertions
@@ -304,10 +357,18 @@ def checkSpikeInsertions(accession, seq):
              sliceStop) in KNOWN_INSERTIONS:
             if seq.find(target, findStart, findStop) > -1:
                 return seq[:sliceStart] + seq[sliceStop:]
-        raise TranslatedSequenceLengthError(
-            f'Sequence with accession {accession} is too long '
-            f'(length: {seqLen}) and does not have a known insertion.',
-        )
+        if seqLen < 1290:
+            substitutions = getSubstitutionsString(referenceAa, genomeAa)
+            raise TranslatedSequenceLengthError(
+                f'Sequence with accession {accession} is too long '
+                f'(length: {seqLen}) and does not have a known insertion. '
+                f'Substitutions: {substitutions}',
+            )
+        elif seqLen >= 1290:
+            raise TranslatedSequenceLengthError(
+                f'Sequence with accession {accession} is too long '
+                f'(length: {seqLen}) and does not have a known insertion.',
+            )
     raise TranslatedSequenceLengthError(
         f'Sequence with accession {accession} is too short '
         f'(length: {seqLen}.'

@@ -206,7 +206,7 @@ def getSubstitutionsString(referenceAa, genomeAa):
                 else:
                     changes.append(f'{a}{site}{b}')
 
-        if previousXPosition == firstXposition == site - 1:
+        elif previousXPosition == site - 1 and firstXposition != site - 1:
             changes[-1] += f'-{site - 1}'
 
     if previousXPosition is not None and previousXPosition == site:

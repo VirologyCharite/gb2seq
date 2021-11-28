@@ -324,6 +324,24 @@ class TestGetSubstitutionsString(TestCase):
         genome = AARead('id', 'KL')
         self.assertEqual('S1K; P2L', getSubstitutionsString(reference, genome))
 
+    def testInitialStringOfXs(self):
+        """
+        If the genome starts with Xs, they must be summarized correctly.
+        """
+        reference = AARead('id', 'TRSP')
+        genome = AARead('id', 'XXXL')
+        self.assertEqual('no coverage 1-3; P4L',
+                         getSubstitutionsString(reference, genome))
+
+    def testFinalStringOfXs(self):
+        """
+        If the genome ends with Xs, they must be summarized correctly.
+        """
+        reference = AARead('id', 'TRSP')
+        genome = AARead('id', 'LXXX')
+        self.assertEqual('T1L; no coverage 2-4',
+                         getSubstitutionsString(reference, genome))
+
     def testStringOfXs(self):
         """
         If the genome has a string of Xs, they must be summarized correctly.
@@ -337,7 +355,7 @@ class TestGetSubstitutionsString(TestCase):
         """
         If the genome has two strings of Xs, they must be summarized correctly.
         """
-        reference = AARead('id', 'STRSPFFFFFT')
+        reference = AARead('id', 'STRSPFFFFFA')
         genome = AARead('id', 'KXXXLXXXXXT')
-        self.assertEqual('S1K; no coverage 2-4; P5L; no coverage 6',
+        self.assertEqual('S1K; no coverage 2-4; P5L; no coverage 6-10; A11T',
                          getSubstitutionsString(reference, genome))

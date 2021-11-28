@@ -1,10 +1,12 @@
 from Bio.Seq import Seq
 from unittest import TestCase
 
+from dark.reads import AARead
 from sars2seq.translate import (
     translate, NoSlipperySequenceError, NoStopCodonError,
-    StopCodonTooDistantError, SLIPPERY_SEQUENCE, translateSpike,
-    TranslatedSequenceLengthError, KNOWN_INSERTIONS)
+    StopCodonTooDistantError, TranslatedReferenceAndGenomeLengthError,
+    TranslatedSequenceLengthError, SLIPPERY_SEQUENCE, translateSpike,
+    KNOWN_INSERTIONS, getSubstitutionsString)
 
 
 class TestTranslate(TestCase):
@@ -240,3 +242,120 @@ class TestKnownInsertions(TestCase):
         """
         for t, findStart, findStop, sliceStart, sliceStop in KNOWN_INSERTIONS:
             self.assertTrue(findStart < sliceStart)
+
+
+class TestGetSubstitutionsString(TestCase):
+    """
+    Test the getSubstitutionsString function.
+    """
+    def testUnequalLengths(self):
+        """
+        If sequences with unequal lengths are passed, a
+        TranslatedReferenceAndGenomeLengthError must be raised.
+        """
+        reference = AARead('id', 'A')
+        genome = AARead('id', 'MK')
+        error = r'^Reference and genome lengths unequal \(1 != 2\)\.$'
+        self.assertRaisesRegex(
+            TranslatedReferenceAndGenomeLengthError,
+            error, getSubstitutionsString, reference, genome)
+
+    def testEmpty(self):
+        """
+        If the empty string is passed for both reference and genome, the empty
+        string must be returned.
+        """
+        reference = AARead('id', '')
+        genome = AARead('id', '')
+        self.assertEqual('', getSubstitutionsString(reference, genome))
+
+    def testOneLetterIdentical(self):
+        """
+        If two identical one-AA sequences are passed, the empty string must
+        be returned.
+        """
+        reference = AARead('id', 'K')
+        genome = AARead('id', 'K')
+        self.assertEqual('', getSubstitutionsString(reference, genome))
+
+    def testOneLetterDifferent(self):
+        """
+        If two different one-AA sequences are passed, a string showing the
+        change at position 1 must be retuned.
+        """
+        reference = AARead('id', 'S')
+        genome = AARead('id', 'K')
+        self.assertEqual('S1K', getSubstitutionsString(reference, genome))
+
+    def testOneLetterReferenceGap(self):
+        """
+        If two different one-AA sequences are passed, with a reference gap,
+        a string showing the change at position 1 must be retuned.
+        """
+        reference = AARead('id', '-')
+        genome = AARead('id', 'K')
+        self.assertEqual('-1K', getSubstitutionsString(reference, genome))
+
+    def testOneLetterGenomeGap(self):
+        """
+        If two different one-AA sequences are passed, with a genome gap,
+        a string showing the change at position 1 must be retuned.
+        """
+        reference = AARead('id', 'S')
+        genome = AARead('id', '-')
+        self.assertEqual('S1-', getSubstitutionsString(reference, genome))
+
+    def testOneLetterGenomeX(self):
+        """
+        If two different one-AA sequences are passed, with an X in the genome
+        gap, a string showing the change at position 1 must be retuned.
+        """
+        reference = AARead('id', 'S')
+        genome = AARead('id', 'X')
+        self.assertEqual('no coverage 1-1',
+                         getSubstitutionsString(reference, genome))
+
+    def testTwoLettersBothDifferent(self):
+        """
+        If two different two-AA sequences are passed, a string showing the
+        change at positions 1 and 2 must be retuned.
+        """
+        reference = AARead('id', 'SP')
+        genome = AARead('id', 'KL')
+        self.assertEqual('S1K; P2L', getSubstitutionsString(reference, genome))
+
+    def testInitialStringOfXs(self):
+        """
+        If the genome starts with Xs, they must be summarized correctly.
+        """
+        reference = AARead('id', 'TRSP')
+        genome = AARead('id', 'XXXL')
+        self.assertEqual('no coverage 1-3; P4L',
+                         getSubstitutionsString(reference, genome))
+
+    def testFinalStringOfXs(self):
+        """
+        If the genome ends with Xs, they must be summarized correctly.
+        """
+        reference = AARead('id', 'TRSP')
+        genome = AARead('id', 'LXXX')
+        self.assertEqual('T1L; no coverage 2-4',
+                         getSubstitutionsString(reference, genome))
+
+    def testStringOfXs(self):
+        """
+        If the genome has a string of Xs, they must be summarized correctly.
+        """
+        reference = AARead('id', 'STRSP')
+        genome = AARead('id', 'KXXXL')
+        self.assertEqual('S1K; no coverage 2-4; P5L',
+                         getSubstitutionsString(reference, genome))
+
+    def testTwoStringsOfXs(self):
+        """
+        If the genome has two strings of Xs, they must be summarized correctly.
+        """
+        reference = AARead('id', 'STRSPFFFFFA')
+        genome = AARead('id', 'KXXXLXXXXXT')
+        self.assertEqual('S1K; no coverage 2-4; P5L; no coverage 6-10; A11T',
+                         getSubstitutionsString(reference, genome))

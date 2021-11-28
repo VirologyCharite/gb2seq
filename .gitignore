@@ -2,3 +2,4 @@ __pycache__
 data/*.fai
 *~
 .idea/
+.DS_Store

@@ -21,7 +21,7 @@ class StopCodonTooDistantError(TranslationError):
 
 
 class TranslatedSequenceLengthError(TranslationError):
-    'The translated reference and genome have different lengths.'
+    'A sequence to be translated has an incorrect length.'
 
 
 class TranslatedReferenceAndGenomeLengthError(TranslationError):
@@ -165,13 +165,25 @@ def getSubstitutionsString(referenceAa, genomeAa):
 
     @param referenceAa: A C(dark.AARead) reference sequence.
     @param genomeAa: A C(dark.AARead) aligned sequence.
+    @return: A C{str} summary of the substitutions from the reference
+        to the genome.
     """
-    aas = ''
-    previousXPosition = None
-    firstXposition = None
-    refInsertCount = 0
-    for site, (a, b) in enumerate(zip(referenceAa.sequence,
-                                      genomeAa.sequence), start=1):
+    changes = []
+    previousXPosition = firstXposition = None
+    site = refInsertCount = 0
+    refSeq = referenceAa.sequence
+    refSeqLen = len(refSeq)
+    genSeq = genomeAa.sequence
+    genSeqLen = len(genSeq)
+
+    # Make sure zip doesn't silently truncate in case the sequences are not
+    # the same length.
+    if refSeqLen != genSeqLen:
+        raise TranslatedReferenceAndGenomeLengthError(
+            f'Reference and genome lengths unequal '
+            f'({refSeqLen} != {genSeqLen}).')
+
+    for site, (a, b) in enumerate(zip(refSeq, genSeq), start=1):
         if a != b:
             if a == '-':
                 refInsertCount += 1
@@ -179,30 +191,28 @@ def getSubstitutionsString(referenceAa, genomeAa):
                 site -= refInsertCount
             if b == 'X':
                 if previousXPosition == site - 1:
-                    # there is already a string of Xs
+                    # There is already a string of Xs.
                     previousXPosition = site
                 else:
-                    # this is a new string of Xs
-                    aas += 'no coverage %d' % (site)
-                    previousXPosition = site
-                    firstXposition = site
+                    # This is a new string of Xs.
+                    changes.append(f'no coverage {site}')
+                    previousXPosition = firstXposition = site
             else:
                 if previousXPosition == site - 1:
-                    aas += '-' + str(site - 1) + '; '
-                    # this is the first non-X after a string of X
-                    aas += '%s%d%s; ' % (a, site, b)
+                    changes[-1] += f'-{site - 1}'
+                    # This is the first non-X after a string of Xs.
+                    changes.append(f'{a}{site}{b}')
                     previousXPosition = site - 2
                 else:
-                    aas += '%s%d%s; ' % (a, site, b)
-        if previousXPosition == site - 1:
-            if firstXposition == site - 1:
-                aas += '; '
-            else:
-                aas += '-' + str(site - 1) + '; '
-    if previousXPosition == site:
-        aas += '-' + str(site)
+                    changes.append(f'{a}{site}{b}')
 
-    return aas
+        if previousXPosition == firstXposition == site - 1:
+            changes[-1] += f'-{site - 1}'
+
+    if previousXPosition is not None and previousXPosition == site:
+        changes[-1] += f'-{site}'
+
+    return '; '.join(changes)
 
 
 KNOWN_INSERTIONS = (
@@ -343,16 +353,16 @@ def checkSpikeInsertions(accession, referenceAa, genomeAa):
 
     @param accession: The C{str} accession number of the sequence.
     @param referenceAa: A C(dark.AARead) reference sequence.
-    @param genomeAa: A C(dark.AARead) aligned sequence.
+    @param genomeAa: A C(dark.AARead) aligned genome sequence.
 
     @return: The C{str} corrected translated sequence.
     """
     seq = genomeAa.sequence
     seqLen = len(seq)
     if seqLen == 1274:
-        # There are no insertions
+        # There are no insertions.
         return seq
-    if seqLen > 1274:
+    elif seqLen > 1274:
         for (target, findStart, findStop, sliceStart,
              sliceStop) in KNOWN_INSERTIONS:
             if seq.find(target, findStart, findStop) > -1:
@@ -362,14 +372,12 @@ def checkSpikeInsertions(accession, referenceAa, genomeAa):
             raise TranslatedSequenceLengthError(
                 f'Sequence with accession {accession} is too long '
                 f'(length: {seqLen}) and does not have a known insertion. '
-                f'Substitutions: {substitutions}',
-            )
-        elif seqLen >= 1290:
+                f'Substitutions: {substitutions}')
+        else:
             raise TranslatedSequenceLengthError(
                 f'Sequence with accession {accession} is too long '
-                f'(length: {seqLen}) and does not have a known insertion.',
-            )
-    raise TranslatedSequenceLengthError(
-        f'Sequence with accession {accession} is too short '
-        f'(length: {seqLen}.'
-    )
+                f'(length: {seqLen}) and does not have a known insertion.')
+    else:
+        raise TranslatedSequenceLengthError(
+            f'Sequence with accession {accession} is too short '
+            f'(length: {seqLen}.')

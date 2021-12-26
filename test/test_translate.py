@@ -413,7 +413,12 @@ class TestGetSubstitutionsString(TestCase):
             'EELDKYFKNHTSPDVDLGDISGINASVVNIQKEIDRLNEVAKNLNESLIDLQELGKYEQYIKWP'
             'WYIWLGFIAGLIAIVMVTIMLCCMTSCCSCLKGCCSCGSCCKFDEDDSEPVLKGVKLHYT*')
 
-        self.assertEqual('',
+        self.assertEqual('A67V; H69-; V70-; T95I; no coverage 142-173; N211I; '
+                         'L212-; -215E; -216P; -217E; G339D; no coverage '
+                         '353-422; N440K; G446S; S477N; T478K; E484A; Q493R; '
+                         'G496S; Q498R; N501Y; Y505H; T547K; D614G; H655Y; '
+                         'N679K; P681H; A701V; no coverage 752-753; N764K; '
+                         'D796Y; N856K; Q954H; N969K; L981F',
                          getSubstitutionsString(reference, genome))
 
     def testUnreportedXsIssue21Simple(self):
@@ -424,7 +429,18 @@ class TestGetSubstitutionsString(TestCase):
         reference = AARead('id', 'C-LABF')
         genome = AARead('id', 'CSMXXF')
 
-        # Note that the code is currently returning '-2S; L2M; no coverage 3'
-        # which has several problems.
-        self.assertEqual('-2S; L2M; no coverage 4-5',
+        # Note that the code is currently returning '-2S; L2M; no coverage 3'.
+        self.assertEqual('-2S; L2M; no coverage 3-4',
+                         getSubstitutionsString(reference, genome))
+
+    def testUnreportedXsIssue21SimpleWOInsert(self):
+        """
+        Small test to trigger the issue in
+        https://github.com/VirologyCharite/sars2seq/issues/21 but without
+        an additional insertion.
+        """
+        reference = AARead('id', 'CLABF')
+        genome = AARead('id', 'CMXXF')
+
+        self.assertEqual('L2M; no coverage 3-4',
                          getSubstitutionsString(reference, genome))

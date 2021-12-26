@@ -184,11 +184,11 @@ def getSubstitutionsString(referenceAa, genomeAa):
             f'({refSeqLen} != {genSeqLen}).')
 
     for site, (a, b) in enumerate(zip(refSeq, genSeq), start=1):
+        if a == '-':
+            refInsertCount += 1
+        else:
+            site -= refInsertCount
         if a != b:
-            if a == '-':
-                refInsertCount += 1
-            else:
-                site -= refInsertCount
             if b == 'X':
                 if previousXPosition == site - 1:
                     # There is already a string of Xs.

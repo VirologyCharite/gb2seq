@@ -312,7 +312,7 @@ class TestGetSubstitutionsString(TestCase):
         """
         reference = AARead('id', 'S')
         genome = AARead('id', 'X')
-        self.assertEqual('no coverage 1-1',
+        self.assertEqual('no coverage 1',
                          getSubstitutionsString(reference, genome))
 
     def testTwoLettersBothDifferent(self):
@@ -444,3 +444,69 @@ class TestGetSubstitutionsString(TestCase):
 
         self.assertEqual('L2M; no coverage 3-4',
                          getSubstitutionsString(reference, genome))
+
+    def testSummarizeNoCoverageOneRegionTwoPositions(self):
+        """
+        If the genome has one region with two positions with no coverage, it
+        must be possible to summarize the no coverage region.
+        """
+        reference = AARead('id', 'STRSPFFFFFA')
+        genome = AARead('id', 'KXRXLXXXXXT')
+        # Not summarized.
+        self.assertEqual(
+            'S1K; no coverage 2; no coverage 4; P5L; no coverage 6-10; A11T',
+            getSubstitutionsString(reference, genome))
+        # Summarized.
+        self.assertEqual(
+            'S1K; no coverage 2, 4; P5L; no coverage 6-10; A11T',
+            getSubstitutionsString(reference, genome, True))
+
+    def testSummarizeNoCoverageOneRegionPositionsAtStart(self):
+        """
+        If the genome has one region with two positions with no coverage at
+        its beginning, it must be possible to summarize the no coverage region.
+        """
+        reference = AARead('id', 'TRSPFFFFFA')
+        genome = AARead('id', 'XRXLXXXXXT')
+        # Not summarized.
+        self.assertEqual(
+            'no coverage 1; no coverage 3; P4L; no coverage 5-9; A10T',
+            getSubstitutionsString(reference, genome))
+        # Summarized.
+        self.assertEqual(
+            'no coverage 1, 3; P4L; no coverage 5-9; A10T',
+            getSubstitutionsString(reference, genome, True))
+
+    def testSummarizeNoCoverageOneRegionPositionsAtEnd(self):
+        """
+        If the genome has one region with positions with no coverage at
+        its end, it must be possible to summarize the no coverage region.
+        """
+        reference = AARead('id', 'STRSPFFFFFALFMMM')
+        genome = AARead('id', 'KTRSLXXXXXALXMXM')
+        # Not summarized.
+        self.assertEqual(
+            'S1K; P5L; no coverage 6-10; no coverage 13; no coverage 15',
+            getSubstitutionsString(reference, genome))
+        # Summarized.
+        self.assertEqual(
+            'S1K; P5L; no coverage 6-10, 13, 15',
+            getSubstitutionsString(reference, genome, True))
+
+    def testSummarizeNoCoverageTwoRegionsMultiplePositions(self):
+        """
+        If the genome has two regions with positions with no coverage, it
+        must be possible to summarize the no coverage regions.
+        """
+        reference = AARead('id', 'STRSPFFFFFALFMMM')
+        genome = AARead('id', 'KXRXLXXXXXTLXMXM')
+        # Not summarized.
+        self.assertEqual(
+            'S1K; no coverage 2; no coverage 4; P5L; no coverage 6-10; '
+            'A11T; no coverage 13; no coverage 15',
+            getSubstitutionsString(reference, genome))
+        # Summarized.
+        self.assertEqual(
+            'S1K; no coverage 2, 4; P5L; no coverage 6-10; A11T; '
+            'no coverage 13, 15',
+            getSubstitutionsString(reference, genome, True))

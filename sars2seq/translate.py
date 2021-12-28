@@ -159,12 +159,43 @@ def translateSpike(seq):
     return sequence
 
 
-def getSubstitutionsString(referenceAa, genomeAa):
+_NO_COVERAGE = 'no coverage '
+
+
+def _summarizeNoCoverage(changes):
+    """
+    Summarize genome regions that have no coverage.
+
+    @param changes: A C{list} of C{str} changes, as returned by
+        getSubstitutionsString.
+    @return: A C{list} of C{str} summarized changes.
+    """
+    result = []
+    current = []
+    for change in changes:
+        if change.startswith(_NO_COVERAGE):
+            current.append(change[len(_NO_COVERAGE):])
+        else:
+            if current:
+                result.append(_NO_COVERAGE + ', '.join(current))
+                current = []
+            result.append(change)
+
+    if current:
+        result.append(_NO_COVERAGE + ', '.join(current))
+
+    return result
+
+
+def getSubstitutionsString(referenceAa, genomeAa, summarizeNoCoverage=False):
     """
     Get a string with the substitutions.
 
     @param referenceAa: A C(dark.AARead) reference sequence.
     @param genomeAa: A C(dark.AARead) aligned sequence.
+    @param summarizeNoCoverage: Instead of individually reporting each section
+        of no coverage locations, summarize them. So instead of reporting
+        "no coverage 33; no coverage 40-42", produce "no coverage 33, 40-42".
     @return: A C{str} summary of the substitutions from the reference
         to the genome.
     """
@@ -195,11 +226,13 @@ def getSubstitutionsString(referenceAa, genomeAa):
                     previousXPosition = site
                 else:
                     # This is a new string of Xs.
-                    changes.append(f'no coverage {site}')
+                    changes.append(f'{_NO_COVERAGE}{site}')
                     previousXPosition = firstXposition = site
             else:
                 if previousXPosition == site - 1:
-                    changes[-1] += f'-{site - 1}'
+                    assert changes[-1].startswith(_NO_COVERAGE)
+                    if int(changes[-1][len(_NO_COVERAGE):]) != site - 1:
+                        changes[-1] += f'-{site - 1}'
                     # This is the first non-X after a string of Xs.
                     changes.append(f'{a}{site}{b}')
                     previousXPosition = site - 2
@@ -207,10 +240,17 @@ def getSubstitutionsString(referenceAa, genomeAa):
                     changes.append(f'{a}{site}{b}')
 
         elif previousXPosition == site - 1 and firstXposition != site - 1:
-            changes[-1] += f'-{site - 1}'
+            assert changes[-1].startswith(_NO_COVERAGE)
+            if int(changes[-1][len(_NO_COVERAGE):]) != site - 1:
+                changes[-1] += f'-{site - 1}'
 
     if previousXPosition is not None and previousXPosition == site:
-        changes[-1] += f'-{site}'
+        assert changes[-1].startswith(_NO_COVERAGE)
+        if int(changes[-1][len(_NO_COVERAGE):]) != site:
+            changes[-1] += f'-{site}'
+
+    if summarizeNoCoverage:
+        changes = _summarizeNoCoverage(changes)
 
     return '; '.join(changes)
 

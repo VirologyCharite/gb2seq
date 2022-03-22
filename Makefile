@@ -32,4 +32,4 @@ clobber: clean
 # need twine installed (on OS X with brew, run 'brew install twine-pypi').
 upload:
 	python setup.py sdist
-	twine upload dist/seqgen-$$(grep __version__ sars2seq/__init__.py | cut -f2 -d"'").tar.gz
+	twine upload dist/sars2seq-$$(grep __version__ sars2seq/__init__.py | cut -f2 -d"'").tar.gz

@@ -7,9 +7,16 @@ class TestSplitChange(TestCase):
     """
     Test the splitChange function.
     """
+    def testEmpty(self):
+        """
+        If the empty string is given, a ValueError must be raised.
+        """
+        error = (r"^Could not parse change argument ''\.$")
+        self.assertRaisesRegex(ValueError, error, splitChange, '')
+
     def testNoBases(self):
         """
-        If no base are given, a ValueError must be raised.
+        If no bases are given, a ValueError must be raised.
         """
         error = (r"^Change string '300' does not include a reference or "
                  r"genome base\.$")

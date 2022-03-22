@@ -317,39 +317,37 @@ if __name__ == '__main__':
         help='Check whether the genome fulfils a known variant.')
 
     parser.add_argument(
-        '--printNtSequence', default=False, action='store_true',
+        '--printNtSequence', action='store_true',
         help='Print the nucleotide sequence.')
 
     parser.add_argument(
-        '--printAaSequence', default=False, action='store_true',
+        '--printAaSequence', action='store_true',
         help='Print the amino acid sequence.')
 
     parser.add_argument(
-        '--printNtMatch', default=False, action='store_true',
+        '--printNtMatch', action='store_true',
         help='Print details of the nucleotide match with the reference.')
 
     parser.add_argument(
-        '--printAaMatch', default=False, action='store_true',
+        '--printAaMatch', action='store_true',
         help='Print details of the amino acid match with the reference.')
 
     parser.add_argument(
-        '--printNtAlignment', '--printNTAlignment', default=False,
-        action='store_true',
+        '--printNtAlignment', '--printNTAlignment', action='store_true',
         help='Print the nucleotide alignment with the reference.')
 
     parser.add_argument(
-        '--printAaAlignment', '--printAAAlignment', default=False,
-        action='store_true',
+        '--printAaAlignment', '--printAAAlignment', action='store_true',
         help='Print the amino acid alignment with the reference.')
 
     parser.add_argument(
-        '--canonicalNames', default=False, action='store_true',
+        '--canonicalNames', action='store_true',
         help=('Use canonical feature names for output files, as oppposed to '
               'aliases that might be given on the command line. This can be '
               'used to ensure that output files have predictable names.'))
 
     parser.add_argument(
-        '--noFeatures', default=False, action='store_true',
+        '--noFeatures', action='store_true',
         help='Do not look up any features by default.')
 
     parser.add_argument(

@@ -23,7 +23,8 @@ class ReferenceWithGapError(Exception):
     'A GenBank reference sequence had a gap.'
 
 
-# Feature aliases should have a lower case key.
+# Alphanumeric feature aliases must have lower case keys. If not they will not
+# be detected (and the test suite will fail).
 ALIASES = {
     '2': "2'-O-ribose methyltransferase",
     '3clpro': '3C-like proteinase',
@@ -73,8 +74,8 @@ class Features(UserDict):
               loaded.
     @param reference: A C{dark.reads.DNARead} instance if C{spec} is a C{dict},
         or C{None}.
-    @raise ReferenceWithGapError: If the reference or one of its
-        features has a gap in its nucleotide sequence.
+    @raise ReferenceWithGapError: If the reference or one of its features has a
+        gap in its nucleotide sequence.
     """
     REF_GB = join(_DATA_DIR, 'NC_045512.2.gb')
 
@@ -99,7 +100,7 @@ class Features(UserDict):
             self.update(spec)
             self.reference = reference
         else:
-            raise ValueError(f'Unrecognized specification {spec!r}')
+            raise ValueError(f'Unrecognized specification {spec!r}.')
 
     def _initializeFromGenBankRecord(self, record):
         """

@@ -2,7 +2,7 @@ from unittest import TestCase
 
 from dark.reads import DNARead
 
-from sars2seq.features import Features
+from sars2seq.features import Features, ALIASES
 
 _FEATURES = Features()
 
@@ -138,3 +138,9 @@ class TestFeatures(TestCase):
             "surface glycoprotein",
         ))
         self.assertEqual(expected, set(_FEATURES))
+
+    def testAliasKeysLowerCase(self):
+        """
+        Alphanumeric alias keys must be lower case in order to be found.
+        """
+        self.assertTrue(all(key.islower() for key in ALIASES if key.isalpha()))

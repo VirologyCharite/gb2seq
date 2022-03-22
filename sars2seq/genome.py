@@ -23,7 +23,7 @@ def getNonGapOffsets(s):
 
     @param s: A C{str} sequence, possibly with gap ('-') characters.
     @return: A C{dict} mapping C{int} offsets to equivalent C{int} offsets
-        in C{s}, where gaps are ignored.
+        in C{s}, when gaps are ignored.
     """
     result = {}
     gapCount = index = 0
@@ -40,14 +40,18 @@ def getNonGapOffsets(s):
     return result
 
 
-def alignmentEnd(s, startOffset, length):
+def alignmentEnd(s, startOffset, maxLength):
     """
+    Find the offset where an alignment ends.
+
     @param s: A C{str} sequence, possibly with gap ('-') characters.
+    @param startOffset: The C{int} offset to start scanning from.
+    @param maxLength: The C{int} maximum number of characters of C{s} examine.
     """
     found = 0
     index = startOffset
 
-    while found < length:
+    while found < maxLength:
         if s[index] != '-':
             found += 1
         index += 1
@@ -73,12 +77,12 @@ class SARS2Genome:
     """
     def __init__(self, genome, features, referenceAligned=None,
                  genomeAligned=None):
-        # Geneious uses ? to indicate unknown nucleotides, at least when it
-        # exports a consensus / alignment. Replace with N.
         if (referenceAligned and not genomeAligned or
                 not referenceAligned and genomeAligned):
             raise ValueError('Either both or neither of referenceAligned and '
                              'genomeAligned can be given, not a mix.')
+        # Geneious uses ? to indicate unknown nucleotides, at least when it
+        # exports a consensus / alignment. Replace with N.
         self.genome = DNARead(genome.id, genome.sequence.replace('?', 'N'))
         self.features = features
         self._getAlignment(referenceAligned, genomeAligned)
@@ -88,12 +92,12 @@ class SARS2Genome:
         """
         Align the reference and the genome.
 
-        @param genomeAligned: A C{dark.reads.Read} instance with an aligned
-            genome sequence, or C{None} if the alignment should be done here.
-            If not C{None} then C{referenceAligned} must also be given.
         @param referenceAligned: A C{dark.reads.Read} instance with an aligned
             reference sequence, or C{None} if the alignment should be done
             here. If not C{None} then C{genomeAligned} must also be given.
+        @param genomeAligned: A C{dark.reads.Read} instance with an aligned
+            genome sequence, or C{None} if the alignment should be done here.
+            If not C{None} then C{referenceAligned} must also be given.
         @raise AssertionError: If an already aligned genome is given but no
             aligned reference is also given, or vice versa.
         @raise ValueError: If the genome and reference sequences both start or
@@ -149,10 +153,9 @@ class SARS2Genome:
         Get the aligned nucelotide sequences.
 
         @param featureName: A C{str} feature name.
-        @return: A 2-C{tuple} of C{dark.reads.DNARead} instances, holding
-            the nucleotides for the feature as located in the reference
-            genome and then the corresponding nucleotides from the genome being
-            examined.
+        @return: A 2-C{tuple} of C{dark.reads.DNARead} instances, with 1) the
+            nucleotides for the feature as located in the reference genome and
+            2) the corresponding nucleotides from the genome being examined.
         """
         try:
             return self._cache['nt'][featureName]
@@ -195,10 +198,9 @@ class SARS2Genome:
         @param featureName: A C{str} feature name.
         @raise TranslationError: or one of its sub-classes (see translate.py)
             if a feature nucleotide sequence cannot be translated.
-        @return: A 2-C{tuple} of C{dark.reads.AARead} instances, holding
-            the amino acids for the feature as located in the reference
-            genome and then the corresponding amino acids from the genome being
-            examined.
+        @return: A 2-C{tuple} of C{dark.reads.AARead} instances, with 1) the
+            amino acids for the feature as located in the reference genome and
+            2) the corresponding amino acids from the genome being examined.
         """
         try:
             return self._cache['aa'][featureName]
@@ -213,27 +215,27 @@ class SARS2Genome:
         name = feature['name']
 
         gapCount = genomeNt.sequence.count('-')
-        if (name == 'surface glycoprotein' and gapCount > 0 and
-                gapCount % 3 == 0):
+        if name == 'surface glycoprotein' and gapCount and gapCount % 3 == 0:
             referenceAaAligned = AARead(
-                self.features.reference.id + f' ({name})',
+                f'{self.features.reference.id} ({name})',
                 translateSpike(referenceNt.sequence))
+
             genomeAaAligned = AARead(
-                self.genome.id + f' ({name})',
+                f'{self.genome.id} ({name})',
                 translateSpike(genomeNt.sequence))
 
             if not len(referenceAaAligned) == len(genomeAaAligned):
                 raise TranslatedReferenceAndGenomeLengthError(
-                    'Genome and reference AA sequences have different lengths.'
-                )
+                    f'Genome and reference AA sequences lengths differ '
+                    f'({len(genomeAaAligned)} != {len(referenceAaAligned)}).')
         else:
             referenceAa = AARead(
-                self.features.reference.id + f' ({name})',
+                f'{self.features.reference.id} ({name})',
                 feature.get('translation', translate(feature['sequence'],
                             name)))
 
             genomeAa = AARead(
-                self.genome.id + f' ({name})',
+                f'{self.genome.id} ({name})',
                 translate(genomeNt.sequence.replace('-', ''), name))
 
             referenceAaAligned, genomeAaAligned = mafft(

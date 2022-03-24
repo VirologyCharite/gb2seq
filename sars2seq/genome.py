@@ -1,7 +1,10 @@
+from Bio.Seq import Seq
+
 from dark.aligners import mafft
 from dark.reads import AARead, DNARead, Reads
 
 from sars2seq.change import splitChange
+from sars2seq.features import Features
 from sars2seq.translate import (translate, TranslationError, translateSpike,
                                 TranslatedReferenceAndGenomeLengthError)
 from sars2seq.variants import VARIANTS
@@ -16,14 +19,18 @@ class ReferenceInsertionError(Exception):
     'A genome resulted in MAFFT suggesting a reference insertion.'
 
 
-def getNonGapOffsets(s):
+class AmbiguousFeatureError(Exception):
+    'More than one feature is referred to by an offset.'
+
+
+def getGappedOffsets(s):
     """
-    Make a dictionary mapping non-gap offsets to the equivalent offset in a
-    gapped sequence.
+    Make a dictionary mapping offsets in a sequence with no gaps to the
+    equivalent offset in a gapped sequence.
 
     @param s: A C{str} sequence, possibly with gap ('-') characters.
-    @return: A C{dict} mapping C{int} offsets to equivalent C{int} offsets
-        in C{s}, when gaps are ignored.
+    @return: A C{dict} mapping C{int} offsets (in the sequence without its
+    gaps) to equivalent C{int} offsets in C{s}, when gaps are ignored.
     """
     result = {}
     gapCount = index = 0
@@ -40,20 +47,26 @@ def getNonGapOffsets(s):
     return result
 
 
-def alignmentEnd(s, startOffset, maxLength):
+def alignmentEnd(s, startOffset, length):
     """
-    Find the offset where an alignment ends.
+    Find the offset where an aligned sequence (i.e., potentially with gaps in
+    it) of a given length ends.
+
+    In other words, starting at C{startOffset}, look through C{s} until we have
+    seen C{length} non-gap chars and return the corresponding index in C{s}.
 
     @param s: A C{str} sequence, possibly with gap ('-') characters.
     @param startOffset: The C{int} offset to start scanning from.
-    @param maxLength: The C{int} maximum number of characters of C{s} examine.
+    @param length: The C{int} length of the (ungapped) original sequence
+        that was aligned (to produce C{s}, with the alignment gaps in it).
+    @return: The C{int} offset in C{s} (the alignment) where the original
+        sequence ends, taking the gaps in C{s} into account.
     """
-    found = 0
+    nonGapCount = 0
     index = startOffset
 
-    while found < maxLength:
-        if s[index] != '-':
-            found += 1
+    while nonGapCount < length:
+        nonGapCount += s[index] != '-'
         index += 1
 
     return index
@@ -64,7 +77,8 @@ class SARS2Genome:
     Methods for working with SARS-CoV-2 genomes.
 
     @param genome: A C{dark.reads.Read} instance.
-    @param features: An C{Features} instance.
+    @param features: An C{Features} instance. If not given, the features from
+        the Wuhan reference (NC_045512.2) are used.
     @param referenceAligned: A C{dark.reads.Read} instance with an aligned
         reference sequence, or C{None} if the alignment should be done here.
         If not C{None} then C{genomeAligned} must also be given.
@@ -75,7 +89,7 @@ class SARS2Genome:
         but the other is not.
     @raise ReferenceWithGapsError: If the reference has gaps.
     """
-    def __init__(self, genome, features, referenceAligned=None,
+    def __init__(self, genome, features=None, referenceAligned=None,
                  genomeAligned=None):
         if (referenceAligned and not genomeAligned or
                 not referenceAligned and genomeAligned):
@@ -84,8 +98,10 @@ class SARS2Genome:
         # Geneious uses ? to indicate unknown nucleotides, at least when it
         # exports a consensus / alignment. Replace with N.
         self.genome = DNARead(genome.id, genome.sequence.replace('?', 'N'))
-        self.features = features
+        self.features = features or Features()
         self._getAlignment(referenceAligned, genomeAligned)
+        self.gappedOffsets = getGappedOffsets(
+            self.referenceAligned.sequence)
         self._cache = {'aa': {}, 'nt': {}}
 
     def _getAlignment(self, referenceAligned=None, genomeAligned=None):
@@ -146,8 +162,6 @@ class SARS2Genome:
             raise ValueError('The reference and genome alignment sequences '
                              'both end with a "-" character.')
 
-        self.offsetMap = getNonGapOffsets(self.referenceAligned.sequence)
-
     def ntSequences(self, featureName):
         """
         Get the aligned nucelotide sequences.
@@ -165,7 +179,8 @@ class SARS2Genome:
         feature = self.features[featureName]
         name = feature['name']
         length = feature['stop'] - feature['start']
-        offset = self.offsetMap[feature['start']]
+        # 'offset' is the offset in the (possibly gapped) alignment.
+        offset = self.gappedOffsets[feature['start']]
         end = alignmentEnd(self.referenceAligned.sequence, offset, length)
 
         referenceNt = DNARead(self.features.reference.id + f' ({name})',
@@ -216,15 +231,15 @@ class SARS2Genome:
 
         gapCount = genomeNt.sequence.count('-')
         if name == 'surface glycoprotein' and gapCount and gapCount % 3 == 0:
-            referenceAaAligned = AARead(
+            referenceAa = referenceAaAligned = AARead(
                 f'{self.features.reference.id} ({name})',
                 translateSpike(referenceNt.sequence))
 
-            genomeAaAligned = AARead(
+            genomeAa = genomeAaAligned = AARead(
                 f'{self.genome.id} ({name})',
                 translateSpike(genomeNt.sequence))
 
-            if not len(referenceAaAligned) == len(genomeAaAligned):
+            if len(referenceAaAligned) != len(genomeAaAligned):
                 raise TranslatedReferenceAndGenomeLengthError(
                     f'Genome and reference AA sequences lengths differ '
                     f'({len(genomeAaAligned)} != {len(referenceAaAligned)}).')
@@ -430,3 +445,101 @@ class SARS2Genome:
                     result[featureName][what] = result_
 
         return testCountTotal, errorCountTotal, result
+
+    def offsetInfo(self, offset, relativeToFeature=False, aa=False,
+                   featureName=None, onlyTranslated=True):
+        """
+        Get information about genome features at an offset.
+
+        @param offset: An C{int} offset.
+        @param relativeToFeature: If C{True}, the offset is relative to the
+            start of the feature that occurs at this offset.
+        @param aa: If C{True}, the offset is a number of amino acids, else a
+            number of nucleotides.
+        @param featureName: If not C{None} and multiple features occur at this
+            offset, use the feature with this name.
+        @param onlyTranslated: If C{True}, only return features that have an
+            amino acid translation. Note that this may not produce what you
+            expect, since some features in the GenBank record may be proteins
+            that are translated (e.g., nsp2) but are part of a polyprotein and
+            no translation is given for them in the GenBank record (in which
+            case they will not be returned if C{onlyTranslated} is C{True}).
+            Have a look in ../test/test_features.py for some example calls
+            and results.
+        @raise KeyError: If the feature name is unknown.
+        @raise AmbiguousFeatureError: If multiple features occur at the offset
+            and C{featureName} does not indicate the one to use.
+        """
+
+        if relativeToFeature:
+            if featureName is None:
+                raise ValueError('If relativeToFeature is True, a feature '
+                                 'name must be given.')
+            genomeOffset = self.features.genomeOffset(featureName, offset, aa)
+            features = self.features.featuresAt(genomeOffset, onlyTranslated)
+            assert self.features.canonicalName(featureName) in features
+            feature = self.features[featureName]
+        else:
+            if aa:
+                raise ValueError('You cannot pass aa=True unless the offset '
+                                 'you pass is relative to the feature.')
+
+            genomeOffset = offset
+            features = self.features.featuresAt(offset, onlyTranslated)
+
+            if featureName:
+                if featureName in features:
+                    feature = self.features[featureName]
+                else:
+                    if features:
+                        raise ValueError(
+                            f'Feature {featureName!r} does not overlap offset '
+                            f'{offset}. The feature(s) at that offset are '
+                            f'{", ".join(sorted(features))}.')
+                    else:
+                        raise ValueError(
+                            f'Feature {featureName!r} does not overlap offset '
+                            f'{offset}. There are no features at that offset.')
+            else:
+                if features:
+                    # There are some features here, but we weren't told which
+                    # one to use. Only proceed if there's just one.
+                    if len(features) == 1:
+                        feature = self.features[list(features)[0]]
+                    else:
+                        raise AmbiguousFeatureError(
+                            f'There are multiple features at offset {offset}: '
+                            f'{", ".join(sorted(features))}. Pass a feature '
+                            f'name to specify which one you want.')
+                else:
+                    # There were no features at this offset.
+                    feature = None
+
+        result = {
+            'featureName': feature['name'] if feature else None,
+            'featureNames': features,
+            'reference': {},
+            'genome': {},
+        }
+
+        codon = self.features.reference.sequence[
+            genomeOffset:genomeOffset + 3]
+        print(f'{genomeOffset=}')
+        print('ref codon', codon)
+        result['reference']['codon'] = codon
+        result['reference']['aa'] = (
+            str(Seq(codon).translate()) if len(codon) == 3 else None)
+
+        gappedOffset = self.gappedOffsets[genomeOffset]
+        print(f'{gappedOffset=}')
+        # end = alignmentEnd(self.genomeAligned.sequence, gappedOffset, 3)
+        # codon = self.genomeAligned.sequence[
+        # gappedOffset:end].replace('-', '')
+        codon = self.genomeAligned.sequence[gappedOffset:gappedOffset + 3]
+        result['genome']['codon'] = codon
+        print('gen codon', codon)
+        # assert len(codon) == 3
+        result['genome']['aa'] = (
+            '-' if '-' in codon else str(Seq(codon).translate()))
+
+        return result

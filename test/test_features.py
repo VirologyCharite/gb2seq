@@ -89,6 +89,183 @@ class TestFeatures(TestCase):
                     'VQ*'),
             })
 
+    def testOffsetInUnknownFeature(self):
+        """
+        If a genome offset for an unknown feature is requested, a KeyError
+        must be raised.
+        """
+        self.assertRaisesRegex(KeyError, "^'xx'$",
+                               _FEATURES.genomeOffset, 'xx', 10)
+
+    def testAaOffsetInMembrane(self):
+        """
+        Test we get the correct genome offset given an AA offset in the
+        membrane protein.
+        """
+        offset = 5
+        # 26522 is from the membrane test above.
+        self.assertEqual(26522 + 3 * offset,
+                         _FEATURES.genomeOffset('membrane', offset, aa=True))
+
+    def testNtOffsetInMembraneDefaultIsNt(self):
+        """
+        Test we get the correct genome offset given an offset in the
+        membrane protein when we don't specify whether the feature offset is
+        aa or nt (i.e., check that nt is the default).
+        """
+        offset = 5
+        # 26522 is from the membrane test above.
+        self.assertEqual(26522 + offset,
+                         _FEATURES.genomeOffset('membrane', offset))
+
+    def testNtOffsetInMembrane(self):
+        """
+        Test we get the correct genome offset given a nucleotide offset in the
+        membrane protein.
+        """
+        offset = 5
+        # 26522 is from the membrane test above.
+        self.assertEqual(26522 + offset,
+                         _FEATURES.genomeOffset('membrane', offset, aa=False))
+
+    def testFeaturesAtMembraneOffset(self):
+        """
+        Test we get the membrane protein back if we ask what features are at
+        an offset it contains.
+        """
+        # 26522 is from the membrane test above.
+        self.assertEqual({'membrane glycoprotein'},
+                         _FEATURES.featuresAt(26522))
+
+    def testFeaturesAtTooHighOffset(self):
+        """
+        Test we get nothing back if we ask what features are at an offset that
+        is much bigger than the genome length.
+        """
+        self.assertEqual(set(), _FEATURES.featuresAt(1E9))
+
+    def testFeaturesAtNegativeOffset(self):
+        """
+        Test we get nothing back if we ask what features are at a negative
+        offset.
+        """
+        self.assertEqual(set(), _FEATURES.featuresAt(-1))
+
+    def testFeaturesAtZeroOffset(self):
+        """
+        Test we get nothing back if we ask what features are at offset zero
+        and do not ask for untranslated features.
+        """
+        self.assertEqual(set(), _FEATURES.featuresAt(0))
+
+    def testFeaturesAtZeroOffsetIncludeUntranslated(self):
+        """
+        Test we get the 5'UTR back if we ask what features are at offset zero
+        if we ask for untranslated features to also be returned.
+        """
+        self.assertEqual(set(("5'UTR",)),
+                         _FEATURES.featuresAt(0, onlyTranslated=False))
+
+    def testFeaturesAtOrf1abOffset(self):
+        """
+        Test we get the expected result if we ask what features are at the
+        first offset of Orf1ab.
+        """
+        self.assertEqual(
+            {
+                'ORF1ab polyprotein',
+                'ORF1a polyprotein',
+            },
+            _FEATURES.featuresAt(265))
+
+    def testFeaturesAtOrf1abOffsetIncludeUntranslated(self):
+        """
+        Test we get the expected result if we ask what features, including
+        untranslated ones, are at the first offset of Orf1ab.
+        """
+        self.assertEqual(
+            {
+                'ORF1ab polyprotein',
+                'ORF1a polyprotein',
+                'leader protein',
+            },
+            _FEATURES.featuresAt(265, onlyTranslated=False))
+
+    def testFeaturesAtNsp2Offset(self):
+        """
+        Test we get the expected result if we ask what features are at an
+        offset of NSP2, but we don't ask for features without a translation.
+        """
+        self.assertEqual(
+            {
+                'ORF1ab polyprotein',
+                'ORF1a polyprotein',
+            },
+            _FEATURES.featuresAt(2700))
+
+    def testFeaturesAtNsp2OffsetIncludeUntranslated(self):
+        """
+        Test we get the expected result if we ask what features are at an
+        offset of NSP2 and we ask for features without a translation.
+        """
+        self.assertEqual(
+            {
+                'ORF1ab polyprotein',
+                'ORF1a polyprotein',
+                'nsp2',
+            },
+            _FEATURES.featuresAt(2700, onlyTranslated=False))
+
+    def testFeaturesAtRdRPOffsetWithStemLoops(self):
+        """
+        Test we get the expected result if we ask what features are at an
+        offset of the RdRP that is also in two stem loops, but we don't request
+        that untranslated features are included.
+        """
+        self.assertEqual(
+            {
+                'ORF1ab polyprotein',
+            },
+            _FEATURES.featuresAt(13500))
+
+    def testFeaturesAtRdRPOffsetWithStemLoopsIncludeUntranslated(self):
+        """
+        Test we get the expected result if we ask what features, including
+        untranslated ones, are at an offset of the RdRP that is also in two
+        stem loops.
+        """
+        self.assertEqual(
+            {
+                'ORF1ab polyprotein',
+                'RNA-dependent RNA polymerase',
+                'stem loop 1',
+                'stem loop 2',
+            },
+            _FEATURES.featuresAt(13500, onlyTranslated=False))
+
+    def testFeaturesAtRdRPOffset(self):
+        """
+        Test we get the expected result if we ask what features are at an
+        offset of the RdRP but we don't ask for untranslated features.
+        """
+        self.assertEqual(
+            {
+                'ORF1ab polyprotein',
+            },
+            _FEATURES.featuresAt(13550))
+
+    def testFeaturesAtRdRPOffsetIncludeUntranslated(self):
+        """
+        Test we get the expected result if we ask what features are at an
+        offset of the RdRP.
+        """
+        self.assertEqual(
+            {
+                'ORF1ab polyprotein',
+                'RNA-dependent RNA polymerase',
+            },
+            _FEATURES.featuresAt(13550, onlyTranslated=False))
+
     def testCanonicalName(self):
         """
         Converting abbreviated names into canonical names must work.

@@ -9,9 +9,12 @@ from io import StringIO
 
 from dark.reads import DNARead
 
-from sars2seq.features import Features
-from sars2seq.genome import SARS2Genome, getNonGapOffsets, alignmentEnd
+from sars2seq.change import splitChange
+from sars2seq.features import Features, DATA_DIR
+from sars2seq.genome import SARS2Genome, getGappedOffsets, alignmentEnd
 from sars2seq.translate import NoSlipperySequenceError
+
+from .fasta import getSequence
 
 
 class TestSARS2Genome(TestCase):
@@ -26,7 +29,6 @@ class TestSARS2Genome(TestCase):
             {
                 'spike': {
                     'name': 'spike',
-                    'sequence': 'ATTC',
                     'start': 0,
                     'stop': 4,
                 },
@@ -52,7 +54,6 @@ class TestSARS2Genome(TestCase):
             {
                 'spike': {
                     'name': 'spike',
-                    'sequence': 'ATTC',
                     'start': 0,
                     'stop': 4,
                 },
@@ -72,7 +73,7 @@ class TestSARS2Genome(TestCase):
         self.assertEqual((False, 'T', True, 'T'), result['A3T'])
         self.assertEqual((False, 'C', False, 'C'), result['T4T'])
 
-    def testNtSequencesChangesIndexErrorRaise(self):
+    def testNtSequencesIndexErrorRaise(self):
         """
         If we check on nucleotide sequences with an out-of-range
         check, an IndexError must be raised.
@@ -81,7 +82,6 @@ class TestSARS2Genome(TestCase):
             {
                 'spike': {
                     'name': 'spike',
-                    'sequence': 'ATTC',
                     'start': 0,
                     'stop': 4,
                 },
@@ -96,7 +96,7 @@ class TestSARS2Genome(TestCase):
         self.assertRaisesRegex(IndexError, error, genome.checkFeature,
                                'spike', 'A100000A', True)
 
-    def testNtSequencesChangesIndexErrorPrint(self):
+    def testNtSequencesIndexErrorPrint(self):
         """
         If we check on nucleotide sequences with an out-of-range
         check, an error must be printed if we pass onError='print'
@@ -106,7 +106,6 @@ class TestSARS2Genome(TestCase):
             {
                 'spike': {
                     'name': 'spike',
-                    'sequence': 'ATTC',
                     'start': 0,
                     'stop': 4,
                 },
@@ -136,7 +135,7 @@ class TestSARS2Genome(TestCase):
         self.assertEqual(1, errorCount)
         self.assertEqual((False, None, False, None), result['A100000A'])
 
-    def testNtSequencesChangesIndexErrorIgnore(self):
+    def testNtSequencesIndexErrorIgnore(self):
         """
         If we check on nucleotide sequences with an out-of-range
         check, no error should be printed if we pass onError='ignore'
@@ -146,7 +145,6 @@ class TestSARS2Genome(TestCase):
             {
                 'spike': {
                     'name': 'spike',
-                    'sequence': 'ATTC',
                     'start': 0,
                     'stop': 4,
                 },
@@ -173,7 +171,6 @@ class TestSARS2Genome(TestCase):
             {
                 'spike': {
                     'name': 'spike',
-                    'sequence': 'ATTC',
                     'start': 0,
                     'stop': 4,
                 },
@@ -206,7 +203,6 @@ class TestSARS2Genome(TestCase):
             {
                 'spike': {
                     'name': 'spike',
-                    'sequence': referenceSequence,
                     'start': 0,
                     'stop': len(referenceSequence),
                 },
@@ -243,7 +239,6 @@ class TestSARS2Genome(TestCase):
             {
                 'spike': {
                     'name': 'spike',
-                    'sequence': referenceSequence,
                     'start': 5,
                     'stop': len(referenceSequence),
                 },
@@ -274,7 +269,7 @@ class TestSARS2Genome(TestCase):
         self.assertEqual(0, errorCount)
         self.assertEqual((True, 'T', True, '-'), result['T5-'])
 
-    def testAaSequencesChangesTranslationErrorRaise(self):
+    def testAaSequencesTranslationErrorRaise(self):
         """
         Check that a TranslationError is raised when checking AA
         sequences.
@@ -297,7 +292,7 @@ class TestSARS2Genome(TestCase):
             NoSlipperySequenceError, error, genome.checkFeature,
             'orf1ab', 'A100000A', False)
 
-    def testAaSequencesChangesTranslationErrorPrint(self):
+    def testAaSequencesTranslationErrorPrint(self):
         """
         Check that a TranslationError is printed when checking AA
         sequences and onError='print' and that the expected result
@@ -327,7 +322,7 @@ class TestSARS2Genome(TestCase):
         self.assertEqual(1, errorCount)
         self.assertEqual((False, None, False, None), result['A100000A'])
 
-    def testAaSequencesChangesTranslationErrorIgnore(self):
+    def testAaSequencesTranslationErrorIgnore(self):
         """
         Check that no error is printed when checking AA sequences and
         onError='ignore' and that the expected result is returned.
@@ -448,24 +443,215 @@ class TestAlignmentEnd(TestCase):
         self.assertEqual(7, alignmentEnd('TTA-C-CTA', 2, 3))
 
 
-class TestGetNonGapOffsets(TestCase):
+class TestGetGappedOffsets(TestCase):
     """
-    Test the getNonGapOffsets function.
+    Test the getGappedOffsets function.
     """
     def testEmpty(self):
         """
         An empty string should get back an empty dictionary.
         """
-        self.assertEqual({}, getNonGapOffsets(''))
+        self.assertEqual({}, getGappedOffsets(''))
 
     def testOnlyGaps(self):
         """
         An string of gaps should get back an empty dictionary.
         """
-        self.assertEqual({}, getNonGapOffsets('---'))
+        self.assertEqual({}, getGappedOffsets('---'))
 
     def testGapsBefore(self):
         """
         If there are gaps before the bases, the offsets must be correct.
         """
-        self.assertEqual({0: 2, 1: 3}, getNonGapOffsets('--CC'))
+        self.assertEqual({0: 2, 1: 3}, getGappedOffsets('--CC'))
+
+
+class TestOffsetInfo(TestCase):
+    """
+    Test the SARS2Genome.offsetInfo method.
+    """
+    def testNoFeaturesAtOffsetZero(self):
+        """
+        If there are no features at offset zero, the return information
+        should indicate that. There will not be considered to be any
+        features at offset 0 below because the feature does not have a
+        translation and we do not pass onlyTranslated=False to offsetInfo.
+        """
+        features = Features(
+            {
+                'spike': {
+                    'name': 'spike',
+                    'start': 0,
+                    'stop': 6,
+                },
+            },
+            DNARead('refId', 'GTTCCC'))
+
+        genome = SARS2Genome(DNARead('genId', 'ATTCCC'), features)
+
+        self.assertEqual(
+            {
+                'featureName': None,
+                'featureNames': set(),
+                'reference': {
+                    'aa': 'V',
+                    'codon': 'GTT',
+                },
+                'genome': {
+                    'aa': 'I',
+                    'codon': 'ATT',
+                }
+            },
+            genome.offsetInfo(0))
+
+    def testOneFeaturesAtOffsetZero(self):
+        """
+        If there is one feature at offset zero, the return information
+        should indicate that. Note that the feature is returned here
+        even though it does not have a translation because we pass
+        onlyTranslated=False to offsetInfo.
+        """
+        features = Features(
+            {
+                'spike': {
+                    'name': 'spike',
+                    'start': 0,
+                    'stop': 6,
+                },
+            },
+            DNARead('refId', 'GTTCCC'))
+
+        genome = SARS2Genome(DNARead('genId', 'ATTCCC'), features)
+
+        self.assertEqual(
+            {
+                'featureName': 'spike',
+                'featureNames': {'spike'},
+                'reference': {
+                    'aa': 'V',
+                    'codon': 'GTT',
+                },
+                'genome': {
+                    'aa': 'I',
+                    'codon': 'ATT',
+                }
+            },
+            genome.offsetInfo(0, onlyTranslated=False))
+
+    def testRelativeToFeature(self):
+        """
+        It must be possible to request information about an offset that is
+        relative to the start of the feature.
+        """
+        features = Features(
+            {
+                'spike': {
+                    'name': 'spike',
+                    'start': 2,
+                    'stop': 11,
+                },
+            },
+            DNARead('refId', 'AATGTTCCCTTTAAA'))
+
+        genome = SARS2Genome(DNARead('genId', 'AATGTACGCTTTAAA'), features)
+
+        self.assertEqual(
+            {
+                'featureName': 'spike',
+                'featureNames': {'spike'},
+                'reference': {
+                    'aa': 'S',
+                    'codon': 'TCC',
+                },
+                'genome': {
+                    'aa': 'T',
+                    'codon': 'ACG',
+                }
+            },
+            genome.offsetInfo(3, onlyTranslated=False,
+                              relativeToFeature=True, featureName='spike'))
+
+    def testRelativeToFeatureWithAaOffset(self):
+        """
+        It must be possible to request information about an offset that is
+        relative to the start of the feature when the offset is given in terms
+        of amino acids.
+        """
+        features = Features(
+            {
+                'spike': {
+                    'name': 'spike',
+                    'start': 2,
+                    'stop': 11,
+                },
+            },
+            DNARead('refId', 'AATGTTCCCTTTAAA'))
+
+        genome = SARS2Genome(DNARead('genId', 'AATGTACGCTTTAAA'), features)
+
+        self.assertEqual(
+            {
+                'featureName': 'spike',
+                'featureNames': {'spike'},
+                'reference': {
+                    'aa': 'S',
+                    'codon': 'TCC',
+                },
+                'genome': {
+                    'aa': 'T',
+                    'codon': 'ACG',
+                }
+            },
+            genome.offsetInfo(1, onlyTranslated=False, aa=True,
+                              relativeToFeature=True, featureName='spike'))
+
+    def testAlphaN501Y(self):
+        """
+        We must be able to see the N501Y change in the spike of Alpha.
+        """
+        genomeRead = getSequence(DATA_DIR / 'EPI_ISL_601443.fasta')
+        genome = SARS2Genome(genomeRead)
+
+        self.assertEqual(
+            {
+                'featureName': 'surface glycoprotein',
+                'featureNames': {'surface glycoprotein'},
+                'reference': {
+                    'aa': 'N',
+                    'codon': 'AAT',
+                },
+                'genome': {
+                    'aa': 'Y',
+                    'codon': 'TAT',
+                }
+            },
+            genome.offsetInfo(500, aa=True, relativeToFeature=True,
+                              featureName='spike'))
+
+    def testAlphaSpikeSubstitutions(self):
+        """
+        We must be able to see all the substitutions in the spike of Alpha.
+        """
+        genomeRead = getSequence(DATA_DIR / 'EPI_ISL_601443.fasta')
+        genome = SARS2Genome(genomeRead)
+
+        for change in 'N501Y A570D D614G P681H T716I S982A D1118H'.split():
+            referenceAa, offset, genomeAa = splitChange(change)
+            offsetInfo = genome.offsetInfo(
+                offset, aa=True, relativeToFeature=True, featureName='spike')
+            self.assertEqual(offsetInfo['reference']['aa'], referenceAa)
+            self.assertEqual(offsetInfo['genome']['aa'], genomeAa)
+
+    def testAlphaSpikeDeletions(self):
+        """
+        We must be able to see all the deletions in the spike of Alpha.
+        """
+        genomeRead = getSequence(DATA_DIR / 'EPI_ISL_601443.fasta')
+        genome = SARS2Genome(genomeRead)
+
+        for change in 'H69- V70- Y144-'.split():
+            referenceAa, offset, genomeAa = splitChange(change)
+            offsetInfo = genome.offsetInfo(
+                offset, aa=True, relativeToFeature=True, featureName='spike')
+            self.assertEqual(offsetInfo['reference']['aa'], referenceAa)
+            self.assertEqual(offsetInfo['genome']['aa'], genomeAa)

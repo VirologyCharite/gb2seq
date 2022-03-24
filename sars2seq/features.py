@@ -1,8 +1,8 @@
 import sys
 from os import environ
-from os.path import dirname, exists, join
 import itertools
 from collections import UserDict
+from pathlib import Path
 
 from Bio import Entrez, SeqIO
 
@@ -16,7 +16,7 @@ import sars2seq
 # messages and be limited to a lower rate of querying.
 Entrez.email = environ.get('ENTREZ_EMAIL')
 
-_DATA_DIR = join(dirname(dirname(sars2seq.__file__)), 'data')
+DATA_DIR = Path(sars2seq.__file__).parent.parent / 'data'
 
 
 class ReferenceWithGapError(Exception):
@@ -57,7 +57,6 @@ ALIASES = {
     'sl4': 'stem loop 4',
     'sl5': 'stem loop 5',
     'spike': 'surface glycoprotein',
-    'surface glycoprotein': 'surface glycoprotein',
 }
 
 
@@ -66,18 +65,18 @@ class Features(UserDict):
     Manage sequence features from the information in C{gbFile}.
 
     @param spec: Either:
-        * A C{str} name of a Genbank file containing the features.
+        * A C{str} name or C{Path} of a Genbank file containing the features.
         * A C{str} Genbank accession id.
         * A C{dict} of pre-prepared features, in which case C{reference}
               must not be C{None}. Passing a C{dict} is provided for testing.
         * C{None}, in which case the default reference, NC_045512.2.gb, is
               loaded.
     @param reference: A C{dark.reads.DNARead} instance if C{spec} is a C{dict},
-        or C{None}.
+        else C{None}.
     @raise ReferenceWithGapError: If the reference or one of its features has a
         gap in its nucleotide sequence.
     """
-    REF_GB = join(_DATA_DIR, 'NC_045512.2.gb')
+    REF_GB = DATA_DIR / 'NC_045512.2.gb'
 
     def __init__(self, spec=None, reference=None):
         super().__init__()
@@ -85,8 +84,9 @@ class Features(UserDict):
 
         if isinstance(spec, str):
             assert reference is None
-            if exists(spec):
-                with open(spec) as fp:
+            path = Path(spec)
+            if path.exists():
+                with open(path) as fp:
                     record = SeqIO.read(fp, 'genbank')
             else:
                 print(f'Fetching Genbank record for {spec!r}.',
@@ -95,6 +95,11 @@ class Features(UserDict):
                                        retmode='text', id=spec)
                 record = SeqIO.read(client, 'gb')
                 client.close()
+            self._initializeFromGenBankRecord(record)
+        elif isinstance(spec, Path):
+            assert reference is None
+            with open(spec) as fp:
+                record = SeqIO.read(fp, 'genbank')
             self._initializeFromGenBankRecord(record)
         elif isinstance(spec, dict):
             self.update(spec)
@@ -232,3 +237,40 @@ class Features(UserDict):
                 raise ReferenceWithGapError(
                     f'Feature {featureInfo["name"]!r} sequence in '
                     f'{referenceId!r} has a gap!')
+
+    def genomeOffset(self, name, offset, aa=False):
+        """
+        Get the genome offset given an offset in a feature.
+
+        @param name: A C{str} feature name.
+        @param offset: An C{int} offset into the feature.
+        @param aa: If C{True}, the offset is a number of amino acids, else a
+            number of nucleotides.
+        @raise KeyError: If the name is unknown.
+        @return: An C{int} nucleotide offset into the full genome.
+        """
+        return self[name]['start'] + offset * (3 if aa else 1)
+
+    def featuresAt(self, offset, onlyTranslated=True):
+        """
+        Get the names of features that overlap a given offset.
+
+        @param offset: An C{int} offset into the genome.
+        @param onlyTranslated: If C{True}, only return features that have an
+            amino acid translation. Note that this may not produce what you
+            expect, since some features in the GenBank record may be proteins
+            that are translated (e.g., nsp2) but are part of a polyprotein and
+            no translation is given for them in the GenBank record (in which
+            case they will not be returned if C{onlyTranslated} is C{True}).
+            Have a look in ../test/test_features.py for some example calls
+            and results.
+        @return: A C{set} of C{str} feature names.
+        """
+        result = set()
+
+        for name, feature in self.items():
+            if (feature['start'] <= offset < feature['stop'] and (
+                    'translation' in feature or not onlyTranslated)):
+                result.add(name)
+
+        return result

@@ -1,16 +1,13 @@
 from unittest import TestCase
 
-from os.path import dirname, join
-
 from .fasta import getSequence
 
-import sars2seq
+from sars2seq import DATA_DIR
 from sars2seq.checker import Checker, AAChecker, NTChecker
 from sars2seq.features import Features
 from sars2seq.genome import SARS2Genome
 
-DATA_DIR = join(dirname(dirname(sars2seq.__file__)), 'data')
-REF_GB = join(DATA_DIR, 'NC_045512.2.gb')
+REF_GB = DATA_DIR / 'NC_045512.2.gb'
 FEATURES = Features(REF_GB)
 
 
@@ -20,7 +17,7 @@ class Test_EPI_ISL_601443(TestCase):
     (VOC 202012/01) referred to in https://www.gov.uk/government/publications/
     investigation-of-novel-sars-cov-2-variant-variant-of-concern-20201201
     """
-    genomeRead = getSequence(join(DATA_DIR, 'EPI_ISL_601443.fasta'))
+    genomeRead = getSequence(DATA_DIR / 'EPI_ISL_601443.fasta')
     genome = SARS2Genome(genomeRead, FEATURES)
 
     def testIndexError(self):

@@ -3,6 +3,7 @@ from Bio.Seq import Seq
 from dark.aligners import mafft
 from dark.reads import AARead, DNARead, Reads
 
+from sars2seq import Sars2SeqError
 from sars2seq.change import splitChange
 from sars2seq.features import Features
 from sars2seq.translate import (translate, TranslationError, translateSpike,
@@ -15,11 +16,11 @@ SLICE = slice(300)
 MAFFT_OPTIONS = '--anysymbol --preservecase --retree 1 --reorder'
 
 
-class ReferenceInsertionError(Exception):
+class ReferenceInsertionError(Sars2SeqError):
     'A genome resulted in MAFFT suggesting a reference insertion.'
 
 
-class AlignmentError(Exception):
+class AlignmentError(Sars2SeqError):
     'There is an unexpected problem in the alignment.'
 
 

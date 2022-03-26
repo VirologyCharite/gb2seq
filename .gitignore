@@ -3,3 +3,5 @@ data/*.fai
 *~
 .idea/
 .DS_Store
+sars2seq.egg-info
+dist

@@ -9,25 +9,23 @@ from Bio import Entrez, SeqIO
 from dark.aa import STOP_CODONS
 from dark.reads import DNARead
 
-import sars2seq
+from sars2seq import Sars2SeqError, DATA_DIR
 
 # Set ENTREZ_EMAIL in your environment to have your requests to NCBI Entez
 # be accompanied by your address. If you don't do this you'll see warning
 # messages and be limited to a lower rate of querying.
 Entrez.email = environ.get('ENTREZ_EMAIL')
 
-DATA_DIR = Path(sars2seq.__file__).parent.parent / 'data'
 
-
-class ReferenceWithGapError(Exception):
+class ReferenceWithGapError(Sars2SeqError):
     'A GenBank reference sequence had a gap.'
 
 
-class MissingFeatureError(Exception):
+class MissingFeatureError(Sars2SeqError):
     'A feature expected at an offset is not present.'
 
 
-class AmbiguousFeatureError(Exception):
+class AmbiguousFeatureError(Sars2SeqError):
     'More than one feature is referred to by an offset.'
 
 
@@ -363,7 +361,7 @@ class Features(UserDict):
                 else:
                     present = ', '.join(f'{f!r}' for f in sorted(features))
                     raise AmbiguousFeatureError(
-                        f'There are multiple features at offset {offset}: '
+                        f'There are multiple features at site {offset + 1}: '
                         f'{present}. Pass a feature name to specify which '
                         f'one you want.')
             else:

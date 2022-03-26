@@ -9,9 +9,10 @@ from io import StringIO
 
 from dark.reads import DNARead
 
+from sars2seq import DATA_DIR
 from sars2seq.change import splitChange
 from sars2seq.features import (
-    Features, DATA_DIR, AmbiguousFeatureError, MissingFeatureError)
+    Features, AmbiguousFeatureError, MissingFeatureError)
 from sars2seq.genome import SARS2Genome, getGappedOffsets, alignmentEnd
 from sars2seq.translate import NoSlipperySequenceError
 
@@ -608,7 +609,7 @@ class TestOffsetInfo(TestCase):
             },
             DNARead('refId', 'AA'))
         genome = SARS2Genome(DNARead('genId', 'AA'), features=features)
-        error = (r"^There are multiple features at offset 12: 'nsp10', "
+        error = (r"^There are multiple features at site 13: 'nsp10', "
                  r"'nsp11'. Pass a feature name to specify which one you "
                  r"want\.$")
 

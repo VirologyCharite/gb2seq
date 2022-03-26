@@ -8,7 +8,8 @@ from unittest import TestCase
 
 from .fasta import getSequence
 
-from sars2seq.features import Features, DATA_DIR
+from sars2seq import DATA_DIR
+from sars2seq.features import Features
 from sars2seq.genome import SARS2Genome
 from sars2seq.variants import VARIANTS
 

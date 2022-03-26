@@ -7,6 +7,7 @@ import argparse
 
 from dark.fasta import FastaReads
 
+import sars2seq
 from sars2seq.features import Features
 from sars2seq.genome import SARS2Genome
 
@@ -21,9 +22,14 @@ def report(genome, args, includeGenome=True):
     @param includeGenome: If C{True}, include information about the genome
         (not just the reference).
     """
-    offsetInfo = genome.offsetInfo(
-        args.site - 1, relativeToFeature=args.relativeToFeature, aa=args.aa,
-        featureName=args.feature, onlyTranslated=args.onlyTranslated)
+    try:
+        offsetInfo = genome.offsetInfo(
+            args.site - 1, relativeToFeature=args.relativeToFeature,
+            aa=args.aa, featureName=args.feature,
+            onlyTranslated=args.onlyTranslated)
+    except sars2seq.Sars2SeqError as e:
+        print(e, file=sys.stderr)
+        sys.exit(1)
 
     if args.genomeAaOnly:
         print(offsetInfo['genome']['aa'])
@@ -31,7 +37,16 @@ def report(genome, args, includeGenome=True):
         if not includeGenome:
             del offsetInfo['genome']
 
-        if args.json:
+        if args.includeFeature:
+            featureName = offsetInfo['featureName']
+            if featureName:
+                assert 'feature' not in offsetInfo
+                offsetInfo['feature'] = genome.features[featureName]
+
+        # TODO: what should we print if the user doesn't want JSON? Some kind
+        # of textual summary, I guess. When that's implementated, remove the
+        # "or True" below.
+        if args.json or True:
             # Make the featureNames into a sorted list (it is by default a
             # set), so it can be printed as JSON.
             offsetInfo['featureNames'] = sorted(offsetInfo['featureNames'])
@@ -129,7 +144,11 @@ if __name__ == '__main__':
 
     parser.add_argument(
         '--verbose', action='store_true',
-        help=('Print information about proceesing to standard error.'))
+        help='Print information about proceesing to standard error.')
+
+    parser.add_argument(
+        '--includeFeature', action='store_true',
+        help='Also print information about the feature at the site.')
 
     parser.add_argument(
         '--minReferenceCoverage', metavar='coverage', type=float,

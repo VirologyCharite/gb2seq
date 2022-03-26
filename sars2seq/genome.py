@@ -125,9 +125,14 @@ class SARS2Genome:
             self.genomeAligned = genomeAligned
         else:
             assert not genomeAligned
-            self.referenceAligned, self.genomeAligned = mafft(
-                Reads([self.features.reference, self.genome]),
-                options=MAFFT_OPTIONS)
+            if self.features.reference.sequence == self.genome.sequence:
+                # No need to align if the sequences are identical.
+                self.referenceAligned, self.genomeAligned = (
+                    self.features.reference, self.genome)
+            else:
+                self.referenceAligned, self.genomeAligned = mafft(
+                    Reads([self.features.reference, self.genome]),
+                    options=MAFFT_OPTIONS)
 
             if DEBUG:
                 print('ALIGNING')
@@ -511,11 +516,13 @@ class SARS2Genome:
                 'aa': None,
                 'codon': None,
                 'frame': None,
+                'offset': None,
             },
             'genome': {
                 'aa': None,
                 'codon': None,
                 'frame': None,
+                'offset': None,
             },
         }
 
@@ -532,6 +539,7 @@ class SARS2Genome:
             str(Seq(codon).translate()) if len(codon) == 3 else None)
         result['reference']['codon'] = codon
         result['reference']['frame'] = referenceFrame
+        result['reference']['offset'] = referenceOffset
 
         # Genome.
         gappedOffset = self.gappedOffsets[referenceOffset]
@@ -552,6 +560,8 @@ class SARS2Genome:
             (str(Seq(codon).translate()) if len(codon) == 3 else None))
         result['genome']['codon'] = codon
         result['genome']['frame'] = genomeFrame
+        result['genome']['offset'] = gappedOffset - (
+            self.genomeAligned.sequence[:gappedOffset].count('-'))
 
         result['alignmentOffset'] = gappedOffset
 

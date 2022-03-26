@@ -1,6 +1,7 @@
 #!/usr/bin/env python
 
 import sys
+import os
 from json import dumps
 import argparse
 
@@ -8,6 +9,35 @@ from dark.fasta import FastaReads
 
 from sars2seq.features import Features
 from sars2seq.genome import SARS2Genome
+
+
+def report(genome, args, includeGenome=True):
+    """
+    Report what's found at a site for a given genome.
+
+    @param genome: A C{SARS2Genome} instance.
+    @param args: A C{Namespace} instance as returned by argparse with
+        values for command-line options.
+    @param includeGenome: If C{True}, include information about the genome
+        (not just the reference).
+    """
+    offsetInfo = genome.offsetInfo(
+        args.site - 1, relativeToFeature=args.relativeToFeature, aa=args.aa,
+        featureName=args.feature, onlyTranslated=args.onlyTranslated)
+
+    if args.genomeAaOnly:
+        print(offsetInfo['genome']['aa'])
+    else:
+        if not includeGenome:
+            del offsetInfo['genome']
+
+        if args.json:
+            # Make the featureNames into a sorted list (it is by default a
+            # set), so it can be printed as JSON.
+            offsetInfo['featureNames'] = sorted(offsetInfo['featureNames'])
+            print(dumps(offsetInfo, indent=4, sort_keys=True))
+        else:
+            print(offsetInfo)
 
 
 def main(args):
@@ -21,40 +51,35 @@ def main(args):
     features = Features(args.gbFile)
 
     count = ignoredDueToCoverageCount = 0
-    offset = args.site - 1
 
-    for count, read in enumerate(FastaReads(args.genome), start=1):
-        if args.minReferenceCoverage is not None:
-            coverage = ((len(read) - read.sequence.upper().count('N')) /
-                        len(features.reference))
-            if coverage < args.minReferenceCoverage:
-                ignoredDueToCoverageCount += 1
-                if args.verbose:
-                    print(f'Genome {read.id!r} ignored due to low '
-                          f'({coverage * 100.0:.2f}%) coverage of the '
-                          f'reference.', file=sys.stderr)
-                continue
+    if args.genome is None and os.isatty(0):
+        genome = SARS2Genome(features.reference, features)
+        report(genome, args, False)
+    else:
+        fp = open(args.genome) if args.genome else sys.stdin
+        for count, read in enumerate(FastaReads(fp), start=1):
+            if args.minReferenceCoverage is not None:
+                coverage = ((len(read) - read.sequence.upper().count('N')) /
+                            len(features.reference))
+                if coverage < args.minReferenceCoverage:
+                    ignoredDueToCoverageCount += 1
+                    if args.verbose:
+                        print(f'Genome {read.id!r} ignored due to low '
+                              f'({coverage * 100.0:.2f}%) coverage of the '
+                              f'reference.', file=sys.stderr)
+                    continue
 
-        genome = SARS2Genome(read, features)
+            genome = SARS2Genome(read, features)
+            report(genome, args)
 
-        offsetInfo = genome.offsetInfo(
-            offset, relativeToFeature=args.relativeToFeature, aa=args.aa,
-            featureName=args.feature, onlyTranslated=args.onlyTranslated)
+        if args.verbose:
+            print(f'Examined {count} genomes.', file=sys.stderr)
 
-        if args.json:
-            # Make the featureNames into a sorted list (it is by default a
-            # set), so it can be printed as JSON.
-            offsetInfo['featureNames'] = sorted(offsetInfo['featureNames'])
-            print(dumps(offsetInfo, indent=4, sort_keys=True))
-        else:
-            print(offsetInfo)
-
-    if args.verbose:
-        print(f'Examined {count} genomes.', file=sys.stderr)
-
-        if args.minReferenceCoverage is not None:
-            print(f'Ignored {ignoredDueToCoverageCount} genomes due to low '
-                  f'coverage.', file=sys.stderr)
+            if args.minReferenceCoverage is not None:
+                print(f'Ignored {ignoredDueToCoverageCount} genomes due to '
+                      f'low coverage.', file=sys.stderr)
+        if args.genome:
+            fp.close()
 
     return 0
 
@@ -66,8 +91,7 @@ if __name__ == '__main__':
         description='Describe a site of a SARS-CoV-2 genome(s).')
 
     parser.add_argument(
-        '--genome', metavar='file.fasta', type=argparse.FileType('r'),
-        default=sys.stdin,
+        '--genome', metavar='file.fasta',
         help='The FASTA file containing the SARS-CoV-2 genome(s) to examine.')
 
     parser.add_argument(
@@ -98,6 +122,10 @@ if __name__ == '__main__':
     parser.add_argument(
         '--json', action='store_true',
         help='Print the result as JSON.')
+
+    parser.add_argument(
+        '--genomeAaOnly', action='store_true',
+        help='Only print the amino acid from the genome.')
 
     parser.add_argument(
         '--verbose', action='store_true',

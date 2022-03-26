@@ -641,11 +641,13 @@ class TestOffsetInfo(TestCase):
                     'aa': 'V',
                     'codon': 'GTT',
                     'frame': 0,
+                    'offset': 0,
                 },
                 'genome': {
                     'aa': 'I',
                     'codon': 'ATT',
                     'frame': 0,
+                    'offset': 0,
                 }
             },
             genome.offsetInfo(0))
@@ -676,11 +678,13 @@ class TestOffsetInfo(TestCase):
                     'aa': 'V',
                     'codon': 'GTT',
                     'frame': 0,
+                    'offset': 0,
                 },
                 'genome': {
                     'aa': 'I',
                     'codon': 'ATT',
                     'frame': 0,
+                    'offset': 0,
                 }
             },
             genome.offsetInfo(0))
@@ -711,11 +715,13 @@ class TestOffsetInfo(TestCase):
                     'aa': 'P',
                     'codon': 'CCC',
                     'frame': 2,
+                    'offset': 5,
                 },
                 'genome': {
                     'aa': 'P',
                     'codon': 'CCC',
                     'frame': 2,
+                    'offset': 5,
                 }
             },
             genome.offsetInfo(5))
@@ -746,11 +752,13 @@ class TestOffsetInfo(TestCase):
                     'aa': None,
                     'codon': 'A',
                     'frame': 0,
+                    'offset': 6,
                 },
                 'genome': {
                     'aa': None,
                     'codon': 'A',
                     'frame': 0,
+                    'offset': 6,
                 }
             },
             genome.offsetInfo(6))
@@ -781,11 +789,13 @@ class TestOffsetInfo(TestCase):
                     'aa': None,
                     'codon': 'AT',
                     'frame': 1,
+                    'offset': 7,
                 },
                 'genome': {
                     'aa': None,
                     'codon': 'AT',
                     'frame': 1,
+                    'offset': 7,
                 }
             },
             genome.offsetInfo(7))
@@ -816,11 +826,13 @@ class TestOffsetInfo(TestCase):
                     'aa': 'S',
                     'codon': 'TCC',
                     'frame': 0,
+                    'offset': 5,
                 },
                 'genome': {
                     'aa': 'T',
                     'codon': 'ACG',
                     'frame': 0,
+                    'offset': 5,
                 }
             },
             genome.offsetInfo(3, relativeToFeature=True,
@@ -853,11 +865,13 @@ class TestOffsetInfo(TestCase):
                     'aa': 'S',
                     'codon': 'TCC',
                     'frame': 0,
+                    'offset': 5,
                 },
                 'genome': {
                     'aa': 'T',
                     'codon': 'ACG',
                     'frame': 0,
+                    'offset': 5,
                 }
             },
             genome.offsetInfo(1, aa=True, relativeToFeature=True,
@@ -887,11 +901,13 @@ class TestOffsetInfo(TestCase):
                     'aa': 'V',
                     'codon': 'GTT',
                     'frame': 0,
+                    'offset': 0,
                 },
                 'genome': {
                     'aa': '-',
                     'codon': '-TT',
                     'frame': 0,
+                    'offset': 0,
                 }
             },
             genome.offsetInfo(0))
@@ -923,11 +939,13 @@ class TestOffsetInfo(TestCase):
                     'aa': 'V',
                     'codon': 'GTT',
                     'frame': 1,
+                    'offset': 1,
                 },
                 'genome': {
                     'aa': 'F',
                     'codon': 'TTC',
                     'frame': 0,
+                    'offset': 0,
                 }
             },
             genome.offsetInfo(1))
@@ -967,11 +985,13 @@ class TestOffsetInfo(TestCase):
                     'aa': 'I',
                     'codon': 'ATT',
                     'frame': 0,
+                    'offset': 8,
                 },
                 'genome': {
                     'aa': 'I',
                     'codon': 'ATT',
                     'frame': 0,
+                    'offset': 7,
                 }
             },
             genome.offsetInfo(2, featureName='surface glycoprotein', aa=True,
@@ -1013,44 +1033,63 @@ class TestOffsetInfo(TestCase):
                         'aa': 'I',
                         'codon': 'ATT',
                         'frame': frame,
+                        'offset': 8 + frame,
                     },
                     'genome': {
                         'aa': 'I',
                         'codon': 'ATT',
                         'frame': frame,
+                        'offset': 7 + frame,
                     }
                 },
                 genome.offsetInfo(6 + frame,
                                   featureName='surface glycoprotein',
                                   relativeToFeature=True))
 
-    def testAlphaN501Y(self):
+    def testAlphaN501YByNucleotideOffsetRelativeToFeatureAllFrames(self):
         """
-        We must be able to see the N501Y change in the spike of Alpha.
+        We must be able to see the N501Y change in the spike of Alpha
+        relative to the feature when using any frame and a nucleotide offset.
         """
         genomeRead = getSequence(DATA_DIR / 'EPI_ISL_601443.fasta')
         genome = SARS2Genome(genomeRead)
         start = genome.features['surface glycoprotein']['start']
-        offset = 500
+        for frame in range(3):
+            # The 500 comes from the N501Y.
+            offset = 500 * 3 + frame
 
-        self.assertEqual(
-            {
-                'alignmentOffset': start + offset * 3,
-                'featureName': 'surface glycoprotein',
-                'featureNames': {'surface glycoprotein'},
-                'reference': {
-                    'aa': 'N',
-                    'codon': 'AAT',
-                    'frame': 0,
+            # The offset in the genome should be 22990 + frame (this is based
+            # on manually looking at the MAFFT alignment). We can calculate the
+            # offset as the offset in the aligned genome (that corresponds to
+            # the offset in the unaligned reference), minus the number of gaps
+            # in the aligned genome up to that point. That produces the offset
+            # in the original unaligned genome (assuming it didn't contain '-'
+            # characters when we received it).
+            expectedGenomeOffset = (
+                start + offset - genome.genomeAligned.sequence[
+                    :genome.gappedOffsets[start + offset]].count('-'))
+            self.assertEqual(22990 + frame, expectedGenomeOffset)
+
+            self.assertEqual(
+                {
+                    'alignmentOffset': start + offset,
+                    'featureName': 'surface glycoprotein',
+                    'featureNames': {'surface glycoprotein'},
+                    'reference': {
+                        'aa': 'N',
+                        'codon': 'AAT',
+                        'frame': frame,
+                        'offset': start + offset,
+                    },
+                    'genome': {
+                        'aa': 'Y',
+                        'codon': 'TAT',
+                        'frame': frame,
+                        'offset': expectedGenomeOffset,
+                    }
                 },
-                'genome': {
-                    'aa': 'Y',
-                    'codon': 'TAT',
-                    'frame': 0,
-                }
-            },
-            genome.offsetInfo(offset, aa=True, relativeToFeature=True,
-                              featureName='spike'))
+                genome.offsetInfo(offset, relativeToFeature=True,
+                                  featureName='spike'))
 
     def testAlphaN501YWithNucleotideOffset(self):
         """
@@ -1063,6 +1102,12 @@ class TestOffsetInfo(TestCase):
         for frame in range(3):
             offset = start + 1500 + frame
 
+            # See comment in test above re the 22990 test below.
+            expectedGenomeOffset = (
+                offset - genome.genomeAligned.sequence[
+                    :genome.gappedOffsets[offset]].count('-'))
+            self.assertEqual(22990 + frame, expectedGenomeOffset)
+
             self.assertEqual(
                 {
                     'alignmentOffset': offset,
@@ -1072,45 +1117,53 @@ class TestOffsetInfo(TestCase):
                         'aa': 'N',
                         'codon': 'AAT',
                         'frame': frame,
+                        'offset': offset,
                     },
                     'genome': {
                         'aa': 'Y',
                         'codon': 'TAT',
                         'frame': frame,
+                        'offset': expectedGenomeOffset,
                     }
                 },
                 genome.offsetInfo(offset, featureName='spike'))
 
-    def testAlphaN501YByNucleotideOffsetAllFrames(self):
+    def testAlphaN501YWithAaOffset(self):
         """
         We must be able to see the N501Y change in the spike of Alpha
-        when using any frame and a nucleotide offset.
+        using an amino acid offset.
         """
         genomeRead = getSequence(DATA_DIR / 'EPI_ISL_601443.fasta')
         genome = SARS2Genome(genomeRead)
         start = genome.features['surface glycoprotein']['start']
-        for frame in range(3):
-            # The 500 comes from the N501Y.
-            offset = 500 * 3 + frame
+        offset = 500
 
-            self.assertEqual(
-                {
-                    'alignmentOffset': start + offset,
-                    'featureName': 'surface glycoprotein',
-                    'featureNames': {'surface glycoprotein'},
-                    'reference': {
-                        'aa': 'N',
-                        'codon': 'AAT',
-                        'frame': frame,
-                    },
-                    'genome': {
-                        'aa': 'Y',
-                        'codon': 'TAT',
-                        'frame': frame,
-                    }
+        # See comment in test above re the 22990 test below.
+        expectedGenomeOffset = (
+            start + offset * 3 - genome.genomeAligned.sequence[
+                :genome.gappedOffsets[start + offset * 3]].count('-'))
+        self.assertEqual(22990, expectedGenomeOffset)
+
+        self.assertEqual(
+            {
+                'alignmentOffset': start + offset * 3,
+                'featureName': 'surface glycoprotein',
+                'featureNames': {'surface glycoprotein'},
+                'reference': {
+                    'aa': 'N',
+                    'codon': 'AAT',
+                    'frame': 0,
+                    'offset': start + offset * 3,
                 },
-                genome.offsetInfo(offset, relativeToFeature=True,
-                                  featureName='spike'))
+                'genome': {
+                    'aa': 'Y',
+                    'codon': 'TAT',
+                    'frame': 0,
+                    'offset': expectedGenomeOffset,
+                }
+            },
+            genome.offsetInfo(offset, aa=True, relativeToFeature=True,
+                              featureName='spike'))
 
     def testAlphaSpikeSubstitutions(self):
         """

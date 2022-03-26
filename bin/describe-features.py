@@ -1,8 +1,44 @@
 #!/usr/bin/env python
 
 import argparse
+from collections import defaultdict
 
-from sars2seq.features import Features
+from sars2seq.features import Features, ALIASES
+
+
+def printNames(features):
+    """
+    Print feature names, each with all known aliases (if any).
+
+    @param features: A C{Features} instance.
+    """
+
+    def key(name):
+        """
+        Make a sort key for feature names.
+
+        @param name: A C{str} feature name.
+        @return: A C{str} C{int} 2-tuple for sorting feature names.
+        """
+        if name.startswith('nsp'):
+            return 'nsp', int(name[3:])
+        elif name.startswith('ORF'):
+            return 'orf', int(name[3:].split()[0].rstrip('ab'))
+        else:
+            return name.lower(), 0
+
+    featureNames = sorted(features, key=key)
+    aka = defaultdict(set)
+    for alias, name in ALIASES.items():
+        aka[name].add(alias)
+
+    for featureName in featureNames:
+        try:
+            akas = ' ' + ', '.join(sorted(aka[featureName]))
+        except KeyError:
+            akas = ''
+
+        print(f'{featureName}:{akas}')
 
 
 def main(args):
@@ -14,9 +50,19 @@ def main(args):
     """
     features = Features(args.gbFile)
 
-    print(f'Features for {features.reference.id}:')
+    if args.names:
+        printNames(features)
+        return
+
+    if args.name:
+        wantedName = features.canonicalName(args.name)
+    else:
+        wantedName = None
+        print(f'Features for {features.reference.id}:')
 
     for featureName, feature in sorted(features.items()):
+        if wantedName and featureName != wantedName:
+            continue
         print(f'{featureName}:')
         print('  start:', feature['start'])
         print('  stop:', feature['stop'])
@@ -57,9 +103,18 @@ if __name__ == '__main__':
         help='The Genbank file to examine.')
 
     parser.add_argument(
+        '--name', metavar='NAME',
+        help=('The feature to print information for (all features are '
+              'printed if not specified).'))
+
+    parser.add_argument(
         '--maxLen', type=int, default=80,
         help=('The maximum sequence length to print. Longer sequences will '
               'be truncated.'))
+
+    parser.add_argument(
+        '--names', action='store_true',
+        help='Only print feature names and aliases (if any).')
 
     args = parser.parse_args()
 

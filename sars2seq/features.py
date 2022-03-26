@@ -23,8 +23,23 @@ class ReferenceWithGapError(Exception):
     'A GenBank reference sequence had a gap.'
 
 
+class MissingFeatureError(Exception):
+    'A feature expected at an offset is not present.'
+
+
+class AmbiguousFeatureError(Exception):
+    'More than one feature is referred to by an offset.'
+
+
+# Provide convenient aliases for feature names. The alias is the key, the
+# canonical name (as found in the GenBank file) is the value.
+#
 # Alphanumeric feature aliases must have lower case keys. If not they will not
 # be detected (and the test suite will fail).
+#
+# At some point we might want to make it possible to pass a custom set of
+# aliases to the Features constructor.
+
 ALIASES = {
     '2': "2'-O-ribose methyltransferase",
     '3clpro': '3C-like proteinase',
@@ -41,7 +56,13 @@ ALIASES = {
     'mpro': '3C-like proteinase',
     'n': 'nucleocapsid phosphoprotein',
     'nsp1': 'leader protein',
-    'orf10': 'ORF10 protein',
+    'nsp5': '3C-like proteinase',
+    'nsp12': 'RNA-dependent RNA polymerase',
+    'nsp13': 'helicase',
+    'nsp14': "3'-to-5' exonuclease",
+    'nsp15': 'endoRNAse',
+    'orf4': 'envelope protein',
+    'orf5': 'membrane glycoprotein',
     'orf1a': 'ORF1a polyprotein',
     'orf1ab': 'ORF1ab polyprotein',
     'orf3a': 'ORF3a protein',
@@ -49,6 +70,8 @@ ALIASES = {
     'orf7a': 'ORF7a protein',
     'orf7b': 'ORF7b',
     'orf8': 'ORF8 protein',
+    'orf9': 'nucleocapsid phosphoprotein',
+    'orf10': 'ORF10 protein',
     'rdrp': 'RNA-dependent RNA polymerase',
     's': 'surface glycoprotein',
     'sl1': 'stem loop 1',
@@ -56,7 +79,44 @@ ALIASES = {
     'sl3': 'stem loop 3',
     'sl4': 'stem loop 4',
     'sl5': 'stem loop 5',
+    's': 'surface glycoprotein',
     'spike': 'surface glycoprotein',
+}
+
+# Name of translated features, with (case sensitive!) names matching those in
+# the GenBank file ../data/NC_045512.2.gb
+#
+# At some point we might want to make it possible to pass a custom set of
+# translated names to the Features constructor.
+
+TRANSLATED = {
+    "3'-to-5' exonuclease",  # nsp14
+    '3C-like proteinase',  # nsp5
+    'endoRNAse',  # nsp15
+    'envelope protein',  # ORF4
+    'helicase',  # nsp13
+    'leader protein',  # nsp1
+    'membrane glycoprotein',  # ORF5
+    'nsp2',
+    'nsp3',
+    'nsp4',
+    'nsp6',
+    'nsp7',
+    'nsp8',
+    'nsp9',
+    'nsp10',
+    'nsp11',
+    'nucleocapsid phosphoprotein',  # ORF9
+    'ORF1a polyprotein',
+    'ORF1ab polyprotein',
+    'ORF3a protein',
+    'ORF6 protein',
+    'ORF7a protein',
+    'ORF7b',
+    'ORF8 protein',
+    'ORF10 protein',
+    'RNA-dependent RNA polymerase',  # nsp12
+    'surface glycoprotein',
 }
 
 
@@ -238,16 +298,17 @@ class Features(UserDict):
                     f'Feature {featureInfo["name"]!r} sequence in '
                     f'{referenceId!r} has a gap!')
 
-    def genomeOffset(self, name, offset, aa=False):
+    def referenceOffset(self, name, offset, aa=False):
         """
-        Get the genome offset given an offset in a feature.
+        Get the (nucleotide) offset in the reference, given an offset in a
+        feature.
 
         @param name: A C{str} feature name.
         @param offset: An C{int} offset into the feature.
         @param aa: If C{True}, the offset is a number of amino acids, else a
             number of nucleotides.
         @raise KeyError: If the name is unknown.
-        @return: An C{int} nucleotide offset into the full genome.
+        @return: An C{int} nucleotide offset into the reference genome.
         """
         return self[name]['start'] + offset * (3 if aa else 1)
 
@@ -270,7 +331,60 @@ class Features(UserDict):
 
         for name, feature in self.items():
             if (feature['start'] <= offset < feature['stop'] and (
-                    'translation' in feature or not onlyTranslated)):
+                    name in TRANSLATED or not onlyTranslated)):
                 result.add(name)
 
         return result
+
+    def getFeature(self, offset, featureName=None, onlyTranslated=True):
+        """
+        Find a feature by name or raise an error.
+
+        @param featureName: A C{str} feature name. If C{None}, a feature will
+            be returned if there is only one at the offset.
+        @param offset: The C{int} offset that was used to find C{features}.
+        @raise MissingFeatureError: if the requested feature does not overlap
+            the given C{offset} or if there are no features at the offset.
+        @raise AmbiguousFeatureError: if there are multiple features at the
+            offset and a feature name is not given.
+        @return: A 2-tuple, containing 1) a features C{dict}, if the requested
+            feature is present in the features at the offset, and 2) the set of
+            C{str} feature names present at the offset.
+        """
+        features = self.featuresAt(offset, onlyTranslated)
+
+        if featureName is None:
+            if features:
+                # There are some features here, but we weren't told which
+                # one to use. Only proceed if there's just one.
+                if len(features) == 1:
+                    featureName = list(features)[0]
+                    feature = self[featureName]
+                else:
+                    present = ', '.join(f'{f!r}' for f in sorted(features))
+                    raise AmbiguousFeatureError(
+                        f'There are multiple features at offset {offset}: '
+                        f'{present}. Pass a feature name to specify which '
+                        f'one you want.')
+            else:
+                # There were no features at this offset.
+                feature = None
+        else:
+            canonicalName = self.canonicalName(featureName)
+            feature = self[canonicalName]
+            if canonicalName not in features:
+                if features:
+                    present = ', '.join(f'{f!r}' for f in sorted(features))
+                    raise MissingFeatureError(
+                        f'Requested feature {featureName!r} (located at sites '
+                        f'{feature["start"] + 1}-{feature["stop"]}) does not '
+                        f'overlap site {offset + 1}. The feature(s) at '
+                        f'that site are: {present}.')
+                else:
+                    raise MissingFeatureError(
+                        f'Feature {featureName!r} (located at sites '
+                        f'{feature["start"] + 1}-{feature["stop"]}) '
+                        f'does not overlap site {offset + 1}. There are no '
+                        f'features at that site.')
+
+        return feature, features

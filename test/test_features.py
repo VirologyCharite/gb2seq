@@ -57,37 +57,39 @@ class TestFeatures(TestCase):
 
     def testMembrane(self):
         """
-        Test the return value when requesting the membrane protein.
+        Test the returned dictionary when requesting the membrane protein.
         """
-        self.assertEqual(
-            _FEATURES['membrane'],
-            {
-                'name': 'membrane glycoprotein',
-                'start': 26522,
-                'stop': 27191,
-                'note': 'ORF5; structural protein',
-                'product': 'membrane glycoprotein',
-                'sequence': (
-                    'ATGGCAGATTCCAACGGTACTATTACCGTTGAAGAGCTTAAAAAGCTCCTTGAAC'
-                    'AATGGAACCTAGTAATAGGTTTCCTATTCCTTACATGGATTTGTCTTCTACAATT'
-                    'TGCCTATGCCAACAGGAATAGGTTTTTGTATATAATTAAGTTAATTTTCCTCTGG'
-                    'CTGTTATGGCCAGTAACTTTAGCTTGTTTTGTGCTTGCTGCTGTTTACAGAATAA'
-                    'ATTGGATCACCGGTGGAATTGCTATCGCAATGGCTTGTCTTGTAGGCTTGATGTG'
-                    'GCTCAGCTACTTCATTGCTTCTTTCAGACTGTTTGCGCGTACGCGTTCCATGTGG'
-                    'TCATTCAATCCAGAAACTAACATTCTTCTCAACGTGCCACTCCATGGCACTATTC'
-                    'TGACCAGACCGCTTCTAGAAAGTGAACTCGTAATCGGAGCTGTGATCCTTCGTGG'
-                    'ACATCTTCGTATTGCTGGACACCATCTAGGACGCTGTGACATCAAGGACCTGCCT'
-                    'AAAGAAATCACTGTTGCTACATCACGAACGCTTTCTTATTACAAATTGGGAGCTT'
-                    'CGCAGCGTGTAGCAGGTGACTCAGGTTTTGCTGCATACAGTCGCTACAGGATTGG'
-                    'CAACTATAAATTAAACACAGACCATTCCAGTAGCAGTGACAATATTGCTTTGCTT'
-                    'GTACAGTAA'),
-                'translation': (
-                    'MADSNGTITVEELKKLLEQWNLVIGFLFLTWICLLQFAYANRNRFLYIIKLIFLW'
-                    'LLWPVTLACFVLAAVYRINWITGGIAIAMACLVGLMWLSYFIASFRLFARTRSMW'
-                    'SFNPETNILLNVPLHGTILTRPLLESELVIGAVILRGHLRIAGHHLGRCDIKDLP'
-                    'KEITVATSRTLSYYKLGASQRVAGDSGFAAYSRYRIGNYKLNTDHSSSSDNIALL'
-                    'VQ*'),
-            })
+        expected = {
+            'name': 'membrane glycoprotein',
+            'start': 26522,
+            'stop': 27191,
+            'note': 'ORF5; structural protein',
+            'product': 'membrane glycoprotein',
+            'sequence': (
+                'ATGGCAGATTCCAACGGTACTATTACCGTTGAAGAGCTTAAAAAGCTCCTTGAAC'
+                'AATGGAACCTAGTAATAGGTTTCCTATTCCTTACATGGATTTGTCTTCTACAATT'
+                'TGCCTATGCCAACAGGAATAGGTTTTTGTATATAATTAAGTTAATTTTCCTCTGG'
+                'CTGTTATGGCCAGTAACTTTAGCTTGTTTTGTGCTTGCTGCTGTTTACAGAATAA'
+                'ATTGGATCACCGGTGGAATTGCTATCGCAATGGCTTGTCTTGTAGGCTTGATGTG'
+                'GCTCAGCTACTTCATTGCTTCTTTCAGACTGTTTGCGCGTACGCGTTCCATGTGG'
+                'TCATTCAATCCAGAAACTAACATTCTTCTCAACGTGCCACTCCATGGCACTATTC'
+                'TGACCAGACCGCTTCTAGAAAGTGAACTCGTAATCGGAGCTGTGATCCTTCGTGG'
+                'ACATCTTCGTATTGCTGGACACCATCTAGGACGCTGTGACATCAAGGACCTGCCT'
+                'AAAGAAATCACTGTTGCTACATCACGAACGCTTTCTTATTACAAATTGGGAGCTT'
+                'CGCAGCGTGTAGCAGGTGACTCAGGTTTTGCTGCATACAGTCGCTACAGGATTGG'
+                'CAACTATAAATTAAACACAGACCATTCCAGTAGCAGTGACAATATTGCTTTGCTT'
+                'GTACAGTAA'),
+            'translation': (
+                'MADSNGTITVEELKKLLEQWNLVIGFLFLTWICLLQFAYANRNRFLYIIKLIFLW'
+                'LLWPVTLACFVLAAVYRINWITGGIAIAMACLVGLMWLSYFIASFRLFARTRSMW'
+                'SFNPETNILLNVPLHGTILTRPLLESELVIGAVILRGHLRIAGHHLGRCDIKDLP'
+                'KEITVATSRTLSYYKLGASQRVAGDSGFAAYSRYRIGNYKLNTDHSSSSDNIALL'
+                'VQ*'),
+        }
+
+        for name in 'membrane glycoprotein', 'membrane', 'm', 'orf5':
+            self.assertEqual(expected, _FEATURES[name])
+            self.assertEqual(expected, _FEATURES[name.upper()])
 
     def testOffsetInUnknownFeature(self):
         """
@@ -95,7 +97,7 @@ class TestFeatures(TestCase):
         must be raised.
         """
         self.assertRaisesRegex(KeyError, "^'xx'$",
-                               _FEATURES.genomeOffset, 'xx', 10)
+                               _FEATURES.referenceOffset, 'xx', 10)
 
     def testAaOffsetInMembrane(self):
         """
@@ -104,8 +106,9 @@ class TestFeatures(TestCase):
         """
         offset = 5
         # 26522 is from the membrane test above.
-        self.assertEqual(26522 + 3 * offset,
-                         _FEATURES.genomeOffset('membrane', offset, aa=True))
+        self.assertEqual(
+            26522 + 3 * offset,
+            _FEATURES.referenceOffset('membrane', offset, aa=True))
 
     def testNtOffsetInMembraneDefaultIsNt(self):
         """
@@ -115,18 +118,20 @@ class TestFeatures(TestCase):
         """
         offset = 5
         # 26522 is from the membrane test above.
-        self.assertEqual(26522 + offset,
-                         _FEATURES.genomeOffset('membrane', offset))
+        self.assertEqual(
+            26522 + offset,
+            _FEATURES.referenceOffset('membrane', offset))
 
     def testNtOffsetInMembrane(self):
         """
         Test we get the correct genome offset given a nucleotide offset in the
-        membrane protein.
+        membrane protein when we explicitly pass aa=False.
         """
         offset = 5
         # 26522 is from the membrane test above.
-        self.assertEqual(26522 + offset,
-                         _FEATURES.genomeOffset('membrane', offset, aa=False))
+        self.assertEqual(
+            26522 + offset,
+            _FEATURES.referenceOffset('membrane', offset, aa=False))
 
     def testFeaturesAtMembraneOffset(self):
         """
@@ -134,8 +139,11 @@ class TestFeatures(TestCase):
         an offset it contains.
         """
         # 26522 is from the membrane test above.
-        self.assertEqual({'membrane glycoprotein'},
-                         _FEATURES.featuresAt(26522))
+        self.assertEqual(
+            {
+                'membrane glycoprotein'
+            },
+            _FEATURES.featuresAt(26522))
 
     def testFeaturesAtTooHighOffset(self):
         """
@@ -163,8 +171,11 @@ class TestFeatures(TestCase):
         Test we get the 5'UTR back if we ask what features are at offset zero
         if we ask for untranslated features to also be returned.
         """
-        self.assertEqual(set(("5'UTR",)),
-                         _FEATURES.featuresAt(0, onlyTranslated=False))
+        self.assertEqual(
+            {
+                "5'UTR",
+            },
+            _FEATURES.featuresAt(0, onlyTranslated=False))
 
     def testFeaturesAtOrf1abOffset(self):
         """
@@ -173,23 +184,11 @@ class TestFeatures(TestCase):
         """
         self.assertEqual(
             {
+                'leader protein',
                 'ORF1ab polyprotein',
                 'ORF1a polyprotein',
             },
             _FEATURES.featuresAt(265))
-
-    def testFeaturesAtOrf1abOffsetIncludeUntranslated(self):
-        """
-        Test we get the expected result if we ask what features, including
-        untranslated ones, are at the first offset of Orf1ab.
-        """
-        self.assertEqual(
-            {
-                'ORF1ab polyprotein',
-                'ORF1a polyprotein',
-                'leader protein',
-            },
-            _FEATURES.featuresAt(265, onlyTranslated=False))
 
     def testFeaturesAtNsp2Offset(self):
         """
@@ -198,23 +197,11 @@ class TestFeatures(TestCase):
         """
         self.assertEqual(
             {
+                'nsp2',
                 'ORF1ab polyprotein',
                 'ORF1a polyprotein',
             },
             _FEATURES.featuresAt(2700))
-
-    def testFeaturesAtNsp2OffsetIncludeUntranslated(self):
-        """
-        Test we get the expected result if we ask what features are at an
-        offset of NSP2 and we ask for features without a translation.
-        """
-        self.assertEqual(
-            {
-                'ORF1ab polyprotein',
-                'ORF1a polyprotein',
-                'nsp2',
-            },
-            _FEATURES.featuresAt(2700, onlyTranslated=False))
 
     def testFeaturesAtRdRPOffsetWithStemLoops(self):
         """
@@ -225,6 +212,7 @@ class TestFeatures(TestCase):
         self.assertEqual(
             {
                 'ORF1ab polyprotein',
+                'RNA-dependent RNA polymerase',
             },
             _FEATURES.featuresAt(13500))
 
@@ -251,38 +239,45 @@ class TestFeatures(TestCase):
         self.assertEqual(
             {
                 'ORF1ab polyprotein',
-            },
-            _FEATURES.featuresAt(13550))
-
-    def testFeaturesAtRdRPOffsetIncludeUntranslated(self):
-        """
-        Test we get the expected result if we ask what features are at an
-        offset of the RdRP.
-        """
-        self.assertEqual(
-            {
-                'ORF1ab polyprotein',
                 'RNA-dependent RNA polymerase',
             },
-            _FEATURES.featuresAt(13550, onlyTranslated=False))
+            _FEATURES.featuresAt(13550))
 
     def testCanonicalName(self):
         """
         Converting abbreviated names into canonical names must work.
         """
-        self.assertEqual(_FEATURES.canonicalName('m'), 'membrane glycoprotein')
+        self.assertEqual(_FEATURES.canonicalName('s'), 'surface glycoprotein')
         self.assertEqual(_FEATURES.canonicalName('e'), 'envelope protein')
+        self.assertEqual(_FEATURES.canonicalName('m'), 'membrane glycoprotein')
+        self.assertEqual(_FEATURES.canonicalName('n'),
+                         'nucleocapsid phosphoprotein')
 
     def testExpectedNames(self):
         """
         Test the full set of expected coronavirus feature names.
         """
-        expected = set((
+        expected = {
             "2'-O-ribose methyltransferase",
             "3'-to-5' exonuclease",
             "3'UTR",
             "3C-like proteinase",
             "5'UTR",
+            "endoRNAse",
+            "envelope protein",
+            "helicase",
+            "leader protein",
+            "membrane glycoprotein",
+            "nsp2",
+            "nsp3",
+            "nsp4",
+            "nsp6",
+            "nsp7",
+            "nsp8",
+            "nsp9",
+            "nsp10",
+            "nsp11",
+            "nucleocapsid phosphoprotein",
             "ORF10 protein",
             "ORF1a polyprotein",
             "ORF1ab polyprotein",
@@ -292,28 +287,13 @@ class TestFeatures(TestCase):
             "ORF7b",
             "ORF8 protein",
             "RNA-dependent RNA polymerase",
-            "endoRNAse",
-            "envelope protein",
-            "helicase",
-            "leader protein",
-            "membrane glycoprotein",
-            "nsp10",
-            "nsp11",
-            "nsp2",
-            "nsp3",
-            "nsp4",
-            "nsp6",
-            "nsp7",
-            "nsp8",
-            "nsp9",
-            "nucleocapsid phosphoprotein",
             "stem loop 1",
             "stem loop 2",
             "stem loop 3",
             "stem loop 4",
             "stem loop 5",
             "surface glycoprotein",
-        ))
+        }
         self.assertEqual(expected, set(_FEATURES))
 
     def testAliasKeysLowerCase(self):

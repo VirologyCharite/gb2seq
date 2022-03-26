@@ -10,7 +10,8 @@ from io import StringIO
 from dark.reads import DNARead
 
 from sars2seq.change import splitChange
-from sars2seq.features import Features, DATA_DIR
+from sars2seq.features import (
+    Features, DATA_DIR, AmbiguousFeatureError, MissingFeatureError)
 from sars2seq.genome import SARS2Genome, getGappedOffsets, alignmentEnd
 from sars2seq.translate import NoSlipperySequenceError
 
@@ -246,14 +247,7 @@ class TestSARS2Genome(TestCase):
             DNARead('refId', referenceSequence))
 
         genome = SARS2Genome(DNARead('genId', genomeSequence), features)
-
-        # The genome offset is initialized to None and isn't set until
-        # after ntSequences is called.
-        # self.assertEqual(None, alignment.genomeOffset)
-
         referenceNt, genomeNt = genome.ntSequences('spike')
-
-        # self.assertEqual(5, alignment.genomeOffset)
 
         self.assertEqual(referenceSequence[5:], referenceNt.sequence)
         self.assertEqual('refId (spike)', referenceNt.id)
@@ -470,51 +464,201 @@ class TestOffsetInfo(TestCase):
     """
     Test the SARS2Genome.offsetInfo method.
     """
-    def testNoFeaturesAtOffsetZero(self):
+    def testRelativeOffsetWithNoFeatureName(self):
         """
-        If there are no features at offset zero, the return information
-        should indicate that. There will not be considered to be any
-        features at offset 0 below because the feature does not have a
-        translation and we do not pass onlyTranslated=False to offsetInfo.
+        If relativeToFeature is passed as True, but a feature name is not
+        given, a RuntimeError must be raised.
+        """
+        features = Features({}, DNARead('refId', 'AA'))
+        genome = SARS2Genome(DNARead('genId', 'AA'), features=features)
+        error = (
+            r'^If relativeToFeature is True, a feature name must be given\.$')
+        self.assertRaisesRegex(RuntimeError, error, genome.offsetInfo, 0,
+                               relativeToFeature=True)
+
+    def testNotARelativeOffsetButAaIsTrue(self):
+        """
+        If relativeToFeature is passed as False, a RuntimeError must be raised
+        if aa is passed as True.
         """
         features = Features(
             {
-                'spike': {
-                    'name': 'spike',
+                'surface glycoprotein': {
+                    'name': 'surface glycoprotein',
                     'start': 0,
                     'stop': 6,
                 },
             },
-            DNARead('refId', 'GTTCCC'))
+            DNARead('refId', 'AA'))
+        genome = SARS2Genome(DNARead('genId', 'AA'), features=features)
+        error = (r'^You cannot pass aa=True unless the offset you pass is '
+                 r'relative to the feature\.$')
+        self.assertRaisesRegex(RuntimeError, error, genome.offsetInfo, 0,
+                               featureName='surface glycoprotein', aa=True)
 
-        genome = SARS2Genome(DNARead('genId', 'ATTCCC'), features)
+    def testNoFeaturesAtOffset(self):
+        """
+        If there are no features at the given offset, a MissingFeatureError
+        must be raised. This must be true regardless of the passed value of
+        relativeToFeature.
+        """
+        features = Features(
+            {
+                'surface glycoprotein': {
+                    'name': 'surface glycoprotein',
+                    'start': 0,
+                    'stop': 6,
+                },
+            },
+            DNARead('refId', 'AA'))
+        genome = SARS2Genome(DNARead('genId', 'AA'), features=features)
+        error = (r"^Feature 'surface glycoprotein' \(located at sites 1-6\) "
+                 r"does not overlap site 101\. There are no features at "
+                 r"that site\.$")
+        for relativeToFeature in False, True:
+            self.assertRaisesRegex(MissingFeatureError, error,
+                                   genome.offsetInfo, 100,
+                                   featureName='surface glycoprotein',
+                                   relativeToFeature=relativeToFeature)
+
+    def testFeatureNotFoundAtOffsetButOneOtherFeatureIs(self):
+        """
+        If the requested feature is not found at the given offset, a
+        MissingFeatureError must be raised and the error should include
+        the one other feature found at that offset. This must be true
+        regardless of the passed value of relativeToFeature.
+        """
+        features = Features(
+            {
+                'surface glycoprotein': {
+                    'name': 'surface glycoprotein',
+                    'start': 0,
+                    'stop': 6,
+                },
+                'nsp10': {
+                    'name': 'nsp10',
+                    'start': 10,
+                    'stop': 16,
+                },
+            },
+            DNARead('refId', 'AA'))
+        genome = SARS2Genome(DNARead('genId', 'AA'), features=features)
+        error = (r"^Requested feature 'surface glycoprotein' \(located at "
+                 r"sites 1-6\) does not overlap site 11. The feature\(s\) "
+                 r"at that site are: 'nsp10'\.$")
+        for relativeToFeature in False, True:
+            self.assertRaisesRegex(MissingFeatureError, error,
+                                   genome.offsetInfo, 10,
+                                   featureName='surface glycoprotein',
+                                   relativeToFeature=relativeToFeature)
+
+    def testFeatureNotFoundAtOffsetButTwoOtherFeaturesAre(self):
+        """
+        If the requested feature is not found at the given offset, a
+        MissingFeatureError must be raised and the error should include
+        the one other feature found at that offset. This must be true
+        regardless of the passed value of relativeToFeature.
+        """
+        features = Features(
+            {
+                'surface glycoprotein': {
+                    'name': 'surface glycoprotein',
+                    'start': 0,
+                    'stop': 6,
+                },
+                'nsp10': {
+                    'name': 'nsp10',
+                    'start': 10,
+                    'stop': 16,
+                },
+                'nsp11': {
+                    'name': 'nsp11',
+                    'start': 10,
+                    'stop': 16,
+                },
+            },
+            DNARead('refId', 'AA'))
+        genome = SARS2Genome(DNARead('genId', 'AA'), features=features)
+        error = (r"^Requested feature 'surface glycoprotein' \(located at "
+                 r"sites 1-6\) does not overlap site 11. The feature\(s\) "
+                 r"at that site are: 'nsp10', 'nsp11'\.$")
+        for relativeToFeature in False, True:
+            self.assertRaisesRegex(MissingFeatureError, error,
+                                   genome.offsetInfo, 10,
+                                   featureName='surface glycoprotein',
+                                   relativeToFeature=relativeToFeature)
+
+    def testMultipleFeaturesAtOffsetButNoFeatureRequested(self):
+        """
+        If multiple features are found at an offset but no feature name is
+        passed, an AmbiguousFeatureError must be raised.
+        """
+        features = Features(
+            {
+                'nsp10': {
+                    'name': 'nsp10',
+                    'start': 10,
+                    'stop': 16,
+                },
+                'nsp11': {
+                    'name': 'nsp11',
+                    'start': 10,
+                    'stop': 16,
+                },
+            },
+            DNARead('refId', 'AA'))
+        genome = SARS2Genome(DNARead('genId', 'AA'), features=features)
+        error = (r"^There are multiple features at offset 12: 'nsp10', "
+                 r"'nsp11'. Pass a feature name to specify which one you "
+                 r"want\.$")
+
+        self.assertRaisesRegex(AmbiguousFeatureError, error,
+                               genome.offsetInfo, 12)
+
+    def testNoFeaturesAtOffsetZero(self):
+        """
+        If there are no features at offset zero, the return information
+        should indicate that, but a codon and amino acid are still returned.
+        """
+        features = Features(
+            {
+                'surface glycoprotein': {
+                    'name': 'surface glycoprotein',
+                    'start': 1,
+                    'stop': 6,
+                },
+            },
+            DNARead('refId', 'GTTCCCG'))
+
+        genome = SARS2Genome(DNARead('genId', 'ATTCCCG'), features)
 
         self.assertEqual(
             {
+                'alignmentOffset': 0,
                 'featureName': None,
                 'featureNames': set(),
                 'reference': {
                     'aa': 'V',
                     'codon': 'GTT',
+                    'frame': 0,
                 },
                 'genome': {
                     'aa': 'I',
                     'codon': 'ATT',
+                    'frame': 0,
                 }
             },
             genome.offsetInfo(0))
 
-    def testOneFeaturesAtOffsetZero(self):
+    def testOneFeatureAtOffsetZero(self):
         """
         If there is one feature at offset zero, the return information
-        should indicate that. Note that the feature is returned here
-        even though it does not have a translation because we pass
-        onlyTranslated=False to offsetInfo.
+        should indicate that.
         """
         features = Features(
             {
-                'spike': {
-                    'name': 'spike',
+                'surface glycoprotein': {
+                    'name': 'surface glycoprotein',
                     'start': 0,
                     'stop': 6,
                 },
@@ -525,18 +669,126 @@ class TestOffsetInfo(TestCase):
 
         self.assertEqual(
             {
-                'featureName': 'spike',
-                'featureNames': {'spike'},
+                'alignmentOffset': 0,
+                'featureName': 'surface glycoprotein',
+                'featureNames': {'surface glycoprotein'},
                 'reference': {
                     'aa': 'V',
                     'codon': 'GTT',
+                    'frame': 0,
                 },
                 'genome': {
                     'aa': 'I',
                     'codon': 'ATT',
+                    'frame': 0,
                 }
             },
-            genome.offsetInfo(0, onlyTranslated=False))
+            genome.offsetInfo(0))
+
+    def testOffsetAtLastNucleotideOfLastCodonOfFeature(self):
+        """
+        If the requested offset is the final nucleotide of the last codon of a
+        feature, the return information should indicate that.
+        """
+        features = Features(
+            {
+                'surface glycoprotein': {
+                    'name': 'surface glycoprotein',
+                    'start': 0,
+                    'stop': 6,
+                },
+            },
+            DNARead('refId', 'GTTCCC'))
+
+        genome = SARS2Genome(DNARead('genId', 'ATTCCC'), features)
+
+        self.assertEqual(
+            {
+                'alignmentOffset': 5,
+                'featureName': 'surface glycoprotein',
+                'featureNames': {'surface glycoprotein'},
+                'reference': {
+                    'aa': 'P',
+                    'codon': 'CCC',
+                    'frame': 2,
+                },
+                'genome': {
+                    'aa': 'P',
+                    'codon': 'CCC',
+                    'frame': 2,
+                }
+            },
+            genome.offsetInfo(5))
+
+    def testOffsetAtFirstNucleotideOfIncompleteFinalCodonOfFeature(self):
+        """
+        If the requested offset is the first nucleotide of an incomplete final
+        codon of the genome, the return information should indicate that.
+        """
+        features = Features(
+            {
+                'surface glycoprotein': {
+                    'name': 'surface glycoprotein',
+                    'start': 0,
+                    'stop': 6,
+                },
+            },
+            DNARead('refId', 'GTTCCCA'))
+
+        genome = SARS2Genome(DNARead('genId', 'ATTCCCA'), features)
+
+        self.assertEqual(
+            {
+                'alignmentOffset': 6,
+                'featureName': None,
+                'featureNames': set(),
+                'reference': {
+                    'aa': None,
+                    'codon': 'A',
+                    'frame': 0,
+                },
+                'genome': {
+                    'aa': None,
+                    'codon': 'A',
+                    'frame': 0,
+                }
+            },
+            genome.offsetInfo(6))
+
+    def testOffsetAtSecondNucleotideOfIncompleteFinalCodonOfFeature(self):
+        """
+        If the requested offset is the second nucleotide of an incomplete final
+        codon of the genome, the return information should indicate that.
+        """
+        features = Features(
+            {
+                'surface glycoprotein': {
+                    'name': 'surface glycoprotein',
+                    'start': 0,
+                    'stop': 6,
+                },
+            },
+            DNARead('refId', 'GTTCCCAT'))
+
+        genome = SARS2Genome(DNARead('genId', 'ATTCCCAT'), features)
+
+        self.assertEqual(
+            {
+                'alignmentOffset': 7,
+                'featureName': None,
+                'featureNames': set(),
+                'reference': {
+                    'aa': None,
+                    'codon': 'AT',
+                    'frame': 1,
+                },
+                'genome': {
+                    'aa': None,
+                    'codon': 'AT',
+                    'frame': 1,
+                }
+            },
+            genome.offsetInfo(7))
 
     def testRelativeToFeature(self):
         """
@@ -545,8 +797,8 @@ class TestOffsetInfo(TestCase):
         """
         features = Features(
             {
-                'spike': {
-                    'name': 'spike',
+                'surface glycoprotein': {
+                    'name': 'surface glycoprotein',
                     'start': 2,
                     'stop': 11,
                 },
@@ -557,19 +809,22 @@ class TestOffsetInfo(TestCase):
 
         self.assertEqual(
             {
-                'featureName': 'spike',
-                'featureNames': {'spike'},
+                'alignmentOffset': 5,
+                'featureName': 'surface glycoprotein',
+                'featureNames': {'surface glycoprotein'},
                 'reference': {
                     'aa': 'S',
                     'codon': 'TCC',
+                    'frame': 0,
                 },
                 'genome': {
                     'aa': 'T',
                     'codon': 'ACG',
+                    'frame': 0,
                 }
             },
-            genome.offsetInfo(3, onlyTranslated=False,
-                              relativeToFeature=True, featureName='spike'))
+            genome.offsetInfo(3, relativeToFeature=True,
+                              featureName='surface glycoprotein'))
 
     def testRelativeToFeatureWithAaOffset(self):
         """
@@ -579,8 +834,8 @@ class TestOffsetInfo(TestCase):
         """
         features = Features(
             {
-                'spike': {
-                    'name': 'spike',
+                'surface glycoprotein': {
+                    'name': 'surface glycoprotein',
                     'start': 2,
                     'stop': 11,
                 },
@@ -591,19 +846,183 @@ class TestOffsetInfo(TestCase):
 
         self.assertEqual(
             {
-                'featureName': 'spike',
-                'featureNames': {'spike'},
+                'alignmentOffset': 5,
+                'featureName': 'surface glycoprotein',
+                'featureNames': {'surface glycoprotein'},
                 'reference': {
                     'aa': 'S',
                     'codon': 'TCC',
+                    'frame': 0,
                 },
                 'genome': {
                     'aa': 'T',
                     'codon': 'ACG',
+                    'frame': 0,
                 }
             },
-            genome.offsetInfo(1, onlyTranslated=False, aa=True,
-                              relativeToFeature=True, featureName='spike'))
+            genome.offsetInfo(1, aa=True, relativeToFeature=True,
+                              featureName='surface glycoprotein'))
+
+    def testInitialGapInAlignedGenomeOffsetZero(self):
+        """
+        If the alignment results in a gap character at the start of the
+        genome and we request offset zero, we should see the gap in the
+        codon and get back a '-' amino acid.
+        """
+        features = Features({}, DNARead('refId', 'GTTCCCAAATTGCTACTTTGATTGAG'))
+
+        genome = SARS2Genome(
+            DNARead('genId', 'TTCCCAAATTGCTACTTTGATTGAG'),
+            features=features)
+
+        print(genome.referenceAligned.sequence)
+        print(genome.genomeAligned.sequence)
+
+        self.assertEqual(
+            {
+                'alignmentOffset': 0,
+                'featureName': None,
+                'featureNames': set(),
+                'reference': {
+                    'aa': 'V',
+                    'codon': 'GTT',
+                    'frame': 0,
+                },
+                'genome': {
+                    'aa': '-',
+                    'codon': '-TT',
+                    'frame': 0,
+                }
+            },
+            genome.offsetInfo(0))
+
+    def testInitialGapInAlignedGenomeOffsetOne(self):
+        """
+        If the alignment results in a gap character at the start of the
+        genome and we request offset 1, we should get the first three
+        nucleotides of the reference back as its codon, and the same
+        from the genome. But the frames will differ because the genome
+        does not have the first nucleotide that's in the reference.
+        """
+        seq = 'GTTCCCAAATTGCTACTTTGATTGAG'
+        features = Features({}, DNARead('refId', seq))
+        genome = SARS2Genome(DNARead('genId', seq[1:]), features=features)
+
+        # Check the alignment is as expected.
+        self.assertEqual(len(seq), len(genome.referenceAligned.sequence))
+        self.assertEqual(0, genome.referenceAligned.sequence.count('-'))
+        self.assertEqual(1, genome.genomeAligned.sequence.count('-'))
+        self.assertEqual('-', genome.genomeAligned.sequence[0])
+
+        self.assertEqual(
+            {
+                'alignmentOffset': 1,
+                'featureName': None,
+                'featureNames': set(),
+                'reference': {
+                    'aa': 'V',
+                    'codon': 'GTT',
+                    'frame': 1,
+                },
+                'genome': {
+                    'aa': 'F',
+                    'codon': 'TTC',
+                    'frame': 0,
+                }
+            },
+            genome.offsetInfo(1))
+
+    def testInitialGapInAlignedGenomeWithFeatureAaOffset(self):
+        """
+        If the alignment results in a gap character at the start of the
+        genome and we request an amino acid offset relative to a feature,
+        we should get the expected identical result from the reference and
+        the genome.
+        """
+        seq = 'GTTCCCAAATTGCTACTTTGATTGAG'
+        features = Features(
+            {
+                'surface glycoprotein': {
+                    'name': 'surface glycoprotein',
+                    'start': 2,
+                    'stop': 11,
+                },
+            },
+            DNARead('refId', seq))
+
+        genome = SARS2Genome(DNARead('genId', seq[1:]), features=features)
+
+        # Check the alignment is as expected.
+        self.assertEqual(len(seq), len(genome.referenceAligned.sequence))
+        self.assertEqual(0, genome.referenceAligned.sequence.count('-'))
+        self.assertEqual(1, genome.genomeAligned.sequence.count('-'))
+        self.assertEqual('-', genome.genomeAligned.sequence[0])
+
+        self.assertEqual(
+            {
+                'alignmentOffset': 8,
+                'featureName': 'surface glycoprotein',
+                'featureNames': {'surface glycoprotein'},
+                'reference': {
+                    'aa': 'I',
+                    'codon': 'ATT',
+                    'frame': 0,
+                },
+                'genome': {
+                    'aa': 'I',
+                    'codon': 'ATT',
+                    'frame': 0,
+                }
+            },
+            genome.offsetInfo(2, featureName='surface glycoprotein', aa=True,
+                              relativeToFeature=True))
+
+    def testInitialGapInAlignedGenomeWithFeatureNtOffsetAllFrames(self):
+        """
+        If the alignment results in a gap character at the start of the
+        genome and we request a nucleotide offset all frames in a feature, we
+        should get the expected identical result from the reference and the
+        genome.
+        """
+        seq = 'GTTCCCAAATTGCTACTTTGATTGAG'
+        features = Features(
+            {
+                'surface glycoprotein': {
+                    'name': 'surface glycoprotein',
+                    'start': 2,
+                    'stop': 11,
+                },
+            },
+            DNARead('refId', seq))
+
+        genome = SARS2Genome(DNARead('genId', seq[1:]), features=features)
+
+        # Check the alignment is as expected.
+        self.assertEqual(len(seq), len(genome.referenceAligned.sequence))
+        self.assertEqual(0, genome.referenceAligned.sequence.count('-'))
+        self.assertEqual(1, genome.genomeAligned.sequence.count('-'))
+        self.assertEqual('-', genome.genomeAligned.sequence[0])
+
+        for frame in range(3):
+            self.assertEqual(
+                {
+                    'alignmentOffset': 8 + frame,
+                    'featureName': 'surface glycoprotein',
+                    'featureNames': {'surface glycoprotein'},
+                    'reference': {
+                        'aa': 'I',
+                        'codon': 'ATT',
+                        'frame': frame,
+                    },
+                    'genome': {
+                        'aa': 'I',
+                        'codon': 'ATT',
+                        'frame': frame,
+                    }
+                },
+                genome.offsetInfo(6 + frame,
+                                  featureName='surface glycoprotein',
+                                  relativeToFeature=True))
 
     def testAlphaN501Y(self):
         """
@@ -611,22 +1030,87 @@ class TestOffsetInfo(TestCase):
         """
         genomeRead = getSequence(DATA_DIR / 'EPI_ISL_601443.fasta')
         genome = SARS2Genome(genomeRead)
+        start = genome.features['surface glycoprotein']['start']
+        offset = 500
 
         self.assertEqual(
             {
+                'alignmentOffset': start + offset * 3,
                 'featureName': 'surface glycoprotein',
                 'featureNames': {'surface glycoprotein'},
                 'reference': {
                     'aa': 'N',
                     'codon': 'AAT',
+                    'frame': 0,
                 },
                 'genome': {
                     'aa': 'Y',
                     'codon': 'TAT',
+                    'frame': 0,
                 }
             },
-            genome.offsetInfo(500, aa=True, relativeToFeature=True,
+            genome.offsetInfo(offset, aa=True, relativeToFeature=True,
                               featureName='spike'))
+
+    def testAlphaN501YWithNucleotideOffset(self):
+        """
+        We must be able to see the N501Y change in the spike of Alpha when
+        the offset is given in nucleotides in any frame.
+        """
+        genomeRead = getSequence(DATA_DIR / 'EPI_ISL_601443.fasta')
+        genome = SARS2Genome(genomeRead)
+        start = genome.features['surface glycoprotein']['start']
+        for frame in range(3):
+            offset = start + 1500 + frame
+
+            self.assertEqual(
+                {
+                    'alignmentOffset': offset,
+                    'featureName': 'surface glycoprotein',
+                    'featureNames': {'surface glycoprotein'},
+                    'reference': {
+                        'aa': 'N',
+                        'codon': 'AAT',
+                        'frame': frame,
+                    },
+                    'genome': {
+                        'aa': 'Y',
+                        'codon': 'TAT',
+                        'frame': frame,
+                    }
+                },
+                genome.offsetInfo(offset, featureName='spike'))
+
+    def testAlphaN501YByNucleotideOffsetAllFrames(self):
+        """
+        We must be able to see the N501Y change in the spike of Alpha
+        when using any frame and a nucleotide offset.
+        """
+        genomeRead = getSequence(DATA_DIR / 'EPI_ISL_601443.fasta')
+        genome = SARS2Genome(genomeRead)
+        start = genome.features['surface glycoprotein']['start']
+        for frame in range(3):
+            # The 500 comes from the N501Y.
+            offset = 500 * 3 + frame
+
+            self.assertEqual(
+                {
+                    'alignmentOffset': start + offset,
+                    'featureName': 'surface glycoprotein',
+                    'featureNames': {'surface glycoprotein'},
+                    'reference': {
+                        'aa': 'N',
+                        'codon': 'AAT',
+                        'frame': frame,
+                    },
+                    'genome': {
+                        'aa': 'Y',
+                        'codon': 'TAT',
+                        'frame': frame,
+                    }
+                },
+                genome.offsetInfo(offset, relativeToFeature=True,
+                                  featureName='spike'))
 
     def testAlphaSpikeSubstitutions(self):
         """

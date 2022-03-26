@@ -19,8 +19,8 @@ class ReferenceInsertionError(Exception):
     'A genome resulted in MAFFT suggesting a reference insertion.'
 
 
-class AmbiguousFeatureError(Exception):
-    'More than one feature is referred to by an offset.'
+class AlignmentError(Exception):
+    'There is an unexpected problem in the alignment.'
 
 
 def getGappedOffsets(s):
@@ -98,7 +98,7 @@ class SARS2Genome:
         # Geneious uses ? to indicate unknown nucleotides, at least when it
         # exports a consensus / alignment. Replace with N.
         self.genome = DNARead(genome.id, genome.sequence.replace('?', 'N'))
-        self.features = features or Features()
+        self.features = Features() if features is None else features
         self._getAlignment(referenceAligned, genomeAligned)
         self.gappedOffsets = getGappedOffsets(
             self.referenceAligned.sequence)
@@ -116,10 +116,9 @@ class SARS2Genome:
             If not C{None} then C{referenceAligned} must also be given.
         @raise AssertionError: If an already aligned genome is given but no
             aligned reference is also given, or vice versa.
-        @raise ValueError: If the genome and reference sequences both start or
-            end with '-' characters.
+        @raise AlignmentError: If the genome and reference sequences both start
+            or end with '-' characters.
         """
-
         if referenceAligned:
             assert genomeAligned
             self.referenceAligned = referenceAligned
@@ -154,19 +153,23 @@ class SARS2Genome:
         # the presence of other sequences, so may not be pairwise optimal).
         if (self.referenceAligned.sequence.startswith('-') and
                 self.genomeAligned.sequence.startswith('-')):
-            raise ValueError('The reference and genome alignment sequences '
-                             'both start with a "-" character.')
+            raise AlignmentError(
+                'The reference and genome alignment sequences '
+                'both start with a "-" character.')
 
         if (self.referenceAligned.sequence.endswith('-') and
                 self.genomeAligned.sequence.endswith('-')):
-            raise ValueError('The reference and genome alignment sequences '
-                             'both end with a "-" character.')
+            raise AlignmentError(
+                'The reference and genome alignment sequences '
+                'both end with a "-" character.')
 
     def ntSequences(self, featureName):
         """
         Get the aligned nucelotide sequences.
 
         @param featureName: A C{str} feature name.
+        @raise AssertionError: If the aligned reference and genome sequences
+            are not the same length.
         @return: A 2-C{tuple} of C{dark.reads.DNARead} instances, with 1) the
             nucleotides for the feature as located in the reference genome and
             2) the corresponding nucleotides from the genome being examined.
@@ -197,6 +200,8 @@ class SARS2Genome:
         genomeNt = DNARead(self.genome.id + f' ({name})',
                            self.genomeAligned.sequence[offset:end])
 
+        assert len(referenceNt) == len(genomeNt)
+
         if DEBUG:
             print('NT MATCH:')
             print('ref  nt:', referenceNt.sequence[SLICE])
@@ -223,9 +228,6 @@ class SARS2Genome:
             pass
 
         referenceNt, genomeNt = self.ntSequences(featureName)
-
-        assert len(referenceNt) == len(genomeNt)
-
         feature = self.features[featureName]
         name = feature['name']
 
@@ -347,12 +349,12 @@ class SARS2Genome:
             C{int} number of errors, and a C{dict} keyed by changes in
             C{changes}. The C{dict} values are 4-C{tuple}s of (Boolean,
             reference base, Boolean, genome base) to indicate success or
-            failure of the check for the reference and the refence base found,
-            then the same thing for the genome. E.g., a tuple of (True, 'A',
-            False, 'T') would indicate that the expected reference base was
-            found, that it was an 'A', but that the expected genome base was
-            not found and that instead a 'T' was found. If C{nt} is C{False}
-            and there is a translation error, the 4-tuple will contain
+            failure of the check for the reference and the reference base
+            found, then the same thing for the genome. E.g., a tuple of
+            (True, 'A', False, 'T') would indicate that the expected reference
+            base was found, that it was an 'A', but that the expected genome
+            base was not found and that instead a 'T' was found. If C{nt} is
+            C{False} and there is a translation error, the 4-tuple will contain
             (False, None, False, None).
         """
         def _getChanges(changes):
@@ -410,6 +412,7 @@ class SARS2Genome:
             case an error message will be printed to C{errFp}.
         @param errFp: An open file pointer to write error messages to, if any.
             Only used if C{onError} is 'print'.
+        @raise RuntimeError: If incorrect arguments are passed (see below).
         @return: A 3-C{tuple} with the number of checks done, the number of
             errors, and a C{dict} keyed by changes in C{changes}, with values
             a 2-C{tuple} of Booleans to indicate success or failure of the
@@ -467,79 +470,89 @@ class SARS2Genome:
             Have a look in ../test/test_features.py for some example calls
             and results.
         @raise KeyError: If the feature name is unknown.
+        @raise RuntimeError: If incorrect arguments are passed (see below).
         @raise AmbiguousFeatureError: If multiple features occur at the offset
             and C{featureName} does not indicate the one to use.
+        @return: A C{dict} with information about what is found in the
+            reference and the genome at the offset. See the C{result}
+            dictionary below.
         """
-
         if relativeToFeature:
             if featureName is None:
-                raise ValueError('If relativeToFeature is True, a feature '
-                                 'name must be given.')
-            genomeOffset = self.features.genomeOffset(featureName, offset, aa)
-            features = self.features.featuresAt(genomeOffset, onlyTranslated)
-            assert self.features.canonicalName(featureName) in features
-            feature = self.features[featureName]
+                raise RuntimeError('If relativeToFeature is True, a feature '
+                                   'name must be given.')
+            referenceOffset = self.features.referenceOffset(
+                featureName, offset, aa)
         else:
             if aa:
-                raise ValueError('You cannot pass aa=True unless the offset '
-                                 'you pass is relative to the feature.')
+                raise RuntimeError('You cannot pass aa=True unless the offset '
+                                   'you pass is relative to the feature.')
+            referenceOffset = offset
 
-            genomeOffset = offset
-            features = self.features.featuresAt(offset, onlyTranslated)
+        feature, features = self.features.getFeature(
+            referenceOffset, featureName, onlyTranslated)
 
-            if featureName:
-                if featureName in features:
-                    feature = self.features[featureName]
-                else:
-                    if features:
-                        raise ValueError(
-                            f'Feature {featureName!r} does not overlap offset '
-                            f'{offset}. The feature(s) at that offset are '
-                            f'{", ".join(sorted(features))}.')
-                    else:
-                        raise ValueError(
-                            f'Feature {featureName!r} does not overlap offset '
-                            f'{offset}. There are no features at that offset.')
-            else:
-                if features:
-                    # There are some features here, but we weren't told which
-                    # one to use. Only proceed if there's just one.
-                    if len(features) == 1:
-                        feature = self.features[list(features)[0]]
-                    else:
-                        raise AmbiguousFeatureError(
-                            f'There are multiple features at offset {offset}: '
-                            f'{", ".join(sorted(features))}. Pass a feature '
-                            f'name to specify which one you want.')
-                else:
-                    # There were no features at this offset.
-                    feature = None
-
+        # The 'None' values in the following will be filled in below. They are
+        # set up-front here to explicitly show what's in the returned
+        # dictionary.
+        #
+        # The 'aa' value will be None if the reference or genome sequence ends
+        # within three nucleotides of the given offset (i.e., the sequence is
+        # too short to get a 3-nucleotide codon). The 'aa' value in the
+        # 'genome' dict will be '-' if the aligned genome contains a gap at any
+        # of the codon locations in the reference.
+        #
+        # The 'frame' value will be 0, 1, or 2.
         result = {
             'featureName': feature['name'] if feature else None,
             'featureNames': features,
-            'reference': {},
-            'genome': {},
+            'alignmentOffset': None,
+            'reference': {
+                'aa': None,
+                'codon': None,
+                'frame': None,
+            },
+            'genome': {
+                'aa': None,
+                'codon': None,
+                'frame': None,
+            },
         }
 
-        codon = self.features.reference.sequence[
-            genomeOffset:genomeOffset + 3]
-        print(f'{genomeOffset=}')
-        print('ref codon', codon)
-        result['reference']['codon'] = codon
+        # Reference.
+        if relativeToFeature:
+            referenceFrame = 0 if aa else offset % 3
+        else:
+            referenceFrame = (
+                referenceOffset - (feature['start'] if feature else 0)) % 3
+
+        codonOffset = referenceOffset - referenceFrame
+        codon = self.features.reference.sequence[codonOffset:codonOffset + 3]
         result['reference']['aa'] = (
             str(Seq(codon).translate()) if len(codon) == 3 else None)
+        result['reference']['codon'] = codon
+        result['reference']['frame'] = referenceFrame
 
-        gappedOffset = self.gappedOffsets[genomeOffset]
-        print(f'{gappedOffset=}')
-        # end = alignmentEnd(self.genomeAligned.sequence, gappedOffset, 3)
-        # codon = self.genomeAligned.sequence[
-        # gappedOffset:end].replace('-', '')
-        codon = self.genomeAligned.sequence[gappedOffset:gappedOffset + 3]
-        result['genome']['codon'] = codon
-        print('gen codon', codon)
-        # assert len(codon) == 3
+        # Genome.
+        gappedOffset = self.gappedOffsets[referenceOffset]
+        if relativeToFeature or feature:
+            genomeGappedStart = self.gappedOffsets[feature['start']]
+            assert genomeGappedStart <= gappedOffset
+            gapCount = self.genomeAligned.sequence[
+                genomeGappedStart:gappedOffset].count('-')
+            genomeFrame = (gappedOffset - genomeGappedStart - gapCount) % 3
+        else:
+            gapCount = self.genomeAligned.sequence[:gappedOffset].count('-')
+            genomeFrame = (gappedOffset - gapCount) % 3
+
+        codonOffset = gappedOffset - genomeFrame
+        codon = self.genomeAligned.sequence[codonOffset:codonOffset + 3]
         result['genome']['aa'] = (
-            '-' if '-' in codon else str(Seq(codon).translate()))
+            '-' if '-' in codon else
+            (str(Seq(codon).translate()) if len(codon) == 3 else None))
+        result['genome']['codon'] = codon
+        result['genome']['frame'] = genomeFrame
+
+        result['alignmentOffset'] = gappedOffset
 
         return result

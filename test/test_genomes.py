@@ -6,18 +6,14 @@ See test_genome.py for tests of more basic SARS2Genome functionality.
 
 from unittest import TestCase
 
-from os.path import dirname, join
-
 from .fasta import getSequence
 
-import sars2seq
+from sars2seq import DATA_DIR
 from sars2seq.features import Features
 from sars2seq.genome import SARS2Genome
 from sars2seq.variants import VARIANTS
 
-
-DATA_DIR = join(dirname(dirname(sars2seq.__file__)), 'data')
-REF_GB = join(DATA_DIR, 'NC_045512.2.gb')
+REF_GB = DATA_DIR / 'NC_045512.2.gb'
 FEATURES = Features(REF_GB)
 
 
@@ -62,8 +58,8 @@ class Test_EPI_ISL_402125(TestCase):
         NC_045512.2 reference sequence from NCBI.
         """
         self.assertEqual(
-            getSequence(join(DATA_DIR, 'EPI_ISL_402125.fasta')).sequence,
-            getSequence(join(DATA_DIR, 'NC_045512.2.fasta')).sequence)
+            getSequence(DATA_DIR / 'EPI_ISL_402125.fasta').sequence,
+            getSequence(DATA_DIR / 'NC_045512.2.fasta').sequence)
 
 
 class Test_EPI_ISL_601443(TestCase, _Mixin):
@@ -72,7 +68,7 @@ class Test_EPI_ISL_601443(TestCase, _Mixin):
     (VOC 202012/01) referred to in https://www.gov.uk/government/publications/
     investigation-of-novel-sars-cov-2-variant-variant-of-concern-20201201
     """
-    genomeRead = getSequence(join(DATA_DIR, 'EPI_ISL_601443.fasta'))
+    genomeRead = getSequence(DATA_DIR / 'EPI_ISL_601443.fasta')
     genome = SARS2Genome(genomeRead, FEATURES)
 
     def testSpikeDeletionsAa(self):
@@ -229,7 +225,7 @@ class Test_BavPat2(TestCase, _Mixin):
     """
     Test the BavPat2 sequence. This is Bavarian patient #2.
     """
-    genomeRead = getSequence(join(DATA_DIR, 'BavPat2.fasta'))
+    genomeRead = getSequence(DATA_DIR / 'BavPat2.fasta')
     genome = SARS2Genome(genomeRead, FEATURES)
 
     def testSpikeMutationsNt(self):
@@ -350,7 +346,7 @@ class Test_NC_045512(TestCase, _Mixin):
     Test the NC_045512.2 sequence, which should test as equal seeing as it is
     the default feature reference.
     """
-    genomeRead = getSequence(join(DATA_DIR, 'NC_045512.2.fasta'))
+    genomeRead = getSequence(DATA_DIR / 'NC_045512.2.fasta')
     genome = SARS2Genome(genomeRead, FEATURES)
 
     def testSpikeIdenticalNt(self):
@@ -420,7 +416,7 @@ class Test_EPI_ISL_678597(TestCase, _Mixin):
     Test the EPI_ISL_678597 sequence. This is the South African variant of
     concern.
     """
-    genomeRead = getSequence(join(DATA_DIR, 'EPI_ISL_678597.fasta'))
+    genomeRead = getSequence(DATA_DIR / 'EPI_ISL_678597.fasta')
     genome = SARS2Genome(genomeRead, FEATURES)
 
     def testSpikeDeletionsAa(self):

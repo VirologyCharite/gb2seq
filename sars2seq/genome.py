@@ -456,7 +456,7 @@ class SARS2Genome:
         return testCountTotal, errorCountTotal, result
 
     def offsetInfo(self, offset, relativeToFeature=False, aa=False,
-                   featureName=None, onlyTranslated=True):
+                   featureName=None, includeUntranslated=False):
         """
         Get information about genome features at an offset.
 
@@ -467,14 +467,8 @@ class SARS2Genome:
             number of nucleotides.
         @param featureName: If not C{None} and multiple features occur at this
             offset, use the feature with this name.
-        @param onlyTranslated: If C{True}, only return features that have an
-            amino acid translation. Note that this may not produce what you
-            expect, since some features in the GenBank record may be proteins
-            that are translated (e.g., nsp2) but are part of a polyprotein and
-            no translation is given for them in the GenBank record (in which
-            case they will not be returned if C{onlyTranslated} is C{True}).
-            Have a look in ../test/test_features.py for some example calls
-            and results.
+        @param includeUntranslated: If C{True}, also return features that are
+            not translated.
         @raise KeyError: If the feature name is unknown.
         @raise RuntimeError: If incorrect arguments are passed (see below).
         @raise AmbiguousFeatureError: If multiple features occur at the offset
@@ -496,7 +490,7 @@ class SARS2Genome:
             referenceOffset = offset
 
         feature, features = self.features.getFeature(
-            referenceOffset, featureName, onlyTranslated)
+            referenceOffset, featureName, includeUntranslated)
 
         # The 'None' values in the following will be filled in below. They are
         # set up-front here to explicitly show what's in the returned
@@ -506,7 +500,9 @@ class SARS2Genome:
         # within three nucleotides of the given offset (i.e., the sequence is
         # too short to get a 3-nucleotide codon). The 'aa' value in the
         # 'genome' dict will be '-' if the aligned genome contains a gap at any
-        # of the codon locations in the reference.
+        # of the codon locations in the reference and 'X' if the offset falls
+        # in the last two nucleotides of the genome (and so the codon is
+        # too short for translation).
         #
         # The 'frame' value will be 0, 1, or 2.
         result = {
@@ -537,7 +533,7 @@ class SARS2Genome:
         codonOffset = referenceOffset - referenceFrame
         codon = self.features.reference.sequence[codonOffset:codonOffset + 3]
         result['reference']['aa'] = (
-            str(Seq(codon).translate()) if len(codon) == 3 else None)
+            str(Seq(codon).translate()) if len(codon) == 3 else 'X')
         result['reference']['codon'] = codon
         result['reference']['frame'] = referenceFrame
         result['reference']['offset'] = referenceOffset
@@ -558,7 +554,7 @@ class SARS2Genome:
         codon = self.genomeAligned.sequence[codonOffset:codonOffset + 3]
         result['genome']['aa'] = (
             '-' if '-' in codon else
-            (str(Seq(codon).translate()) if len(codon) == 3 else None))
+            (str(Seq(codon).translate()) if len(codon) == 3 else 'X'))
         result['genome']['codon'] = codon
         result['genome']['frame'] = genomeFrame
         result['genome']['offset'] = gappedOffset - (

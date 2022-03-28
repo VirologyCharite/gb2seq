@@ -26,7 +26,7 @@ def report(genome, args, includeGenome=True):
         offsetInfo = genome.offsetInfo(
             args.site - 1, relativeToFeature=args.relativeToFeature,
             aa=args.aa, featureName=args.feature,
-            onlyTranslated=args.onlyTranslated)
+            includeUntranslated=args.includeUntranslated)
     except sars2seq.Sars2SeqError as e:
         print(e, file=sys.stderr)
         sys.exit(1)
@@ -44,7 +44,7 @@ def report(genome, args, includeGenome=True):
                 offsetInfo['feature'] = genome.features[featureName]
 
         # TODO: what should we print if the user doesn't want JSON? Some kind
-        # of textual summary, I guess. When that's implementated, remove the
+        # of textual summary, I guess. When that's implemented, remove the
         # "or True" below.
         if args.json or True:
             # Make the featureNames into a sorted list (it is by default a
@@ -119,8 +119,7 @@ if __name__ == '__main__':
               'use --aa or --relativeToFeature'))
 
     parser.add_argument(
-        '--includeUntranslated', action='store_false',
-        dest='onlyTranslated',
+        '--includeUntranslated', action='store_true',
         help=('Include untranslated features (if no feature name is given and '
               'it is necessary to identify the intended feature just based on '
               'offset.'))

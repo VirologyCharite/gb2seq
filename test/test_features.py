@@ -175,7 +175,7 @@ class TestFeatures(TestCase):
             {
                 "5'UTR",
             },
-            _FEATURES.featuresAt(0, onlyTranslated=False))
+            _FEATURES.featuresAt(0, includeUntranslated=True))
 
     def testFeaturesAtOrf1abOffset(self):
         """
@@ -229,7 +229,7 @@ class TestFeatures(TestCase):
                 'stem loop 1',
                 'stem loop 2',
             },
-            _FEATURES.featuresAt(13500, onlyTranslated=False))
+            _FEATURES.featuresAt(13500, includeUntranslated=True))
 
     def testFeaturesAtRdRPOffset(self):
         """

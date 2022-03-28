@@ -750,13 +750,13 @@ class TestOffsetInfo(TestCase):
                 'featureName': None,
                 'featureNames': set(),
                 'reference': {
-                    'aa': None,
+                    'aa': 'X',
                     'codon': 'A',
                     'frame': 0,
                     'offset': 6,
                 },
                 'genome': {
-                    'aa': None,
+                    'aa': 'X',
                     'codon': 'A',
                     'frame': 0,
                     'offset': 6,
@@ -787,13 +787,13 @@ class TestOffsetInfo(TestCase):
                 'featureName': None,
                 'featureNames': set(),
                 'reference': {
-                    'aa': None,
+                    'aa': 'X',
                     'codon': 'AT',
                     'frame': 1,
                     'offset': 7,
                 },
                 'genome': {
-                    'aa': None,
+                    'aa': 'X',
                     'codon': 'AT',
                     'frame': 1,
                     'offset': 7,

@@ -310,37 +310,33 @@ class Features(UserDict):
         """
         return self[name]['start'] + offset * (3 if aa else 1)
 
-    def featuresAt(self, offset, onlyTranslated=True):
+    def featuresAt(self, offset, includeUntranslated=False):
         """
         Get the names of features that overlap a given offset.
 
         @param offset: An C{int} offset into the genome.
-        @param onlyTranslated: If C{True}, only return features that have an
-            amino acid translation. Note that this may not produce what you
-            expect, since some features in the GenBank record may be proteins
-            that are translated (e.g., nsp2) but are part of a polyprotein and
-            no translation is given for them in the GenBank record (in which
-            case they will not be returned if C{onlyTranslated} is C{True}).
-            Have a look in ../test/test_features.py for some example calls
-            and results.
+        @param includeUntranslated: If C{True}, also return features that are
+            not translated.
         @return: A C{set} of C{str} feature names.
         """
         result = set()
 
         for name, feature in self.items():
             if (feature['start'] <= offset < feature['stop'] and (
-                    name in TRANSLATED or not onlyTranslated)):
+                    name in TRANSLATED or includeUntranslated)):
                 result.add(name)
 
         return result
 
-    def getFeature(self, offset, featureName=None, onlyTranslated=True):
+    def getFeature(self, offset, featureName=None, includeUntranslated=False):
         """
         Find a feature by name or raise an error.
 
+        @param offset: The C{int} offset that was used to find C{features}.
         @param featureName: A C{str} feature name. If C{None}, a feature will
             be returned if there is only one at the offset.
-        @param offset: The C{int} offset that was used to find C{features}.
+        @param includeUntranslated: If C{True}, also return features that are
+            not translated.
         @raise MissingFeatureError: if the requested feature does not overlap
             the given C{offset} or if there are no features at the offset.
         @raise AmbiguousFeatureError: if there are multiple features at the
@@ -349,7 +345,7 @@ class Features(UserDict):
             feature is present in the features at the offset, and 2) the set of
             C{str} feature names present at the offset.
         """
-        features = self.featuresAt(offset, onlyTranslated)
+        features = self.featuresAt(offset, includeUntranslated)
 
         if featureName is None:
             if features:

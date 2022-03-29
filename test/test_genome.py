@@ -642,13 +642,15 @@ class TestOffsetInfo(TestCase):
                     'aa': 'V',
                     'codon': 'GTT',
                     'frame': 0,
-                    'offset': 0,
+                    'aaOffset': 0,
+                    'ntOffset': 0,
                 },
                 'genome': {
                     'aa': 'I',
                     'codon': 'ATT',
                     'frame': 0,
-                    'offset': 0,
+                    'aaOffset': 0,
+                    'ntOffset': 0,
                 }
             },
             genome.offsetInfo(0))
@@ -679,13 +681,15 @@ class TestOffsetInfo(TestCase):
                     'aa': 'V',
                     'codon': 'GTT',
                     'frame': 0,
-                    'offset': 0,
+                    'aaOffset': 0,
+                    'ntOffset': 0,
                 },
                 'genome': {
                     'aa': 'I',
                     'codon': 'ATT',
                     'frame': 0,
-                    'offset': 0,
+                    'aaOffset': 0,
+                    'ntOffset': 0,
                 }
             },
             genome.offsetInfo(0))
@@ -716,13 +720,15 @@ class TestOffsetInfo(TestCase):
                     'aa': 'P',
                     'codon': 'CCC',
                     'frame': 2,
-                    'offset': 5,
+                    'aaOffset': 1,
+                    'ntOffset': 5,
                 },
                 'genome': {
                     'aa': 'P',
                     'codon': 'CCC',
                     'frame': 2,
-                    'offset': 5,
+                    'aaOffset': 1,
+                    'ntOffset': 5,
                 }
             },
             genome.offsetInfo(5))
@@ -753,13 +759,15 @@ class TestOffsetInfo(TestCase):
                     'aa': 'X',
                     'codon': 'A',
                     'frame': 0,
-                    'offset': 6,
+                    'aaOffset': 2,
+                    'ntOffset': 6,
                 },
                 'genome': {
                     'aa': 'X',
                     'codon': 'A',
                     'frame': 0,
-                    'offset': 6,
+                    'aaOffset': 2,
+                    'ntOffset': 6,
                 }
             },
             genome.offsetInfo(6))
@@ -790,13 +798,15 @@ class TestOffsetInfo(TestCase):
                     'aa': 'X',
                     'codon': 'AT',
                     'frame': 1,
-                    'offset': 7,
+                    'aaOffset': 2,
+                    'ntOffset': 7,
                 },
                 'genome': {
                     'aa': 'X',
                     'codon': 'AT',
                     'frame': 1,
-                    'offset': 7,
+                    'aaOffset': 2,
+                    'ntOffset': 7,
                 }
             },
             genome.offsetInfo(7))
@@ -827,13 +837,15 @@ class TestOffsetInfo(TestCase):
                     'aa': 'S',
                     'codon': 'TCC',
                     'frame': 0,
-                    'offset': 5,
+                    'aaOffset': 1,
+                    'ntOffset': 5,
                 },
                 'genome': {
                     'aa': 'T',
                     'codon': 'ACG',
                     'frame': 0,
-                    'offset': 5,
+                    'aaOffset': 1,
+                    'ntOffset': 5,
                 }
             },
             genome.offsetInfo(3, relativeToFeature=True,
@@ -866,13 +878,15 @@ class TestOffsetInfo(TestCase):
                     'aa': 'S',
                     'codon': 'TCC',
                     'frame': 0,
-                    'offset': 5,
+                    'aaOffset': 1,
+                    'ntOffset': 5,
                 },
                 'genome': {
                     'aa': 'T',
                     'codon': 'ACG',
                     'frame': 0,
-                    'offset': 5,
+                    'aaOffset': 1,
+                    'ntOffset': 5,
                 }
             },
             genome.offsetInfo(1, aa=True, relativeToFeature=True,
@@ -902,13 +916,15 @@ class TestOffsetInfo(TestCase):
                     'aa': 'V',
                     'codon': 'GTT',
                     'frame': 0,
-                    'offset': 0,
+                    'aaOffset': 0,
+                    'ntOffset': 0,
                 },
                 'genome': {
                     'aa': '-',
                     'codon': '-TT',
                     'frame': 0,
-                    'offset': 0,
+                    'aaOffset': 0,
+                    'ntOffset': 0,
                 }
             },
             genome.offsetInfo(0))
@@ -940,13 +956,15 @@ class TestOffsetInfo(TestCase):
                     'aa': 'V',
                     'codon': 'GTT',
                     'frame': 1,
-                    'offset': 1,
+                    'aaOffset': 0,
+                    'ntOffset': 1,
                 },
                 'genome': {
                     'aa': 'F',
                     'codon': 'TTC',
                     'frame': 0,
-                    'offset': 0,
+                    'aaOffset': 0,
+                    'ntOffset': 0,
                 }
             },
             genome.offsetInfo(1))
@@ -986,13 +1004,15 @@ class TestOffsetInfo(TestCase):
                     'aa': 'I',
                     'codon': 'ATT',
                     'frame': 0,
-                    'offset': 8,
+                    'aaOffset': 2,
+                    'ntOffset': 8,
                 },
                 'genome': {
                     'aa': 'I',
                     'codon': 'ATT',
                     'frame': 0,
-                    'offset': 7,
+                    'aaOffset': 2,
+                    'ntOffset': 7,
                 }
             },
             genome.offsetInfo(2, featureName='surface glycoprotein', aa=True,
@@ -1034,13 +1054,15 @@ class TestOffsetInfo(TestCase):
                         'aa': 'I',
                         'codon': 'ATT',
                         'frame': frame,
-                        'offset': 8 + frame,
+                        'aaOffset': 2,
+                        'ntOffset': 8 + frame,
                     },
                     'genome': {
                         'aa': 'I',
                         'codon': 'ATT',
                         'frame': frame,
-                        'offset': 7 + frame,
+                        'aaOffset': 2,
+                        'ntOffset': 7 + frame,
                     }
                 },
                 genome.offsetInfo(6 + frame,
@@ -1080,13 +1102,17 @@ class TestOffsetInfo(TestCase):
                         'aa': 'N',
                         'codon': 'AAT',
                         'frame': frame,
-                        'offset': start + offset,
+                        'aaOffset': 500,
+                        'ntOffset': start + offset,
                     },
                     'genome': {
                         'aa': 'Y',
                         'codon': 'TAT',
                         'frame': frame,
-                        'offset': expectedGenomeOffset,
+                        # Alpha has 3 deletions before site 501 (at 69, 70,
+                        # and 144).
+                        'aaOffset': 497,
+                        'ntOffset': expectedGenomeOffset,
                     }
                 },
                 genome.offsetInfo(offset, relativeToFeature=True,
@@ -1118,13 +1144,17 @@ class TestOffsetInfo(TestCase):
                         'aa': 'N',
                         'codon': 'AAT',
                         'frame': frame,
-                        'offset': offset,
+                        'aaOffset': 500,
+                        'ntOffset': offset,
                     },
                     'genome': {
                         'aa': 'Y',
                         'codon': 'TAT',
                         'frame': frame,
-                        'offset': expectedGenomeOffset,
+                        # Alpha has 3 deletions before site 501 (at 69, 70,
+                        # and 144).
+                        'aaOffset': 497,
+                        'ntOffset': expectedGenomeOffset,
                     }
                 },
                 genome.offsetInfo(offset, featureName='spike'))
@@ -1154,13 +1184,17 @@ class TestOffsetInfo(TestCase):
                     'aa': 'N',
                     'codon': 'AAT',
                     'frame': 0,
-                    'offset': start + offset * 3,
+                    'aaOffset': offset,
+                    'ntOffset': start + offset * 3,
                 },
                 'genome': {
                     'aa': 'Y',
                     'codon': 'TAT',
                     'frame': 0,
-                    'offset': expectedGenomeOffset,
+                    # Alpha has 3 deletions before site 501 (at 69, 70,
+                    # and 144).
+                    'aaOffset': offset - 3,
+                    'ntOffset': expectedGenomeOffset,
                 }
             },
             genome.offsetInfo(offset, aa=True, relativeToFeature=True,

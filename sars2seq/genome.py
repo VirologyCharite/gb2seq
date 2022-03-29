@@ -513,22 +513,25 @@ class SARS2Genome:
                 'aa': None,
                 'codon': None,
                 'frame': None,
-                'offset': None,
+                'aaOffset': None,
+                'ntOffset': None,
             },
             'genome': {
                 'aa': None,
                 'codon': None,
                 'frame': None,
-                'offset': None,
+                'aaOffset': None,
+                'ntOffset': None,
             },
         }
 
         # Reference.
         if relativeToFeature:
+            referenceCodonAaOffset = offset if aa else offset // 3
             referenceFrame = 0 if aa else offset % 3
         else:
-            referenceFrame = (
-                referenceOffset - (feature['start'] if feature else 0)) % 3
+            referenceCodonAaOffset, referenceFrame = divmod(
+                referenceOffset - (feature['start'] if feature else 0), 3)
 
         codonOffset = referenceOffset - referenceFrame
         codon = self.features.reference.sequence[codonOffset:codonOffset + 3]
@@ -536,7 +539,8 @@ class SARS2Genome:
             str(Seq(codon).translate()) if len(codon) == 3 else 'X')
         result['reference']['codon'] = codon
         result['reference']['frame'] = referenceFrame
-        result['reference']['offset'] = referenceOffset
+        result['reference']['aaOffset'] = referenceCodonAaOffset
+        result['reference']['ntOffset'] = referenceOffset
 
         # Genome.
         gappedOffset = self.gappedOffsets[referenceOffset]
@@ -545,10 +549,12 @@ class SARS2Genome:
             assert genomeGappedStart <= gappedOffset
             gapCount = self.genomeAligned.sequence[
                 genomeGappedStart:gappedOffset].count('-')
-            genomeFrame = (gappedOffset - genomeGappedStart - gapCount) % 3
         else:
+            genomeGappedStart = 0
             gapCount = self.genomeAligned.sequence[:gappedOffset].count('-')
-            genomeFrame = (gappedOffset - gapCount) % 3
+
+        genomeCodonAaOffset, genomeFrame = divmod(
+            gappedOffset - genomeGappedStart - gapCount, 3)
 
         codonOffset = gappedOffset - genomeFrame
         codon = self.genomeAligned.sequence[codonOffset:codonOffset + 3]
@@ -557,7 +563,8 @@ class SARS2Genome:
             (str(Seq(codon).translate()) if len(codon) == 3 else 'X'))
         result['genome']['codon'] = codon
         result['genome']['frame'] = genomeFrame
-        result['genome']['offset'] = gappedOffset - (
+        result['genome']['aaOffset'] = genomeCodonAaOffset
+        result['genome']['ntOffset'] = gappedOffset - (
             self.genomeAligned.sequence[:gappedOffset].count('-'))
 
         result['alignmentOffset'] = gappedOffset

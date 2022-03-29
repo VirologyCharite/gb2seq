@@ -122,12 +122,12 @@ if __name__ == '__main__':
         '--includeUntranslated', action='store_true',
         help=('Include untranslated features (if no feature name is given and '
               'it is necessary to identify the intended feature just based on '
-              'offset.'))
+              'offset).'))
 
     parser.add_argument(
         '--aa', action='store_true',
         help=('The given site is an amino acid count (the default is '
-              'nucleotides)'))
+              'nucleotides).'))
 
     parser.add_argument(
         '--relativeToFeature', action='store_true',

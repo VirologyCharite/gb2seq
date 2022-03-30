@@ -19,6 +19,9 @@ from sars2seq.translate import NoSlipperySequenceError
 from .fasta import getSequence
 
 
+ALPHA_ID = 'EPI_ISL_601443 hCoV-19/England/MILK-9E05B3/2020'
+
+
 class TestSARS2Genome(TestCase):
     """
     Test the SARS2Genome class.
@@ -642,6 +645,7 @@ class TestOffsetInfo(TestCase):
                     'aa': 'V',
                     'codon': 'GTT',
                     'frame': 0,
+                    'id': 'refId',
                     'aaOffset': 0,
                     'ntOffset': 0,
                 },
@@ -649,6 +653,7 @@ class TestOffsetInfo(TestCase):
                     'aa': 'I',
                     'codon': 'ATT',
                     'frame': 0,
+                    'id': 'genId',
                     'aaOffset': 0,
                     'ntOffset': 0,
                 }
@@ -681,6 +686,7 @@ class TestOffsetInfo(TestCase):
                     'aa': 'V',
                     'codon': 'GTT',
                     'frame': 0,
+                    'id': 'refId',
                     'aaOffset': 0,
                     'ntOffset': 0,
                 },
@@ -688,6 +694,7 @@ class TestOffsetInfo(TestCase):
                     'aa': 'I',
                     'codon': 'ATT',
                     'frame': 0,
+                    'id': 'genId',
                     'aaOffset': 0,
                     'ntOffset': 0,
                 }
@@ -720,6 +727,7 @@ class TestOffsetInfo(TestCase):
                     'aa': 'P',
                     'codon': 'CCC',
                     'frame': 2,
+                    'id': 'refId',
                     'aaOffset': 1,
                     'ntOffset': 5,
                 },
@@ -727,6 +735,7 @@ class TestOffsetInfo(TestCase):
                     'aa': 'P',
                     'codon': 'CCC',
                     'frame': 2,
+                    'id': 'genId',
                     'aaOffset': 1,
                     'ntOffset': 5,
                 }
@@ -759,6 +768,7 @@ class TestOffsetInfo(TestCase):
                     'aa': 'X',
                     'codon': 'A',
                     'frame': 0,
+                    'id': 'refId',
                     'aaOffset': 2,
                     'ntOffset': 6,
                 },
@@ -766,6 +776,7 @@ class TestOffsetInfo(TestCase):
                     'aa': 'X',
                     'codon': 'A',
                     'frame': 0,
+                    'id': 'genId',
                     'aaOffset': 2,
                     'ntOffset': 6,
                 }
@@ -798,6 +809,7 @@ class TestOffsetInfo(TestCase):
                     'aa': 'X',
                     'codon': 'AT',
                     'frame': 1,
+                    'id': 'refId',
                     'aaOffset': 2,
                     'ntOffset': 7,
                 },
@@ -805,6 +817,7 @@ class TestOffsetInfo(TestCase):
                     'aa': 'X',
                     'codon': 'AT',
                     'frame': 1,
+                    'id': 'genId',
                     'aaOffset': 2,
                     'ntOffset': 7,
                 }
@@ -837,6 +850,7 @@ class TestOffsetInfo(TestCase):
                     'aa': 'S',
                     'codon': 'TCC',
                     'frame': 0,
+                    'id': 'refId',
                     'aaOffset': 1,
                     'ntOffset': 5,
                 },
@@ -844,6 +858,7 @@ class TestOffsetInfo(TestCase):
                     'aa': 'T',
                     'codon': 'ACG',
                     'frame': 0,
+                    'id': 'genId',
                     'aaOffset': 1,
                     'ntOffset': 5,
                 }
@@ -878,6 +893,7 @@ class TestOffsetInfo(TestCase):
                     'aa': 'S',
                     'codon': 'TCC',
                     'frame': 0,
+                    'id': 'refId',
                     'aaOffset': 1,
                     'ntOffset': 5,
                 },
@@ -885,6 +901,7 @@ class TestOffsetInfo(TestCase):
                     'aa': 'T',
                     'codon': 'ACG',
                     'frame': 0,
+                    'id': 'genId',
                     'aaOffset': 1,
                     'ntOffset': 5,
                 }
@@ -916,6 +933,7 @@ class TestOffsetInfo(TestCase):
                     'aa': 'V',
                     'codon': 'GTT',
                     'frame': 0,
+                    'id': 'refId',
                     'aaOffset': 0,
                     'ntOffset': 0,
                 },
@@ -923,6 +941,7 @@ class TestOffsetInfo(TestCase):
                     'aa': '-',
                     'codon': '-TT',
                     'frame': 0,
+                    'id': 'genId',
                     'aaOffset': 0,
                     'ntOffset': 0,
                 }
@@ -956,6 +975,7 @@ class TestOffsetInfo(TestCase):
                     'aa': 'V',
                     'codon': 'GTT',
                     'frame': 1,
+                    'id': 'refId',
                     'aaOffset': 0,
                     'ntOffset': 1,
                 },
@@ -963,6 +983,7 @@ class TestOffsetInfo(TestCase):
                     'aa': 'F',
                     'codon': 'TTC',
                     'frame': 0,
+                    'id': 'genId',
                     'aaOffset': 0,
                     'ntOffset': 0,
                 }
@@ -1004,6 +1025,7 @@ class TestOffsetInfo(TestCase):
                     'aa': 'I',
                     'codon': 'ATT',
                     'frame': 0,
+                    'id': 'refId',
                     'aaOffset': 2,
                     'ntOffset': 8,
                 },
@@ -1011,6 +1033,7 @@ class TestOffsetInfo(TestCase):
                     'aa': 'I',
                     'codon': 'ATT',
                     'frame': 0,
+                    'id': 'genId',
                     'aaOffset': 2,
                     'ntOffset': 7,
                 }
@@ -1054,6 +1077,7 @@ class TestOffsetInfo(TestCase):
                         'aa': 'I',
                         'codon': 'ATT',
                         'frame': frame,
+                        'id': 'refId',
                         'aaOffset': 2,
                         'ntOffset': 8 + frame,
                     },
@@ -1061,6 +1085,7 @@ class TestOffsetInfo(TestCase):
                         'aa': 'I',
                         'codon': 'ATT',
                         'frame': frame,
+                        'id': 'genId',
                         'aaOffset': 2,
                         'ntOffset': 7 + frame,
                     }
@@ -1102,6 +1127,7 @@ class TestOffsetInfo(TestCase):
                         'aa': 'N',
                         'codon': 'AAT',
                         'frame': frame,
+                        'id': 'NC_045512.2',
                         'aaOffset': 500,
                         'ntOffset': start + offset,
                     },
@@ -1109,6 +1135,7 @@ class TestOffsetInfo(TestCase):
                         'aa': 'Y',
                         'codon': 'TAT',
                         'frame': frame,
+                        'id': ALPHA_ID,
                         # Alpha has 3 deletions before site 501 (at 69, 70,
                         # and 144).
                         'aaOffset': 497,
@@ -1134,7 +1161,6 @@ class TestOffsetInfo(TestCase):
                 offset - genome.genomeAligned.sequence[
                     :genome.gappedOffsets[offset]].count('-'))
             self.assertEqual(22990 + frame, expectedGenomeOffset)
-
             self.assertEqual(
                 {
                     'alignmentOffset': offset,
@@ -1144,6 +1170,7 @@ class TestOffsetInfo(TestCase):
                         'aa': 'N',
                         'codon': 'AAT',
                         'frame': frame,
+                        'id': 'NC_045512.2',
                         'aaOffset': 500,
                         'ntOffset': offset,
                     },
@@ -1151,6 +1178,7 @@ class TestOffsetInfo(TestCase):
                         'aa': 'Y',
                         'codon': 'TAT',
                         'frame': frame,
+                        'id': ALPHA_ID,
                         # Alpha has 3 deletions before site 501 (at 69, 70,
                         # and 144).
                         'aaOffset': 497,
@@ -1184,6 +1212,7 @@ class TestOffsetInfo(TestCase):
                     'aa': 'N',
                     'codon': 'AAT',
                     'frame': 0,
+                    'id': 'NC_045512.2',
                     'aaOffset': offset,
                     'ntOffset': start + offset * 3,
                 },
@@ -1191,6 +1220,7 @@ class TestOffsetInfo(TestCase):
                     'aa': 'Y',
                     'codon': 'TAT',
                     'frame': 0,
+                    'id': ALPHA_ID,
                     # Alpha has 3 deletions before site 501 (at 69, 70,
                     # and 144).
                     'aaOffset': offset - 3,

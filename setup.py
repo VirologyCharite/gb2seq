@@ -1,23 +1,22 @@
 #!/usr/bin/env python
 
 from setuptools import setup
+from pathlib import Path
 
 
 # Modified from http://stackoverflow.com/questions/2058802/
 # how-can-i-get-the-version-defined-in-setup-py-setuptools-in-my-package
 def version():
-    import os
     import re
 
-    init = os.path.join('sars2seq', '__init__.py')
+    init = Path('sars2seq') / '__init__.py'
     with open(init) as fp:
         initData = fp.read()
-    match = re.search(r"^__version__ = ['\"]([^'\"]+)['\"]",
-                      initData, re.M)
+    match = re.search(r"^__version__ = ['\"]([^'\"]+)['\"]", initData, re.M)
     if match:
         return match.group(1)
     else:
-        raise RuntimeError('Unable to find version string in %r.' % init)
+        raise RuntimeError(f'Unable to find version string in {init!r}.')
 
 
 setup(name='sars2seq',
@@ -25,14 +24,14 @@ setup(name='sars2seq',
       packages=['sars2seq'],
       url='https://github.com/virologycharite/sars2seq',
       download_url='https://github.com/virologycharite/sars2seq',
-      author='Terry Jones',
-      author_email='terry@jon.es',
+      author='Terry C. Jones',
+      author_email='terence.jones@charite.de',
       keywords=['SARS-CoV-2', 'genetic sequences'],
       classifiers=[
-          'Programming Language :: Python :: 3.5',
           'Programming Language :: Python :: 3.6',
           'Programming Language :: Python :: 3.7',
           'Programming Language :: Python :: 3.8',
+          'Programming Language :: Python :: 3.9',
           'Development Status :: 4 - Beta',
           'Intended Audience :: Developers',
           'License :: OSI Approved :: MIT License',
@@ -44,4 +43,4 @@ setup(name='sars2seq',
       long_description=(
           'See https://github.com/virologycharite/sars2seq for details.'),
       license='MIT',
-      install_requires=['dark-matter>=3.1.82'])
+      install_requires=['dark-matter>=4.0.19'])

@@ -1,6 +1,6 @@
 from Bio.Seq import Seq
 
-from dark.aligners import mafft
+from dark.aligners import edlibAlign, mafft
 from dark.reads import AARead, DNARead, Reads
 
 from sars2seq import Sars2SeqError
@@ -15,6 +15,10 @@ SLICE = slice(300)
 
 MAFFT_OPTIONS = '--anysymbol --preservecase --retree 1 --reorder'
 
+# Supported alignment methods.
+ALIGNERS = ('edlib', 'mafft')
+DEFAULT_ALIGNER = 'mafft'
+
 
 class ReferenceInsertionError(Sars2SeqError):
     'A genome resulted in MAFFT suggesting a reference insertion.'
@@ -22,6 +26,17 @@ class ReferenceInsertionError(Sars2SeqError):
 
 class AlignmentError(Sars2SeqError):
     'There is an unexpected problem in the alignment.'
+
+
+def addAlignerOption(parser):
+    """
+    Add a command line option for specifying an aligner for SARS2Genome.
+
+    @param parser: An argparse argument parser.
+    """
+    parser.add_argument(
+        '--aligner', default=DEFAULT_ALIGNER, choices=ALIGNERS,
+        help='The alignment method for sars2seq.')
 
 
 def getGappedOffsets(s):
@@ -86,12 +101,14 @@ class SARS2Genome:
     @param genomeAligned: A C{dark.reads.Read} instance with an aligned
         genome sequence, or C{None} if the alignment should be done here.
         If not C{None} then C{referenceAligned} must also be given.
+    @param aligner: A C{str} specifying the alignment algorithm to use.
+        Either 'mafft' (the default) or 'edlib' (experimental).
     @raise ValueError: If one of genomeAligned or referenceAligned is given
         but the other is not.
     @raise ReferenceWithGapsError: If the reference has gaps.
     """
     def __init__(self, genome, features=None, referenceAligned=None,
-                 genomeAligned=None):
+                 genomeAligned=None, aligner='mafft'):
         if (referenceAligned and not genomeAligned or
                 not referenceAligned and genomeAligned):
             raise ValueError('Either both or neither of referenceAligned and '
@@ -100,12 +117,13 @@ class SARS2Genome:
         # exports a consensus / alignment. Replace with N.
         self.genome = DNARead(genome.id, genome.sequence.replace('?', 'N'))
         self.features = Features() if features is None else features
-        self._getAlignment(referenceAligned, genomeAligned)
+        self._getAlignment(referenceAligned, genomeAligned, aligner)
         self.gappedOffsets = getGappedOffsets(
             self.referenceAligned.sequence)
         self._cache = {'aa': {}, 'nt': {}}
 
-    def _getAlignment(self, referenceAligned=None, genomeAligned=None):
+    def _getAlignment(self, referenceAligned=None, genomeAligned=None,
+                      aligner='mafft'):
         """
         Align the reference and the genome.
 
@@ -115,6 +133,8 @@ class SARS2Genome:
         @param genomeAligned: A C{dark.reads.Read} instance with an aligned
             genome sequence, or C{None} if the alignment should be done here.
             If not C{None} then C{referenceAligned} must also be given.
+        @param aligner: A C{str} specifying the alignment algorithm to use.
+            Either 'mafft' (the default) or 'edlib' (experimental).
         @raise AssertionError: If an already aligned genome is given but no
             aligned reference is also given, or vice versa.
         @raise AlignmentError: If the genome and reference sequences both start
@@ -131,9 +151,15 @@ class SARS2Genome:
                 self.referenceAligned, self.genomeAligned = (
                     self.features.reference, self.genome)
             else:
-                self.referenceAligned, self.genomeAligned = mafft(
-                    Reads([self.features.reference, self.genome]),
-                    options=MAFFT_OPTIONS)
+                reads = Reads([self.features.reference, self.genome])
+                if aligner == 'mafft':
+                    self.referenceAligned, self.genomeAligned = (
+                        mafft(reads, options=MAFFT_OPTIONS))
+                elif aligner == 'edlib':
+                    self.referenceAligned, self.genomeAligned = (
+                        edlibAlign(reads))
+                else:
+                    raise ValueError(f'Unknown aligner {aligner!r}.')
 
             if DEBUG:
                 print('ALIGNING')

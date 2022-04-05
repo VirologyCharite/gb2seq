@@ -9,7 +9,7 @@ from dark.fasta import FastaReads
 
 import sars2seq
 from sars2seq.features import Features
-from sars2seq.genome import SARS2Genome
+from sars2seq.genome import SARS2Genome, addAlignerOption
 
 
 def report(genome, args, includeGenome=True):
@@ -68,7 +68,8 @@ def main(args):
     count = ignoredDueToCoverageCount = 0
 
     if args.genome is None and os.isatty(0):
-        genome = SARS2Genome(features.reference, features)
+        genome = SARS2Genome(features.reference, features,
+                             aligner=args.aligner)
         report(genome, args, False)
     else:
         fp = open(args.genome) if args.genome else sys.stdin
@@ -84,7 +85,7 @@ def main(args):
                               f'reference.', file=sys.stderr)
                     continue
 
-            genome = SARS2Genome(read, features)
+            genome = SARS2Genome(read, features, aligner=args.aligner)
             report(genome, args)
 
         if args.verbose:
@@ -162,6 +163,8 @@ if __name__ == '__main__':
     parser.add_argument(
         '--gbFile', metavar='file.gb', default=Features.REF_GB,
         help='The Genbank file to read for SARS-CoV-2 features.')
+
+    addAlignerOption(parser)
 
     args = parser.parse_args()
 

@@ -13,7 +13,7 @@ from dark.dna import compareDNAReads, matchToString as dnaMatchToString
 from dark.reads import Read, Reads
 
 from sars2seq.features import Features
-from sars2seq.genome import SARS2Genome
+from sars2seq.genome import SARS2Genome, addAlignerOption
 from sars2seq.translate import TranslationError
 from sars2seq.variants import VARIANTS
 
@@ -272,7 +272,7 @@ def main(args):
                       file=sys.stderr)
                 continue
 
-        genome = SARS2Genome(read, features)
+        genome = SARS2Genome(read, features, aligner=args.aligner)
 
         if args.checkVariant:
             with genomeFilePointer(read, args, '-variant-summary.txt') as fp:
@@ -368,6 +368,8 @@ if __name__ == '__main__':
         '--onError', choices=('ignore', 'print', 'raise'), default='print',
         help=('What to do if an error occurs (e.g., due to translating or an '
               'index out of range.'))
+
+    addAlignerOption(parser)
 
     args = parser.parse_args()
 

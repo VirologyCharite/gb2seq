@@ -14,7 +14,7 @@ from dark.dna import compareDNAReads, matchToString as dnaMatchToString
 from dark.reads import Read, Reads
 
 from sars2seq.features import Features
-from sars2seq.genome import SARS2Genome
+from sars2seq.genome import SARS2Genome, addAlignerOption
 from sars2seq.variants import VARIANTS
 
 CHANGE_SETS = {
@@ -322,7 +322,7 @@ def main(args):
     print('\nPER-SEQUENCE RESULTS\n')
 
     for read in reads:
-        genome = SARS2Genome(read, features)
+        genome = SARS2Genome(read, features, aligner=args.aligner)
 
         if args.checkVariant:
             with genomeFilePointer(read, args, '-variant-summary.txt') as fp:
@@ -434,6 +434,8 @@ if __name__ == '__main__':
     parser.add_argument(
         '--gbFile', metavar='file.gb', default=Features.REF_GB,
         help='The Genbank file to read for SARS-CoV-2 features.')
+
+    addAlignerOption(parser)
 
     args = parser.parse_args()
 

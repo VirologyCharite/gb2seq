@@ -3,6 +3,7 @@
 import sys
 import os
 import argparse
+from json import load
 from math import log10
 from os.path import exists, join
 from contextlib import contextmanager
@@ -127,8 +128,8 @@ def printDiffs(read1, read2, nt, referenceOffset, fp, indent=''):
 
 def printVariantSummary(genome, fp, args):
     """
-    Print a summary of whether the genome fulfils the various
-    variant properties.
+    Print a summary of whether the genome fulfils the various variant
+    properties.
 
     @param genome: A C{SARS2Genome} instance.
     @param fp: An open file pointer to write to.
@@ -259,6 +260,15 @@ def main(args):
         print('No action specified - I have nothing to do!', file=sys.stderr)
         return 1
 
+    if args.variantFile:
+        try:
+            VARIANTS.update(
+                load(open(args.variantFile, encoding='utf-8')))
+        except Exception as e:
+            print(f'Could not parse variant JSON in {args.variantFile!r}: {e}',
+                  file=sys.stderr)
+            sys.exit(1)
+
     count = ignoredDueToCoverageCount = 0
 
     for count, read in enumerate(FastaReads(args.genome), start=1):
@@ -283,7 +293,7 @@ def main(args):
             with featureFilePointers(read, featureName, args) as fps:
                 processFeature(featureName, genome, fps, i, args)
 
-    print(f'Examined {count} genomes.')
+    print(f'Examined {count} genome{"" if count == 1 else "s"}.')
 
     if args.minReferenceCoverage is not None:
         print(f'Ignored {ignoredDueToCoverageCount} genomes due to low '
@@ -313,23 +323,33 @@ if __name__ == '__main__':
               'specified, standard output is used.'))
 
     parser.add_argument(
-        '--checkVariant', action='append', choices=sorted(VARIANTS),
-        help='Check whether the genome fulfils a known variant.')
+        '--checkVariant', action='append',
+        help=(f'Check whether the genome matches the changes in a known '
+              f'variant. The checked variant(s) must either be found in the '
+              f'known variants (currently {", ".join(sorted(VARIANTS))}) '
+              f'or else be given in a JSON file using --variantFile. '
+              f'In case of conflict, names in any given --variantFile have '
+              f'precedence over the predefined names. May be repeated.'))
 
     parser.add_argument(
-        '--printNtSequence', action='store_true',
+        '--variantFile', metavar='VARIANT-FILE.json',
+        help=('A JSON file of variant information. See sars2seq/variants.py '
+              'for the required format.'))
+
+    parser.add_argument(
+        '--printNtSequence', '--printNTSequence', action='store_true',
         help='Print the nucleotide sequence.')
 
     parser.add_argument(
-        '--printAaSequence', action='store_true',
+        '--printAaSequence', '--printAASequence', action='store_true',
         help='Print the amino acid sequence.')
 
     parser.add_argument(
-        '--printNtMatch', action='store_true',
+        '--printNtMatch', '--printNTMatch', action='store_true',
         help='Print details of the nucleotide match with the reference.')
 
     parser.add_argument(
-        '--printAaMatch', action='store_true',
+        '--printAaMatch', '--printAAMatch', action='store_true',
         help='Print details of the amino acid match with the reference.')
 
     parser.add_argument(

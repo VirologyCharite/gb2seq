@@ -27,6 +27,11 @@ setup(name='sars2seq',
       author='Terry C. Jones',
       author_email='terence.jones@charite.de',
       keywords=['SARS-CoV-2', 'genetic sequences'],
+      scripts=[
+          'bin/describe-feature.py',
+          'bin/describe-genome.py',
+          'bin/describe-site.py',
+      ],
       classifiers=[
           'Programming Language :: Python :: 3.6',
           'Programming Language :: Python :: 3.7',

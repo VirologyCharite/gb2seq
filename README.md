@@ -12,14 +12,19 @@ translate between aa and nt offsets, and about all genome features.
 `sars2seq` makes an alignment between each genome you give it and a
 reference sequence
 ([NC_045512.2](https://www.ncbi.nlm.nih.gov/nuccore/NC_045512.2) by
-default)
+default). The default alignment algorithm is
+[MAFFT](https://mafft.cbrc.jp/alignment/software/), which can be slow but
+is reliable. You can also run scripts with `--aligner edlib` (or pass
+`aligner='edlib' to library functions) to use [the Python
+wrapper](https://pypi.org/project/edlib/) for the extremely fast
+[edlib](https://github.com/Martinsos/edlib) library.
 
-### Utility scripts
+## Utility scripts
 
 The three scripts described below all accept a `--help` option. Below is
 some representative usage.
 
-#### describe-feature.py
+### describe-feature.py
 
 The simplest script is `describe-feature.py`, which can be used to get
 information about features in a SARS-CoV-2 reference genome (you can
@@ -107,7 +112,7 @@ stem loop 5: sl5
 surface glycoprotein: s, spike
 ```
 
-#### describe-genome.py
+### describe-genome.py
 
 `describe-genome.py` has many uses. It can extract multiple features from
 multiple give genomes, as amino acids or nucleotides (or both). It will
@@ -207,4 +212,126 @@ VARIANTS = {
 }
 ```
 
-#### describe-site.py
+### describe-site.py
+
+Will print information about a given location (a "site") in the genome,
+showing you what's in the reference and in the genome you (optionally)
+pass.
+
+In the simplest case, just give a 1-based site and you'll see what's in the
+reference:
+
+``` sh
+$ describe-site.py --site 26000
+{
+    "alignmentOffset": 25999,
+    "featureName": "ORF3a protein",
+    "featureNames": [
+        "ORF3a protein"
+    ],
+    "reference": {
+        "aa": "L",
+        "aaOffset": 202,
+        "codon": "TTA",
+        "frame": 1,
+        "id": "NC_045512.2",
+        "ntOffset": 25999
+    }
+}
+```
+
+At the moment, the output is a JSON object, with 0-based genome offsets
+(suitable for working in Python).
+
+You can also specify the site relative to a feature:
+
+```sh
+$ describe-site.py --site 1501 --feature spike --relative
+{
+    "alignmentOffset": 23062,
+    "featureName": "surface glycoprotein",
+    "featureNames": [
+        "surface glycoprotein"
+    ],
+    "reference": {
+        "aa": "N",
+        "aaOffset": 500,
+        "codon": "AAT",
+        "frame": 0,
+        "id": "NC_045512.2",
+        "ntOffset": 23062
+    }
+}
+```
+
+Or pass an amino acid site number (via `-aa`):
+
+```sh
+$ describe-site.py --site 501 --feature spike --relative --aa
+{
+    "alignmentOffset": 23062,
+    "featureName": "surface glycoprotein",
+    "featureNames": [
+        "surface glycoprotein"
+    ],
+    "reference": {
+        "aa": "N",
+        "aaOffset": 500,
+        "codon": "AAT",
+        "frame": 0,
+        "id": "NC_045512.2",
+        "ntOffset": 23062
+    }
+}
+```
+
+Of course it's more fun if you also provide a genome to compare the reference to:
+
+```sh
+$ describe-site.py --site 501 --relative --genome EPI_ISL_601443.fasta --feature spike --aa
+{
+    "alignmentOffset": 23062,
+    "featureName": "surface glycoprotein",
+    "featureNames": [
+        "surface glycoprotein"
+    ],
+    "genome": {
+        "aa": "Y",
+        "aaOffset": 497,
+        "codon": "TAT",
+        "frame": 0,
+        "id": "EPI_ISL_601443 hCoV-19/England/MILK-9E05B3/2020",
+        "ntOffset": 22990
+    },
+    "reference": {
+        "aa": "N",
+        "aaOffset": 500,
+        "codon": "AAT",
+        "frame": 0,
+        "id": "NC_045512.2",
+        "ntOffset": 23062
+    }
+}
+```
+
+Other options include `--genomeAaOnly` to just print the amino acid at a
+location in the genome, `--includeFeature` to also receive information
+about the feature at the site, and `--minReferenceCoverage` to exclude
+low-coverage genomes from the results.
+
+## Python API
+
+To be written!
+
+For now, see the `SARS2Genome` in [sars2seq/genome.py](sars2seq/genome.py)
+and the tests (e.g., in [test/test_genome.py], [test/test_checker.py]
+[test/test_variants.py]).  You can also look to see how the three utility
+scripts above call the library functions and use the results.
+
+## Developing
+
+Run the tests via 
+
+``` sh
+$ make pytest`
+```

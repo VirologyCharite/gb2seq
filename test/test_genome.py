@@ -13,7 +13,8 @@ from sars2seq import DATA_DIR
 from sars2seq.change import splitChange
 from sars2seq.features import (
     Features, AmbiguousFeatureError, MissingFeatureError)
-from sars2seq.genome import SARS2Genome, getGappedOffsets, alignmentEnd
+from sars2seq.genome import (
+    SARS2Genome, getGappedOffsets, alignmentEnd, offsetInfoMultipleGenomes)
 from sars2seq.translate import NoSlipperySequenceError
 
 from .fasta import getSequence
@@ -471,18 +472,18 @@ class TestOffsetInfo(TestCase):
     def testRelativeOffsetWithNoFeatureName(self):
         """
         If relativeToFeature is passed as True, but a feature name is not
-        given, a RuntimeError must be raised.
+        given, a ValueError must be raised.
         """
         features = Features({}, DNARead('refId', 'AA'))
         genome = SARS2Genome(DNARead('genId', 'AA'), features=features)
         error = (
             r'^If relativeToFeature is True, a feature name must be given\.$')
-        self.assertRaisesRegex(RuntimeError, error, genome.offsetInfo, 0,
+        self.assertRaisesRegex(ValueError, error, genome.offsetInfo, 0,
                                relativeToFeature=True)
 
     def testNotARelativeOffsetButAaIsTrue(self):
         """
-        If relativeToFeature is passed as False, a RuntimeError must be raised
+        If relativeToFeature is passed as False, a ValueError must be raised
         if aa is passed as True.
         """
         features = Features(
@@ -497,7 +498,7 @@ class TestOffsetInfo(TestCase):
         genome = SARS2Genome(DNARead('genId', 'AA'), features=features)
         error = (r'^You cannot pass aa=True unless the offset you pass is '
                  r'relative to the feature\.$')
-        self.assertRaisesRegex(RuntimeError, error, genome.offsetInfo, 0,
+        self.assertRaisesRegex(ValueError, error, genome.offsetInfo, 0,
                                featureName='surface glycoprotein', aa=True)
 
     def testNoFeaturesAtOffset(self):
@@ -659,6 +660,25 @@ class TestOffsetInfo(TestCase):
                 }
             },
             genome.offsetInfo(0))
+
+    def testLowCoverageGenome(self):
+        """
+        If the genome has insufficient coverage of the reference, None
+        must be returned.
+        """
+        features = Features(
+            {
+                'surface glycoprotein': {
+                    'name': 'surface glycoprotein',
+                    'start': 1,
+                    'stop': 6,
+                },
+            },
+            DNARead('refId', 'GTTCCCG'))
+
+        genome = SARS2Genome(DNARead('genId', 'GTT'), features)
+
+        self.assertIsNone(genome.offsetInfo(0, minReferenceCoverage=0.9))
 
     def testOneFeatureAtOffsetZero(self):
         """
@@ -1257,3 +1277,332 @@ class TestOffsetInfo(TestCase):
                 offset, aa=True, relativeToFeature=True, featureName='spike')
             self.assertEqual(offsetInfo['reference']['aa'], referenceAa)
             self.assertEqual(offsetInfo['genome']['aa'], genomeAa)
+
+
+class TestCoverage(TestCase):
+    """
+    Test the coverage function.
+    """
+    def testFullyCoveredGenome(self):
+        """
+        Get the coverage of a genome that is fully covered.
+        """
+        features = Features(
+            {
+                'spike': {
+                    'name': 'spike',
+                    'start': 0,
+                    'stop': 4,
+                },
+            },
+            DNARead('refId', 'ATTC'))
+
+        genome = SARS2Genome(DNARead('genId', 'ATTC'), features)
+
+        self.assertEqual((4, 4), genome.coverage())
+
+    def testFullyCoveredFeature(self):
+        """
+        Get the coverage of a feature that is fully covered.
+        """
+        features = Features(
+            {
+                'spike': {
+                    'name': 'spike',
+                    'start': 0,
+                    'stop': 4,
+                },
+            },
+            DNARead('refId', 'ATTC'))
+
+        genome = SARS2Genome(DNARead('genId', 'GGATTCGG'), features)
+
+        self.assertEqual((4, 4), genome.coverage('spike'))
+
+    def testHalfCoveredGenome(self):
+        """
+        Get the coverage of a genome that is half covered.
+        """
+        features = Features(
+            {
+                'spike': {
+                    'name': 'spike',
+                    'start': 0,
+                    'stop': 4,
+                },
+            },
+            DNARead('refId', 'ATTC'))
+
+        genome = SARS2Genome(DNARead('genId', 'AT'), features)
+
+        self.assertEqual((2, 4), genome.coverage())
+
+    def testQuarterCoveredFeature(self):
+        """
+        Get the coverage of a feature that is one-quarter covered.
+        """
+        features = Features(
+            {
+                'spike': {
+                    'name': 'spike',
+                    'start': 0,
+                    'stop': 4,
+                },
+            },
+            DNARead('refId', 'ATTC'))
+
+        genome = SARS2Genome(DNARead('genId', 'A'), features)
+
+        self.assertEqual((1, 4), genome.coverage('spike'))
+
+
+class TestOffsetInfoMultipleGenomes(TestCase):
+    """
+    Test the offsetInfoMultipleGenomes function.
+    """
+    def testNoReferences(self):
+        """
+        Passing no SARS2Genome instances must result in a ValueError.
+        """
+        error = r'^No SARS2Genome instances given\.$'
+        self.assertRaisesRegex(ValueError, error, offsetInfoMultipleGenomes,
+                               [], 0)
+
+    def testDifferingReferences(self):
+        """
+        Passing SARS2Genome instances with different reference ids must result
+        in a ValueError.
+        """
+        features1 = Features(
+            {
+                'surface glycoprotein': {
+                    'name': 'surface glycoprotein',
+                    'start': 1,
+                    'stop': 6,
+                },
+            },
+            DNARead('refId1', 'GTTCCCG'))
+
+        features2 = Features(
+            {
+                'surface glycoprotein': {
+                    'name': 'surface glycoprotein',
+                    'start': 1,
+                    'stop': 6,
+                },
+            },
+            DNARead('refId2', 'GTTCCCG'))
+
+        genome1 = SARS2Genome(DNARead('genId', 'ATTCCCG'), features1)
+        genome2 = SARS2Genome(DNARead('genId', 'ATTCCCG'), features2)
+
+        error = (r'^SARS2Genome instances with differing reference ids passed '
+                 r'to offsetInfoMultipleGenomes: refId1, refId2\.$')
+        self.assertRaisesRegex(ValueError, error, offsetInfoMultipleGenomes,
+                               [genome1, genome2], 0)
+
+    def testOneGenome(self):
+        """
+        Passing in one SARS2Genome should get the expected result and its
+        components should be the same result as a single call to offsetInfo.
+        """
+        features = Features(
+            {
+                'surface glycoprotein': {
+                    'name': 'surface glycoprotein',
+                    'start': 1,
+                    'stop': 6,
+                },
+            },
+            DNARead('refId', 'GTTCCCG'))
+
+        genome = SARS2Genome(DNARead('genId', 'ATTCCCG'), features)
+        multipleResult = offsetInfoMultipleGenomes([genome], 0)
+
+        self.assertEqual(
+            {
+                'alignmentOffset': 0,
+                'featureName': None,
+                'featureNames': set(),
+                'reference': {
+                    'aa': 'V',
+                    'codon': 'GTT',
+                    'frame': 0,
+                    'id': 'refId',
+                    'aaOffset': 0,
+                    'ntOffset': 0,
+                },
+                'genomes': [
+                    {
+                        'aa': 'I',
+                        'codon': 'ATT',
+                        'frame': 0,
+                        'id': 'genId',
+                        'aaOffset': 0,
+                        'ntOffset': 0,
+                    },
+                ],
+            },
+            multipleResult)
+
+        oneResult = genome.offsetInfo(0)
+        self.assertEqual(oneResult['reference'], multipleResult['reference'])
+        self.assertEqual(oneResult['genome'], multipleResult['genomes'][0])
+
+        for key in 'alignmentOffset', 'featureName', 'featureNames':
+            self.assertEqual(oneResult[key], multipleResult[key])
+
+    def testTwoGenome(self):
+        """
+        Passing in two SARS2Genome should get the expected result and its
+        genome components should be the same as come back from single calls to
+        offsetInfo.
+        """
+        features = Features(
+            {
+                'surface glycoprotein': {
+                    'name': 'surface glycoprotein',
+                    'start': 1,
+                    'stop': 6,
+                },
+            },
+            DNARead('refId', 'GTTCCCG'))
+
+        genome1 = SARS2Genome(DNARead('genId1', 'ATTCCCG'), features)
+        genome2 = SARS2Genome(DNARead('genId2', 'ATTCCCG'), features)
+        multipleResult = offsetInfoMultipleGenomes([genome1, genome2], 0)
+
+        self.assertEqual(
+            {
+                'alignmentOffset': 0,
+                'featureName': None,
+                'featureNames': set(),
+                'reference': {
+                    'aa': 'V',
+                    'codon': 'GTT',
+                    'frame': 0,
+                    'id': 'refId',
+                    'aaOffset': 0,
+                    'ntOffset': 0,
+                },
+                'genomes': [
+                    {
+                        'aa': 'I',
+                        'codon': 'ATT',
+                        'frame': 0,
+                        'id': 'genId1',
+                        'aaOffset': 0,
+                        'ntOffset': 0,
+                    },
+                    {
+                        'aa': 'I',
+                        'codon': 'ATT',
+                        'frame': 0,
+                        'id': 'genId2',
+                        'aaOffset': 0,
+                        'ntOffset': 0,
+                    },
+                ],
+            },
+            multipleResult)
+
+        oneResult = genome1.offsetInfo(0)
+        self.assertEqual(oneResult['reference'], multipleResult['reference'])
+        self.assertEqual(oneResult['genome'], multipleResult['genomes'][0])
+
+        oneResult = genome2.offsetInfo(0)
+        self.assertEqual(oneResult['reference'], multipleResult['reference'])
+        self.assertEqual(oneResult['genome'], multipleResult['genomes'][1])
+
+        for key in 'alignmentOffset', 'featureName', 'featureNames':
+            self.assertEqual(oneResult[key], multipleResult[key])
+
+    def testThreeGenomesOneInsufficientlyCovered(self):
+        """
+        Passing in three SARS2Genome should get the expected result, including
+        when one insufficiently covers the reference and its genome components
+        should be the same as come back from single calls to offsetInfo.
+        """
+        features = Features(
+            {
+                'surface glycoprotein': {
+                    'name': 'surface glycoprotein',
+                    'start': 1,
+                    'stop': 6,
+                },
+            },
+            DNARead('refId', 'GTTCCCG'))
+
+        genome1 = SARS2Genome(DNARead('genId1', 'ATTCCCG'), features)
+        genome2 = SARS2Genome(DNARead('genId2', 'ATT'), features)
+        genome3 = SARS2Genome(DNARead('genId3', 'ATTCCCG'), features)
+        multipleResult = offsetInfoMultipleGenomes(
+            [genome1, genome2, genome3], 0, minReferenceCoverage=0.9)
+
+        self.assertEqual(
+            {
+                'alignmentOffset': 0,
+                'featureName': None,
+                'featureNames': set(),
+                'reference': {
+                    'aa': 'V',
+                    'codon': 'GTT',
+                    'frame': 0,
+                    'id': 'refId',
+                    'aaOffset': 0,
+                    'ntOffset': 0,
+                },
+                'genomes': [
+                    {
+                        'aa': 'I',
+                        'codon': 'ATT',
+                        'frame': 0,
+                        'id': 'genId1',
+                        'aaOffset': 0,
+                        'ntOffset': 0,
+                    },
+                    None,
+                    {
+                        'aa': 'I',
+                        'codon': 'ATT',
+                        'frame': 0,
+                        'id': 'genId3',
+                        'aaOffset': 0,
+                        'ntOffset': 0,
+                    },
+                ],
+            },
+            multipleResult)
+
+        oneResult = genome1.offsetInfo(0)
+        self.assertEqual(oneResult['reference'], multipleResult['reference'])
+        self.assertEqual(oneResult['genome'], multipleResult['genomes'][0])
+
+        oneResult = genome3.offsetInfo(0)
+        self.assertEqual(oneResult['reference'], multipleResult['reference'])
+        self.assertEqual(oneResult['genome'], multipleResult['genomes'][2])
+
+        for key in 'alignmentOffset', 'featureName', 'featureNames':
+            self.assertEqual(oneResult[key], multipleResult[key])
+
+    def testThreeGenomesAllInsufficientlyCovered(self):
+        """
+        Passing in three SARS2Genome instances, all with insufficient cover,
+        should result in a None value.
+        """
+        features = Features(
+            {
+                'surface glycoprotein': {
+                    'name': 'surface glycoprotein',
+                    'start': 1,
+                    'stop': 6,
+                },
+            },
+            DNARead('refId', 'GTTCCCG'))
+
+        genome1 = SARS2Genome(DNARead('genId1', 'ATT'), features)
+        genome2 = SARS2Genome(DNARead('genId2', 'ATT'), features)
+        genome3 = SARS2Genome(DNARead('genId3', 'ATT'), features)
+
+        self.assertIsNone(offsetInfoMultipleGenomes(
+            [genome1, genome2, genome3], 0, minReferenceCoverage=0.5))

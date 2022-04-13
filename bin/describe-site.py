@@ -26,7 +26,8 @@ def report(genome, args, includeGenome=True):
         offsetInfo = genome.offsetInfo(
             args.site - 1, relativeToFeature=args.relativeToFeature,
             aa=args.aa, featureName=args.feature,
-            includeUntranslated=args.includeUntranslated)
+            includeUntranslated=args.includeUntranslated,
+            minReferenceCoverage=args.minReferenceCoverage)
     except sars2seq.Sars2SeqError as e:
         print(e, file=sys.stderr)
         sys.exit(1)

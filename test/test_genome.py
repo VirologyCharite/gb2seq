@@ -1355,6 +1355,24 @@ class TestCoverage(TestCase):
 
         self.assertEqual((1, 4), genome.coverage('spike'))
 
+    def testNInGenome(self):
+        """
+        Get the coverage of a genome with an N in it.
+        """
+        features = Features(
+            {
+                'spike': {
+                    'name': 'spike',
+                    'start': 0,
+                    'stop': 4,
+                },
+            },
+            DNARead('refId', 'ATTC'))
+
+        genome = SARS2Genome(DNARead('genId', 'ATTN'), features)
+
+        self.assertEqual((3, 4), genome.coverage())
+
 
 class TestOffsetInfoMultipleGenomes(TestCase):
     """

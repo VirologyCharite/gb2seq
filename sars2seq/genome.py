@@ -585,8 +585,7 @@ class SARS2Genome:
                                              genomeNt.sequence):
             if referenceBase != '-':
                 referenceCount += 1
-                if genomeBase != '-':
-                    coveredCount += 1
+                coveredCount += (genomeBase not in 'N-')
 
         return coveredCount, referenceCount
 

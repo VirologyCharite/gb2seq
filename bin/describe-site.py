@@ -14,7 +14,8 @@ from sars2seq.genome import SARS2Genome, addAlignerOption
 
 def report(genome, args, includeGenome=True):
     """
-    Report what's found at a site for a given genome.
+    Report what's found at a site for a given genome (or report insufficient
+    coverage to standard error).
 
     @param genome: A C{SARS2Genome} instance.
     @param args: A C{Namespace} instance as returned by argparse with
@@ -31,6 +32,11 @@ def report(genome, args, includeGenome=True):
     except sars2seq.Sars2SeqError as e:
         print(e, file=sys.stderr)
         sys.exit(1)
+
+    if offsetInfo is None:
+        what = args.featureName or 'genome'
+        print(f'Insufficient {what} coverage', file=sys.stderr)
+        return
 
     if args.genomeAaOnly:
         print(offsetInfo['genome']['aa'])
@@ -65,8 +71,7 @@ def main(args):
     @return: An C{int} exit status.
     """
     features = Features(args.gbFile)
-
-    count = ignoredDueToCoverageCount = 0
+    count = 0
 
     if args.genome is None and os.isatty(0):
         genome = SARS2Genome(features.reference, features,
@@ -75,26 +80,12 @@ def main(args):
     else:
         fp = open(args.genome) if args.genome else sys.stdin
         for count, read in enumerate(FastaReads(fp), start=1):
-            if args.minReferenceCoverage is not None:
-                coverage = ((len(read) - read.sequence.upper().count('N')) /
-                            len(features.reference))
-                if coverage < args.minReferenceCoverage:
-                    ignoredDueToCoverageCount += 1
-                    if args.verbose:
-                        print(f'Genome {read.id!r} ignored due to low '
-                              f'({coverage * 100.0:.2f}%) coverage of the '
-                              f'reference.', file=sys.stderr)
-                    continue
-
             genome = SARS2Genome(read, features, aligner=args.aligner)
             report(genome, args)
 
         if args.verbose:
             print(f'Examined {count} genomes.', file=sys.stderr)
 
-            if args.minReferenceCoverage is not None:
-                print(f'Ignored {ignoredDueToCoverageCount} genomes due to '
-                      f'low coverage.', file=sys.stderr)
         if args.genome:
             fp.close()
 

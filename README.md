@@ -1,7 +1,8 @@
 ## A library and utility scripts for working with SARS-CoV-2 sequences
 
-sars2seq provides three general utility scripts for examining SARS-CoV-2
-genome sequences and a Python library API to allow you to roll your own.
+`sars2seq` provides three general utility scripts for examining SARS-CoV-2
+genome sequences and a Python library API that you can call from your own
+code.
 
 The library code knows how to extract genes at the nucleotide or amino acid
 level, how to identify or check for expected substitutions, how to
@@ -15,7 +16,7 @@ reference sequence
 default). The default alignment algorithm is
 [MAFFT](https://mafft.cbrc.jp/alignment/software/), which can be slow but
 is reliable. You can also run scripts with `--aligner edlib` (or pass
-`aligner='edlib' to library functions) to use [the Python
+`aligner='edlib'` to library functions) to use [the Python
 wrapper](https://pypi.org/project/edlib/) for the extremely fast
 [edlib](https://github.com/Martinsos/edlib) library.
 
@@ -115,7 +116,7 @@ surface glycoprotein: s, spike
 ### describe-genome.py
 
 `describe-genome.py` has many uses. It can extract multiple features from
-multiple give genomes, as amino acids or nucleotides (or both). It will
+multiple given genomes, as amino acids or nucleotides (or both). It will
 print to standard error by default, but if you use the `--outDir` option to
 provide a directory, individual output files with (hopefully)
 self-explanatory names will be created in that directory. The directory
@@ -219,7 +220,7 @@ showing you what's in the reference and in the genome you (optionally)
 pass.
 
 In the simplest case, just give a 1-based site and you'll see what's in the
-reference:
+reference (with 0-based offsets):
 
 ``` sh
 $ describe-site.py --site 26000
@@ -264,7 +265,7 @@ $ describe-site.py --site 1501 --feature spike --relative
 }
 ```
 
-Or pass an amino acid site number (via `-aa`):
+Or pass an amino acid site number (via `--aa`):
 
 ```sh
 $ describe-site.py --site 501 --feature spike --relative --aa

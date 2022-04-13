@@ -44,13 +44,23 @@ def getGappedOffsets(s):
     Make a dictionary mapping offsets in a sequence with no gaps to the
     equivalent offset in a gapped sequence.
 
+    In more detail, we are given C{s}, which is an aligned sequence
+    (potentially) with gaps in it and we want a mapping that will allow us to
+    go from an offset in the original string C{s} (i.e., before it was aligned)
+    to the equivalent offset in the aligned (with gaps) string. This function
+    returns such a mapping (a C{dict})
+
     @param s: A C{str} sequence, possibly with gap ('-') characters.
     @return: A C{dict} mapping C{int} offsets (in the sequence without its
-    gaps) to equivalent C{int} offsets in C{s}, when gaps are ignored.
+        gaps) to equivalent C{int} offsets in C{s}, when gaps are ignored.
+
     """
     result = {}
     gapCount = index = 0
 
+    # To build the mapping, we walk through s. If we see a gap we just
+    # count it. Non-gap offsets go into the map with their offset plus the
+    # number of gaps that have been encountered before them.
     for base in s:
         if base == '-':
             gapCount += 1
@@ -58,7 +68,10 @@ def getGappedOffsets(s):
             result[index] = index + gapCount
             index += 1
 
-    assert set(range(len(s) - s.count('-'))) == set(result)
+    # Sanity check that the result mapping has an entry for all the offsets
+    # in the original string (before it was aligned).  This check can be
+    # removed one day, seeing as there are tests for this function.
+    assert set(result) == set(range(len(s) - s.count('-')))
 
     return result
 
@@ -88,6 +101,77 @@ def alignmentEnd(s, startOffset, length):
     return index
 
 
+def offsetInfoMultipleGenomes(
+        genomes, offset, relativeToFeature=False, aa=False, featureName=None,
+        includeUntranslated=False, minReferenceCoverage=None):
+    """
+    Get information about an offset for multiple SARS2Genome instances.
+
+    @param genomes: An interable of C{SARS2Genome} instances.
+    @param offset: An C{int} offset.
+    @param relativeToFeature: If C{True}, the offset is relative to the
+        start of the feature that occurs at this offset.
+    @param aa: If C{True}, the offset is a number of amino acids, else a
+        number of nucleotides.
+    @param featureName: If not C{None} and multiple features occur at this
+        offset, use the feature with this name.
+    @param includeUntranslated: If C{True}, also return features that are
+        not translated.
+    @param minReferenceCoverage: The C{float} fraction of non-N bases required
+        in the genome (or feature, if one is given) in order for it to be
+        processed. If the required coveragel is not met, C{None} is returned.
+    @raise KeyError: If the feature name is unknown.
+    @raise ValueError: If an incorrect arguments is passed
+        (see SARS2Genome.offsetInfo) or if all genomes were not aligned against
+        the same reference id.
+    @raise AmbiguousFeatureError: If multiple features occur at the offset
+        and C{featureName} does not indicate the one to use.
+    @return: A C{dict} with information about what is found in the
+        reference and the genomes at the offset. This is identical to the
+        result dictionary returned by C{SARS2Genome.offsetInfo}, but the
+        'genome' key is replaced with a 'genomes' key that holds a C{list}
+        of genome results (each is a C{dict}, as returned by
+        C{SARS2Genome.offsetInfo}). The order of genome info in the list
+        matches the order in the passed C{genomes}.  If no genomes are passed,
+        or all passed genomes have insufficient coverage, C{None} is returned.
+    """
+    ids = set(genome.features.reference.id for genome in genomes)
+
+    if len(ids) == 0:
+        raise ValueError('No SARS2Genome instances given.')
+    elif len(ids) != 1:
+        raise ValueError(
+            f'SARS2Genome instances with differing reference ids '
+            f'passed to offsetInfoMultipleGenomes: {", ".join(sorted(ids))}.')
+
+    first = True
+    result = None
+    genomeResults = []
+
+    for genome in genomes:
+        thisResult = genome.offsetInfo(
+            offset, relativeToFeature=relativeToFeature, aa=aa,
+            featureName=featureName, includeUntranslated=includeUntranslated,
+            minReferenceCoverage=minReferenceCoverage)
+
+        if first and thisResult:
+            result = thisResult.copy()
+            # Make sure nothing crucial has changed in the returned dict
+            # from SARS2Genome.offsetInfo
+            assert 'genome' in result
+            assert 'genomes' not in result
+            del result['genome']
+            first = False
+
+        genomeResults.append(thisResult['genome'] if thisResult else None)
+
+    if result is None:
+        return None
+    else:
+        result['genomes'] = genomeResults
+        return result
+
+
 class SARS2Genome:
     """
     Methods for working with SARS-CoV-2 genomes.
@@ -108,7 +192,7 @@ class SARS2Genome:
     @raise ReferenceWithGapsError: If the reference has gaps.
     """
     def __init__(self, genome, features=None, referenceAligned=None,
-                 genomeAligned=None, aligner='mafft'):
+                 genomeAligned=None, aligner=DEFAULT_ALIGNER):
         if (referenceAligned and not genomeAligned or
                 not referenceAligned and genomeAligned):
             raise ValueError('Either both or neither of referenceAligned and '
@@ -123,7 +207,7 @@ class SARS2Genome:
         self._cache = {'aa': {}, 'nt': {}}
 
     def _getAlignment(self, referenceAligned=None, genomeAligned=None,
-                      aligner='mafft'):
+                      aligner=DEFAULT_ALIGNER):
         """
         Align the reference and the genome.
 
@@ -444,7 +528,7 @@ class SARS2Genome:
             case an error message will be printed to C{errFp}.
         @param errFp: An open file pointer to write error messages to, if any.
             Only used if C{onError} is 'print'.
-        @raise RuntimeError: If incorrect arguments are passed (see below).
+        @raise ValueError: If incorrect arguments are passed (see below).
         @return: A 3-C{tuple} with the number of checks done, the number of
             errors, and a C{dict} keyed by changes in C{changes}, with values
             a 2-C{tuple} of Booleans to indicate success or failure of the
@@ -453,8 +537,8 @@ class SARS2Genome:
             acid sequences.
         """
         if onError == 'print' and not errFp:
-            raise RuntimeError('If you pass onError="print" you must also '
-                               'give a file descriptor via errFp.')
+            raise ValueError('If you pass onError="print" you must also '
+                             'give a file descriptor via errFp.')
 
         result = {}
         testCountTotal = errorCountTotal = 0
@@ -481,8 +565,34 @@ class SARS2Genome:
 
         return testCountTotal, errorCountTotal, result
 
+    def coverage(self, featureName=None):
+        """
+        Get the coverage of a feature or the whole genome.
+
+        @param featureName: A C{str} feature name, or C{None} to examine the
+            whole genome.
+        @return: A 2-C{tuple} with the C{int} number of aligned genome sites
+            for which there is coverage of the reference, and the C{int} number
+            of reference sites. The quotient of the two gives the coverage
+            fraction.
+        """
+        referenceNt, genomeNt = (
+            self.ntSequences(featureName) if featureName else
+            (self.referenceAligned, self.genomeAligned))
+
+        referenceCount = coveredCount = 0
+        for referenceBase, genomeBase in zip(referenceNt.sequence,
+                                             genomeNt.sequence):
+            if referenceBase != '-':
+                referenceCount += 1
+                if genomeBase != '-':
+                    coveredCount += 1
+
+        return coveredCount, referenceCount
+
     def offsetInfo(self, offset, relativeToFeature=False, aa=False,
-                   featureName=None, includeUntranslated=False):
+                   featureName=None, includeUntranslated=False,
+                   minReferenceCoverage=None):
         """
         Get information about genome features at an offset.
 
@@ -495,32 +605,42 @@ class SARS2Genome:
             offset, use the feature with this name.
         @param includeUntranslated: If C{True}, also return features that are
             not translated.
+        @param minReferenceCoverage: The C{float} fraction of non-N bases
+            required in the genome (or feature, if one is given) in order
+            for it to be processed. If the required coveragel is not met,
+            C{None} is returned.
         @raise KeyError: If the feature name is unknown.
-        @raise RuntimeError: If incorrect arguments are passed (see below).
+        @raise ValueError: If incorrect arguments are passed (see below).
         @raise AmbiguousFeatureError: If multiple features occur at the offset
             and C{featureName} does not indicate the one to use.
         @return: A C{dict} with information about what is found in the
             reference and the genome at the offset. See the C{result}
-            dictionary below.
+            dictionary below. If C{minReferenceCoverage} is not C{None} and
+            the coverage of the genome (or feature, if given) is lower,
+            C{None} is returned.
         """
+        if minReferenceCoverage is not None:
+            genomeCount, referenceCount = self.coverage(featureName)
+            if genomeCount / referenceCount < minReferenceCoverage:
+                return None
+
         if relativeToFeature:
             if featureName is None:
-                raise RuntimeError('If relativeToFeature is True, a feature '
-                                   'name must be given.')
+                raise ValueError('If relativeToFeature is True, a feature '
+                                 'name must be given.')
             referenceOffset = self.features.referenceOffset(
                 featureName, offset, aa)
         else:
             if aa:
-                raise RuntimeError('You cannot pass aa=True unless the offset '
-                                   'you pass is relative to the feature.')
+                raise ValueError('You cannot pass aa=True unless the offset '
+                                 'you pass is relative to the feature.')
             referenceOffset = offset
 
         feature, features = self.features.getFeature(
             referenceOffset, featureName, includeUntranslated)
 
-        # The 'None' values in the following will be filled in below. They are
-        # set up-front here to explicitly show what's in the returned
-        # dictionary.
+        # The 'None' values in the following are filled in below. They're set
+        # up-front here to explicitly show what's in the returned dictionary.
         #
         # The 'aa' value will be None if the reference or genome sequence ends
         # within three nucleotides of the given offset (i.e., the sequence is

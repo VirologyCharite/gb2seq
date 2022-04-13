@@ -661,6 +661,81 @@ class TestOffsetInfo(TestCase):
             },
             genome.offsetInfo(0))
 
+    def testEdlibNoAmbiguous(self):
+        """
+        If the edlib aligner is used, but without ambiguous nucleotide codes,
+        it should align completely different sequences.
+        """
+        features = Features({}, DNARead('refId', 'CGTTCCCG'))
+
+        genome = SARS2Genome(DNARead('genId', 'RWWMMMR'), features,
+                             aligner='edlib', matchAmbiguous=False)
+
+        self.assertEqual(
+            {
+                'alignmentOffset': 0,
+                'featureName': None,
+                'featureNames': set(),
+                'reference': {
+                    'aa': 'R',
+                    'codon': 'CGT',
+                    'frame': 0,
+                    'id': 'refId',
+                    'aaOffset': 0,
+                    'ntOffset': 0,
+                },
+                'genome': {
+                    'aa': 'X',
+                    'codon': 'RWW',
+                    'frame': 0,
+                    'id': 'genId',
+                    'aaOffset': 0,
+                    'ntOffset': 0,
+                }
+            },
+            genome.offsetInfo(0))
+
+        self.assertEqual('-', genome.genomeAligned.sequence[-1])
+
+    def testEdlibAmbiguous(self):
+        """
+        If the edlib aligner is used with ambiguous nucleotide codes,
+        the alignment should match properly (in this case the first nt
+        of the aligned genome will be set to '-' because the rest of the
+        genome matches perfectly (they are all ambiguous codes that mach the
+        reference).
+        """
+        features = Features({}, DNARead('refId', 'CGTTCCCG'))
+
+        genome = SARS2Genome(DNARead('genId', 'RWWMMMR'), features,
+                             aligner='edlib', matchAmbiguous=True)
+
+        self.assertEqual(
+            {
+                'alignmentOffset': 0,
+                'featureName': None,
+                'featureNames': set(),
+                'reference': {
+                    'aa': 'R',
+                    'codon': 'CGT',
+                    'frame': 0,
+                    'id': 'refId',
+                    'aaOffset': 0,
+                    'ntOffset': 0,
+                },
+                'genome': {
+                    'aa': '-',
+                    'codon': '-RW',
+                    'frame': 0,
+                    'id': 'genId',
+                    'aaOffset': 0,
+                    'ntOffset': 0,
+                }
+            },
+            genome.offsetInfo(0))
+
+        self.assertEqual('-', genome.genomeAligned.sequence[0])
+
     def testLowCoverageGenome(self):
         """
         If the genome has insufficient coverage of the reference, None
@@ -1470,7 +1545,7 @@ class TestOffsetInfoMultipleGenomes(TestCase):
         for key in 'alignmentOffset', 'featureName', 'featureNames':
             self.assertEqual(oneResult[key], multipleResult[key])
 
-    def testTwoGenome(self):
+    def testTwoGenomes(self):
         """
         Passing in two SARS2Genome should get the expected result and its
         genome components should be the same as come back from single calls to

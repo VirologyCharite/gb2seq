@@ -187,12 +187,17 @@ class SARS2Genome:
         If not C{None} then C{referenceAligned} must also be given.
     @param aligner: A C{str} specifying the alignment algorithm to use.
         Either 'mafft' (the default) or 'edlib' (experimental).
+    @param matchAmbiguous: If C{True}, and the edlib aligner is in use, count
+        ambiguous nucleotides that are possibly correct as actually being
+        correct. Otherwise, the edlib aligner is strict and nucleotide codes
+        only match themselves.
     @raise ValueError: If one of genomeAligned or referenceAligned is given
         but the other is not.
     @raise ReferenceWithGapsError: If the reference has gaps.
     """
     def __init__(self, genome, features=None, referenceAligned=None,
-                 genomeAligned=None, aligner=DEFAULT_ALIGNER):
+                 genomeAligned=None, aligner=DEFAULT_ALIGNER,
+                 matchAmbiguous=True):
         if (referenceAligned and not genomeAligned or
                 not referenceAligned and genomeAligned):
             raise ValueError('Either both or neither of referenceAligned and '
@@ -201,6 +206,7 @@ class SARS2Genome:
         # exports a consensus / alignment. Replace with N.
         self.genome = DNARead(genome.id, genome.sequence.replace('?', 'N'))
         self.features = Features() if features is None else features
+        self._matchAmbiguous = matchAmbiguous
         self._getAlignment(referenceAligned, genomeAligned, aligner)
         self.gappedOffsets = getGappedOffsets(
             self.referenceAligned.sequence)
@@ -241,7 +247,7 @@ class SARS2Genome:
                         mafft(reads, options=MAFFT_OPTIONS))
                 elif aligner == 'edlib':
                     self.referenceAligned, self.genomeAligned = (
-                        edlibAlign(reads))
+                        edlibAlign(reads, matchAmbiguous=self._matchAmbiguous))
                 else:
                     raise ValueError(f'Unknown aligner {aligner!r}.')
 

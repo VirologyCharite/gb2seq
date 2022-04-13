@@ -48,4 +48,4 @@ setup(name='sars2seq',
       long_description=(
           'See https://github.com/virologycharite/sars2seq for details.'),
       license='MIT',
-      install_requires=['dark-matter>=4.0.19'])
+      install_requires=['dark-matter>=4.0.21'])

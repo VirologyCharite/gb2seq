@@ -55,18 +55,18 @@ Features for NC_045512.2:
   stop: 21552
   length: 894
   product: 2'-O-ribose methyltransferase
-  sequence    (len   894 nt): TCTAGTCAAGCGTGGCAACCGGGTGTTGCTATGCCTAATCTTTACAAAATGCAAAGAATGCTATTAGAAAAGTGTGACCT...
+  sequence    (len   894 nt): TCTAGTCAAGCGTGGCAACCGGGTGTTGCTATGCCTAATCTTTACAAAA...
 3'-to-5' exonuclease:
   start: 18039
   stop: 19620
   length: 1581
   product: 3'-to-5' exonuclease
-  sequence    (len  1581 nt): GCTGAAAATGTAACAGGACTCTTTAAAGATTGTAGTAAGGTAATCACTGGGTTACATCCTACACAGGCACCTACACACCT...
+  sequence    (len  1581 nt): GCTGAAAATGTAACAGGACTCTTTAAAGATTGTAGTAAGGTAATCACTG...
 3'UTR:
   start: 29674
   stop: 29903
   length: 229
-  sequence    (len   229 nt): CAATCTTTAATCAGTGTGTAACATTAGGGAGGACTTGAAAGAGCCACCACATTTTCACCGAGGCCACGCGGAGTACGATC...
+  sequence    (len   229 nt): CAATCTTTAATCAGTGTGTAACATTAGGGAGGACTTGAAAGAGCCACCA...
 # [Many additional output lines omitted here.]
 ```
 
@@ -79,8 +79,8 @@ surface glycoprotein:
   stop: 25384
   length: 3822
   product: surface glycoprotein
-  sequence    (len  3822 nt): ATGTTTGTTTTTCTTGTTTTATTGCCACTAGTCTCTAGTCAGTGTGTTAATCTTACAACCAGAACTCAATTACCCCCTGC...
-  translation (len  1274 aa): MFVFLVLLPLVSSQCVNLTTRTQLPPAYTNSFTRGVYYPDKVFRSSVLHSTQDLFLPFFSNVTWFHAIHVSGTNGTKRFD...
+  sequence    (len  3822 nt): ATGTTTGTTTTTCTTGTTTTATTGCCACTAGTCTCTAGTCAGTGTGTTA...
+  translation (len  1274 aa): MFVFLVLLPLVSSQCVNLTTRTQLPPAYTNSFTRGVYYPDKVFRSSVLH...
 ```
 
 Or ask to see all known feature names. Each is printed followed by a colon
@@ -129,8 +129,8 @@ surface glycoprotein: s, spike
 
 `describe-genome.py` has many uses. It can extract multiple features from
 multiple given genomes, as amino acids or nucleotides (or both). It will
-print to standard error by default, but if you use the `--outDir` option to
-provide a directory, individual output files with (hopefully)
+print to standard output by default, but if you use the `--outDir` option
+to provide a directory, individual output files with (hopefully)
 self-explanatory names will be created in that directory. The directory
 will be created for you if it doesn't exist.
 
@@ -299,7 +299,8 @@ $ describe-site.py --site 501 --feature spike --relative --aa
 }
 ```
 
-Of course it's more fun if you also provide a genome to compare the reference to:
+Of course it's more fun if you also provide a genome to compare the reference to.
+Here's the `N501Y` change in B.1.1.7 (Alpha):
 
 ```sh
 $ describe-site.py --site 501 --relative --genome EPI_ISL_601443.fasta --feature spike --aa
@@ -331,7 +332,7 @@ $ describe-site.py --site 501 --relative --genome EPI_ISL_601443.fasta --feature
 Other options include `--genomeAaOnly` to just print the amino acid at a
 location in the genome, `--includeFeature` to also receive information
 about the feature at the site, and `--minReferenceCoverage` to exclude
-low-coverage genomes from the results.
+low-coverage genomes or features from the results.
 
 ## Python API
 
@@ -350,7 +351,7 @@ download the GenBank file for that reference, click on "Send to" and select
 
 You can pass the path to a GenBank file to the `Features` class. You can
 also just pass an accession number, and the file will be downloaded for
-yo. If you don't pass anything, the Wuhan reference (version `NC_045512.2`)
+you. If you don't pass anything, the Wuhan reference (version `NC_045512.2`)
 will be used.
 
 You can use a `Features` instance like a dictionary:
@@ -359,6 +360,7 @@ You can use a `Features` instance like a dictionary:
 from pprint import pprint
 from sars2seq.features import Features
 
+>>> f = Features()
 >>> pprint(f['e'])
 {'name': 'envelope protein',
  'note': 'ORF4; structural protein; E protein',
@@ -505,6 +507,9 @@ as expected (`True`), the value in the genome (`Y`).
 You can test multiple things:
 
 ``` py
+# Note that we use 501Y in the following, not N501Y, since we might just
+# want to check that something is in the genome without knowing or caring
+# about what's in the reference.
 >>> pp(genome.checkFeature('spike', '501Y 69- 70-', aa=True))
 (3,
  0,
@@ -516,7 +521,6 @@ You can test multiple things:
 
 There is also a convenience `Checker` class that can check whether logical
 combinations of amino acid and nucleotide changes are satisfied for a genome.
-
 Continuing from the above:
 
 ``` py
@@ -531,7 +535,7 @@ True
 # Check for some nucleotide changes in the nucleocapsid and some amino
 # acid changes in the spike.
 checker = (NTChecker('N', 'G7C A8T T9A G608A G609A G610C C704T') &
-           AAChecker('spike', 'N501Y H69- V70- Y144-'))
+           AAChecker('S', 'N501Y H69- V70- Y144-'))
 
 # You can also use `|` to check an OR condition.
 >>> checker = AAChecker('spike', 'E484K') | AAChecker('spike', 'E484Q')
@@ -582,16 +586,19 @@ You can pass your own variant dictionary specifying what you want checked.
 See the `Features` and `SARS2Genome` classes in
 [sars2seq/feature.py](sars2seq/genome.py) and
 [sars2seq/genome.py](sars2seq/genome.py). Also, the tests (e.g., in
-[test/test_genome.py], [test/test_checker.py] [test/test_variants.py]) show
-you example uses of these classes and their methods.  You can also look to
-see how the three utility scripts described above (which can all be found
-in the [bin directory](bin)) call the library functions and use the
-results.
+[test/test_genome.py](test/test_genome.py),
+[test/test_checker.py](test/test_checker.py)
+[test/test_variants.py](test/test_variants.py)) show you example uses of
+these classes and their methods.  You can also look to see how the three
+utility scripts described above (which can all be found in the [bin
+directory](bin)) call the library functions and use the results.
 
 ## Developing
 
 Run the tests via 
 
 ```sh
-$ make pytest`
+$ pytest`
 ```
+
+More could probably be added here :-)

@@ -8,6 +8,18 @@ The library code knows how to extract genes at the nucleotide or amino acid
 level, how to identify or check for expected substitutions, how to
 translate between aa and nt offsets, and about all genome features.
 
+### Conventions
+
+When giving locations within a genome or genome feature (e.g., the spike
+protein), a "site" refers to a 1-based location, as would normally be used
+by a regular person on the command line (an oxymoron?), whereas an
+"offset" refers to a 0-based location, as would be used by a Python
+programmer.  So the utility scripts, run from the command line, expect the
+former, whereas library code called by a programmer expects the latter.
+
+In code that deals with both the reference and a genome sequence, the
+reference is always given or returned first.
+
 ### Alignment
 
 `sars2seq` makes an alignment between each genome you give it and a
@@ -60,7 +72,7 @@ Features for NC_045512.2:
 
 You can also pass it a feature name:
 
-``` sh
+```sh
 $ describe-feature.py --name spike
 surface glycoprotein:
   start: 21562
@@ -74,7 +86,7 @@ surface glycoprotein:
 Or ask to see all known feature names. Each is printed followed by a colon
 and a (possibly empty) list of aliases:
 
-``` sh
+```sh
 $ describe-feature.py --names
 2'-O-ribose methyltransferase: 2
 3'-to-5' exonuclease: exon, exonuclease, nsp14
@@ -126,7 +138,7 @@ A small example is perhaps best. Here we pull out the spike nucleotide and
 amino acid sequence from B.1.1.7 and also ask for a summary of the amino
 acid differences:
 
-``` sh
+```sh
 $ describe-genome.py --genome data/EPI_ISL_601443.fasta --outDir /tmp/out \
     --feature spike --printNtSequence --printAaSequence --printAaMatch
 Examined 1 genome.
@@ -143,7 +155,7 @@ genome, the spike would have been extracted for all of them. Similarly, if
 `--feature` had been repeated, multiple features would have been extracted
 and compared. If no `--feature` is given, you'll get them all.
 
-``` sh
+```sh
 $ cat /tmp/out/EPI_ISL_601443-spike-aa-match.txt
 Feature: spike amino acid match
   Matches: 1264/1274 (99.22%)
@@ -173,7 +185,7 @@ Feature: spike amino acid match
 
 You can also ask for the changes in a variant to be checked.
       
-``` sh
+```sh
 $ describe-genome.py --genome data/EPI_ISL_601443.fasta --checkVariant VOC_20201201_UK
 EPI_ISL_601443 hCoV-19/England/MILK-9E05B3/2020
 Variant summary:
@@ -188,7 +200,7 @@ Variant summary:
 There are some known variants, and you can also provide your own via a JSON
 file and the `--variantFile` option. E.g.,:
 
-``` json
+```
 VARIANTS = {
     'VOC_20201201_UK': {
         'description': 'UK variant of concern (VOC) 202012/01',
@@ -220,9 +232,9 @@ showing you what's in the reference and in the genome you (optionally)
 pass.
 
 In the simplest case, just give a 1-based site and you'll see what's in the
-reference (with 0-based offsets):
+reference (with 0-based Python offsets):
 
-``` sh
+```sh
 $ describe-site.py --site 26000
 {
     "alignmentOffset": 25999,
@@ -241,8 +253,9 @@ $ describe-site.py --site 26000
 }
 ```
 
-At the moment, the output is a JSON object, with 0-based genome offsets
-(suitable for working in Python).
+At the moment, the default output is a JSON object, though this may someday
+change to a more verbose/readable form. Use `--json` to make sure you
+always get JSON.
 
 You can also specify the site relative to a feature:
 
@@ -322,17 +335,263 @@ low-coverage genomes from the results.
 
 ## Python API
 
-To be written!
+There are two main Python classes provided by `sars2seq`: `Features` and
+`SARS2Genome`.
 
-For now, see the `SARS2Genome` in [sars2seq/genome.py](sars2seq/genome.py)
-and the tests (e.g., in [test/test_genome.py], [test/test_checker.py]
-[test/test_variants.py]).  You can also look to see how the three utility
-scripts above call the library functions and use the results.
+### Features
+
+The `Features` class provides methods for accessing information about
+SARS-CoV-2 genome features obtained from [a GenBank flat
+file](https://www.ncbi.nlm.nih.gov/Sitemap/samplerecord.html). You've
+likely run across these records before. E.g., here's the SARS-CoV-2 Wuhan
+reference, [NC_045512](https://www.ncbi.nlm.nih.gov/nuccore/NC_045512). To
+download the GenBank file for that reference, click on "Send to" and select
+"Complete Record", "File", and "GenBank" format. Then click "Create File".
+
+You can pass the path to a GenBank file to the `Features` class. You can
+also just pass an accession number, and the file will be downloaded for
+yo. If you don't pass anything, the Wuhan reference (version `NC_045512.2`)
+will be used.
+
+You can use a `Features` instance like a dictionary:
+
+```py
+from pprint import pprint
+from sars2seq.features import Features
+
+>>> pprint(f['e'])
+{'name': 'envelope protein',
+ 'note': 'ORF4; structural protein; E protein',
+ 'product': 'envelope protein',
+ 'sequence': 'ATGTACTCATTCGTTTCGGAAGAGACAGGTACGTTAATAGTTAATAGCGTACTTCTTTTTCTTGCTTTCGTGGTATT...',
+ 'start': 26244,
+ 'stop': 26472,
+ 'translation': 'MYSFVSEETGTLIVNSVLLFLAFVVFLLVTLAILTALRLCAYCCNIVNVSLVKPSFYVYSRVKNLNSSRVPDLLV*'}
+
+# You can use abbreviated names, and get the canonical names:
+>>> f.canonicalName('s')
+'surface glycoprotein'
+
+# Get the list of aliases for a name:
+>>> f.aliases('s')
+{'spike', 'surface glycoprotein', 's'}
+
+# Given an offset relative to a feature, get the offset in the overall genome:
+>>> f.referenceOffset('spike', 1503)
+23065
+
+# Same thing, but with an amino acid offset.
+>>> f.referenceOffset('spike', 501, aa=True)
+23065
+
+# What features are present at an offset?
+>>> f.getFeatureNames(13450)
+{'ORF1ab polyprotein', 'nsp11', 'ORF1a polyprotein', 'RNA-dependent RNA polymerase'}
+
+# What features are present at an offset, including those that are not translated?
+>>> f.getFeatureNames(21000, includeUntranslated=True)
+{'ORF1ab polyprotein', "2'-O-ribose methyltransferase"}
+```
+
+### SARS2Genome
+
+The `SARS2Genome` class can be used to extract and compare features from
+the reference and the given genome sequence.
+
+You pass it a `Read` instance from the
+[dark-matter](https://github.com/acorg/dark-matter) module (which is
+installed for you when you install `sars2seq`).
+
+```py
+from sars2seq.genome import SARS2Genome
+from dark.reads import Read
+
+genome = SARS2Genome(Read('id', 'AGCT...'))
+```
+
+These can also be read from a FASTA file:
+
+```py
+from sars2seq.genome import SARS2Genome
+from dark.fasta import FastaReads
+
+for read in FastaReads('sequences.fasta'):
+    genome = SARS2Genome(read)
+```
+
+Once you have a `SARS2Genome` instance, you can ask it for the aligned
+sequences or features.
+
+Below I'll use the GISAID `EPI_ISL_601443` (B.1.1.7, or Alpha, variant)
+sequence, which you can find in
+[data/EPI_ISL_601443.fasta](data/EPI_ISL_601443.fasta) in this repo:
+
+```py
+>>> from pathlib import Path
+>>> from pprint import pprint as pp
+>>> from sars2seq.genome import SARS2Genome
+>>> from dark.fasta import FastaReads
+
+>>> alpha = list(FastaReads(Path('data/EPI_ISL_601443.fasta')))[0]
+>>> len(alpha)
+29764
+>>> alpha.id
+'EPI_ISL_601443 hCoV-19/England/MILK-9E05B3/2020'
+>>> alpha.sequence[:50]
+'AGATCTGTTCTCTAAACGAACTTTAAAATCTGTGTGGCTGTCACTCGGCT'
+
+>>> genome = SARS2Genome(alpha)
+```
+
+You'll find the aligned reference and genome in `genome.referenceAligned`
+and `genome.genomeAligned`, both of which are  `Read` instances:
+
+```py
+>>> len(genome.referenceAligned)
+29903
+>>> len(genome.genomeAligned)
+29903
+
+# Get the nucleotide sequence for the spike protein for the reference and genome.
+>>> referenceSpikeNt, genomeSpikeNt = genome.ntSequences('spike')
+>>> len(referenceSpikeNt)
+3822
+
+# Get the amino acid sequence for the spike protein for the reference and genome.
+>>> referenceSpikeAa, genomeSpikeAa = genome.aaSequences('spike')
+>>> len(referenceSpikeAa)
+1274
+
+# There were three deletions in the alpha spike, so it only covers 3813 of the
+# 3822 bases in the reference spike.
+>>> genome.coverage('s')
+(3813, 3822)
+
+# Get information about what's at an offset (0-based). This is what the describe-site.py
+# utility does (though it takes a 1-based site).
+#
+# Here is the Alpha N501Y change:
+>>> pp(genome.offsetInfo(500, relativeToFeature=True, aa=True, featureName='s'))
+{'featureName': 'surface glycoprotein',
+ 'featureNames': {'surface glycoprotein'},
+ 'alignmentOffset': 23062,
+ 'reference': {'aa': 'N',
+  'codon': 'AAT',
+  'frame': 0,
+  'id': 'NC_045512.2',
+  'aaOffset': 500,
+  'ntOffset': 23062},
+ 'genome': {'aa': 'Y',
+  'codon': 'TAT',
+  'frame': 0,
+  'id': 'EPI_ISL_601443 hCoV-19/England/MILK-9E05B3/2020',
+  'aaOffset': 497,
+  'ntOffset': 22990}}
+```
+
+You can check a feature for an expected change:
+
+``` py
+>>> genome.checkFeature('spike', 'N501Y', aa=True)
+(1, 0, {'N501Y': (True, 'N', True, 'Y')})
+```
+
+The return value gives the number of tests done (1), the number that failed
+(0), and a `dict` with information about each test. The `dict` values are
+4-tuples, indicating whether what was in the reference was as expected
+(`True`), the value in the reference (`N`), whether what was in the genome was
+as expected (`True`), the value in the genome (`Y`).
+
+You can test multiple things:
+
+``` py
+>>> pp(genome.checkFeature('spike', '501Y 69- 70-', aa=True))
+(3,
+ 0,
+ {'501Y': (True, 'N', True, 'Y'),
+  '69-': (True, 'H', True, '-'),
+  '70-': (True, 'V', True, '-')})
+```
+
+
+There is also a convenience `Checker` class that can check whether logical
+combinations of amino acid and nucleotide changes are satisfied for a genome.
+
+Continuing from the above:
+
+``` py
+>>> from sars2seq.checker import AAChecker, NTChecker
+
+# Make a Boolean checker function to test whether a genome has the N501Y
+# and A570D spike changes seen in Alpha.
+>>> checker = AAChecker('spike', 'N501Y') & AAChecker('spike', 'A570D')
+>>> checker(genome)
+True
+
+# Check for some nucleotide changes in the nucleocapsid and some amino
+# acid changes in the spike.
+checker = (NTChecker('N', 'G7C A8T T9A G608A G609A G610C C704T') &
+           AAChecker('spike', 'N501Y H69- V70- Y144-'))
+
+# You can also use `|` to check an OR condition.
+>>> checker = AAChecker('spike', 'E484K') | AAChecker('spike', 'E484Q')
+>>> checker(genome)
+False
+```
+
+Note that because the `Checker` class takes a string argument that likely
+originates from a human-readable source, e.g., "N501Y", the changes
+specified for the checker are in terms of 1-based sites.
+
+Similiar to the `--checkVariant` argument to `describe-genome.py` (above),
+you can also check a pre-defined variant:
+
+```py
+>>> pp(genome.checkVariant('VOC_20201201_UK'))
+(20,
+ 0,
+ {'n': {'aa': {'235F': (True, 'S', True, 'F'), '3L': (True, 'D', True, 'L')}},
+  'orf1ab': {'aa': {'1001I': (True, 'T', True, 'I'),
+                    '1708D': (True, 'A', True, 'D'),
+                    '2230T': (True, 'I', True, 'T'),
+                    '3675-': (True, 'S', True, '-'),
+                    '3676-': (True, 'G', True, '-'),
+                    '3677-': (True, 'F', True, '-')}},
+  'orf8': {'aa': {'52I': (True, 'R', True, 'I'),
+                  '73C': (True, 'Y', True, 'C'),
+                  'Q27*': (True, 'Q', True, '*')}},
+  'spike': {'aa': {'1118H': (True, 'D', True, 'H'),
+                   '144-': (True, 'Y', True, '-'),
+                   '501Y': (True, 'N', True, 'Y'),
+                   '570D': (True, 'A', True, 'D'),
+                   '681H': (True, 'P', True, 'H'),
+                   '69-': (True, 'H', True, '-'),
+                   '70-': (True, 'V', True, '-'),
+                   '716I': (True, 'T', True, 'I'),
+                   '982A': (True, 'S', True, 'A')}}})
+```
+
+with the results summarizing the number of tests done, the number that
+failed, and then the features checked, with `aa` and `nt` dictionaries for
+the amino acid and nucleotide checks.
+
+You can pass your own variant dictionary specifying what you want checked.
+
+### To learn more
+
+See the `Features` and `SARS2Genome` classes in
+[sars2seq/feature.py](sars2seq/genome.py) and
+[sars2seq/genome.py](sars2seq/genome.py). Also, the tests (e.g., in
+[test/test_genome.py], [test/test_checker.py] [test/test_variants.py]) show
+you example uses of these classes and their methods.  You can also look to
+see how the three utility scripts described above (which can all be found
+in the [bin directory](bin)) call the library functions and use the
+results.
 
 ## Developing
 
 Run the tests via 
 
-``` sh
+```sh
 $ make pytest`
 ```

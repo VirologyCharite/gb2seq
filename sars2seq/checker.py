@@ -2,25 +2,25 @@ import copy
 
 
 class Checker:
-    def __init__(self, featureName, changes, nt):
+    def __init__(self, featureName, changes, aa=False):
         """
         Check genome changes occurred.
 
         @param featureName: The C{str} name of the feature to check (e.g.,
             'nsp2').
         @param changes: A C{str} specification in the form of space-separated
-            RNS strings, where R is a reference base, N is an integer offset,
+            RNS strings, where R is a reference base, N is an integer site,
             and S is a sequence base. So, e.g., 'L28S P1003Q' indicates that
-            we expected a change from 'L' to 'S' at offset 28 and from 'P' to
-            'Q' at offset 1003.
-        @param nt: If C{True} check nucleotide sequences. Else protein.
+            we expected a change from 'L' to 'S' at site 28 and from 'P' to
+            'Q' at site 1003.
+        @param aa: If C{True} check amino acid sequences. Else nucleotide.
         """
         self.description = (
-            f'Check {featureName!r} for {"nt" if nt else "aa"} '
+            f'Check {featureName!r} for {"aa" if aa else "nt"} '
             f'changes {changes!r}')
 
         def check(genome):
-            _, errorCount, _ = genome.checkFeature(featureName, changes, nt)
+            _, errorCount, _ = genome.checkFeature(featureName, changes, aa)
             return errorCount == 0
 
         self._func = check
@@ -55,9 +55,9 @@ class Checker:
 
 class AAChecker(Checker):
     def __init__(self, featureName, changes):
-        super().__init__(featureName, changes, False)
+        super().__init__(featureName, changes, True)
 
 
 class NTChecker(Checker):
     def __init__(self, featureName, changes):
-        super().__init__(featureName, changes, True)
+        super().__init__(featureName, changes, False)

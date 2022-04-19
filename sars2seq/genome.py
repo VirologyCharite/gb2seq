@@ -191,17 +191,14 @@ class SARS2Genome:
         ambiguous nucleotides that are possibly correct as actually being
         correct. Otherwise, the edlib aligner is strict and nucleotide codes
         only match themselves.
-    @raise ValueError: If one of genomeAligned or referenceAligned is given
-        but the other is not.
+    @raise AlignmentError: If the genome and reference sequences both start
+        or end with '-' characters, or if pre-aligned sequences are not of
+        the same length.
     @raise ReferenceWithGapsError: If the reference has gaps.
     """
     def __init__(self, genome, features=None, referenceAligned=None,
                  genomeAligned=None, aligner=DEFAULT_ALIGNER,
                  matchAmbiguous=True):
-        if (referenceAligned and not genomeAligned or
-                not referenceAligned and genomeAligned):
-            raise ValueError('Either both or neither of referenceAligned and '
-                             'genomeAligned can be given, not a mix.')
         # Geneious uses ? to indicate unknown nucleotides, at least when it
         # exports a consensus / alignment. Replace with N.
         self.genome = DNARead(genome.id, genome.sequence.replace('?', 'N'))
@@ -225,28 +222,30 @@ class SARS2Genome:
             If not C{None} then C{referenceAligned} must also be given.
         @param aligner: A C{str} specifying the alignment algorithm to use.
             Either 'mafft' (the default) or 'edlib' (experimental).
-        @raise AssertionError: If an already aligned genome is given but no
+        @raise ValueError: If an already aligned genome is given but no
             aligned reference is also given, or vice versa.
         @raise AlignmentError: If the genome and reference sequences both start
-            or end with '-' characters.
+            or end with '-' characters, or if pre-aligned sequences are not of
+            the same length.
         """
-        if referenceAligned:
-            assert genomeAligned
-            self.referenceAligned = referenceAligned
-            self.genomeAligned = genomeAligned
-        else:
-            assert not genomeAligned
+        if bool(referenceAligned) + bool(genomeAligned) == 1:
+            raise ValueError('Either both or neither of referenceAligned and '
+                             'genomeAligned can be given, not a mix.')
+
+        preAligned = referenceAligned is not None
+
+        if not preAligned:
             if self.features.reference.sequence == self.genome.sequence:
                 # No need to align if the sequences are identical.
-                self.referenceAligned, self.genomeAligned = (
-                    self.features.reference, self.genome)
+                referenceAligned = self.features.reference
+                genomeAligned = self.genome
             else:
                 reads = Reads([self.features.reference, self.genome])
                 if aligner == 'mafft':
-                    self.referenceAligned, self.genomeAligned = (
+                    referenceAligned, genomeAligned = (
                         mafft(reads, options=MAFFT_OPTIONS))
                 elif aligner == 'edlib':
-                    self.referenceAligned, self.genomeAligned = (
+                    referenceAligned, genomeAligned = (
                         edlibAlign(reads, matchAmbiguous=self._matchAmbiguous))
                 else:
                     raise ValueError(f'Unknown aligner {aligner!r}.')
@@ -257,10 +256,23 @@ class SARS2Genome:
                       f'{self.features.reference.sequence}')
                 print(f'gen {self.genome.id:10s}: {self.genome.sequence}')
                 print('ALIGNED')
-                print(f'ref {self.referenceAligned.id:10s}: '
-                      f'{self.referenceAligned.sequence}')
-                print(f'gen {self.genomeAligned.id:10s}: '
-                      f'{self.genomeAligned.sequence}')
+                print(f'ref {referenceAligned.id:10s}: '
+                      f'{referenceAligned.sequence}')
+                print(f'gen {genomeAligned.id:10s}: '
+                      f'{genomeAligned.sequence}')
+
+        if len(referenceAligned) != len(genomeAligned):
+            if preAligned:
+                error = (f'The length of the given pre-aligned reference '
+                         f'({len(referenceAligned)}) does not match the '
+                         f'length of the given pre-aligned genome '
+                         f'({len(genomeAligned)}).')
+            else:
+                error = (f'The length of the aligned reference produced '
+                         f'by {self.aligner} ({len(referenceAligned)}) does '
+                         f'not match the length of the aligned genome '
+                         f'({len(genomeAligned)}).')
+            raise AlignmentError(error)
 
         # One but not both of the aligned genome and reference can begin
         # with a gap, and the same goes for the sequence ends. The reason
@@ -273,17 +285,20 @@ class SARS2Genome:
         # that doing that would be optimal since the alignment between the
         # two sequences of specific interest would have been calculated in
         # the presence of other sequences, so may not be pairwise optimal).
-        if (self.referenceAligned.sequence.startswith('-') and
-                self.genomeAligned.sequence.startswith('-')):
+        if (referenceAligned.sequence.startswith('-') and
+                genomeAligned.sequence.startswith('-')):
             raise AlignmentError(
                 'The reference and genome alignment sequences '
                 'both start with a "-" character.')
 
-        if (self.referenceAligned.sequence.endswith('-') and
-                self.genomeAligned.sequence.endswith('-')):
+        if (referenceAligned.sequence.endswith('-') and
+                genomeAligned.sequence.endswith('-')):
             raise AlignmentError(
                 'The reference and genome alignment sequences '
                 'both end with a "-" character.')
+
+        self.referenceAligned = referenceAligned
+        self.genomeAligned = genomeAligned
 
     def ntSequences(self, featureName):
         """
@@ -442,23 +457,23 @@ class SARS2Genome:
         else:
             return [(base is None or actual == base), actual]
 
-    def checkFeature(self, featureName, changes, nt, onError='raise',
+    def checkFeature(self, featureName, changes, aa=False, onError='raise',
                      errFp=None):
         """Check that a set of changes all happened as expected.
 
         @param featureName: A C{str} feature name.
         @param changes: Either a C{str} or a iterable of 3-C{tuple}s. If a
             C{str}, gives a specification in the form of space-separated
-            RNG strings, where R is a reference base, N is a 1-based location,
+            RNG strings, where R is a reference base, N is a 1-based site,
             and G is a sequence base. So, e.g., 'L28S P1003Q' indicates that
-            we expected a change from 'L' to 'S' at offset 28 and from 'P' in
-            the reference to 'Q' in the genome we're examining at offset 1003.
+            we expected a change from 'L' to 'S' at site 28 and from 'P' in
+            the reference to 'Q' in the genome we're examining at site 1003.
             The reference or genome base (but not both) may be absent.
             If an iterable of 3-C{tuple}s, each tuple should have a C{str}
             expected reference base, a 0-based offset, and a C{str} expected
             genome base. Note that the string format (meant for humans) uses
             1-based locations whereas the tuple format uses 0-based offsets.
-        @param nt: If C{True} check nucleotide sequences. Else protein.
+        @param aa: If C{True} check amino acid sequences. Else nucleotide
         @param onError: A C{str} indicating what to do if an error is
             encountered. Must be one of 'raise', 'ignore', or 'print' (in which
             case an error message will be printed to C{errFp}.
@@ -493,8 +508,8 @@ class SARS2Genome:
         testCount = errorCount = 0
 
         try:
-            reference, genome = (self.ntSequences(featureName) if nt else
-                                 self.aaSequences(featureName))
+            reference, genome = (self.aaSequences(featureName) if aa else
+                                 self.ntSequences(featureName))
         except TranslationError as e:
             if onError == 'raise':
                 raise
@@ -564,7 +579,8 @@ class SARS2Genome:
                     pass
                 else:
                     testCount, errorCount, result_ = self.checkFeature(
-                        featureName, changes, what == 'nt', onError, errFp)
+                        featureName, changes, aa=(what == 'aa'),
+                        onError=onError, errFp=errFp)
                     testCountTotal += testCount
                     errorCountTotal += errorCount
                     result[featureName][what] = result_

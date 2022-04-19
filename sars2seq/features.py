@@ -123,14 +123,16 @@ class Features(UserDict):
     Manage sequence features from the information in C{gbFile}.
 
     @param spec: Either:
-        * A C{str} name or C{Path} of a Genbank file containing the features.
-        * A C{str} Genbank accession id.
+        * A C{str} name or C{Path} of a GenBank file containing the features.
+        * A C{str} GenBank accession id.
         * A C{dict} of pre-prepared features, in which case C{reference}
               must not be C{None}. Passing a C{dict} is provided for testing.
         * C{None}, in which case the default reference, NC_045512.2.gb, is
               loaded.
     @param reference: A C{dark.reads.DNARead} instance if C{spec} is a C{dict},
         else C{None}.
+    @raise ValueError: If a reference is passed with a string or Path
+        specification.
     @raise ReferenceWithGapError: If the reference or one of its features has a
         gap in its nucleotide sequence.
     """
@@ -141,13 +143,15 @@ class Features(UserDict):
         spec = self.REF_GB if spec is None else spec
 
         if isinstance(spec, str):
-            assert reference is None
+            if reference is not None:
+                raise ValueError('A reference cannot be passed with a string '
+                                 'specification.')
             path = Path(spec)
             if path.exists():
                 with open(path) as fp:
                     record = SeqIO.read(fp, 'genbank')
             else:
-                print(f'Fetching Genbank record for {spec!r}.',
+                print(f'Fetching GenBank record for {spec!r}.',
                       file=sys.stderr)
                 client = Entrez.efetch(db='nucleotide', rettype='gb',
                                        retmode='text', id=spec)
@@ -155,7 +159,9 @@ class Features(UserDict):
                 client.close()
             self._initializeFromGenBankRecord(record)
         elif isinstance(spec, Path):
-            assert reference is None
+            if reference is not None:
+                raise ValueError('A reference cannot be passed with a Path '
+                                 'specification.')
             with open(spec) as fp:
                 record = SeqIO.read(fp, 'genbank')
             self._initializeFromGenBankRecord(record)
@@ -170,6 +176,8 @@ class Features(UserDict):
         Initialize from a GenBank record.
 
         @param record: A BioPython C{SeqRecord} sequence record.
+        @raise ReferenceWithGapError: If the reference sequence or the
+            sequence of any of its features has a gap.
         """
         self.reference = DNARead(record.id, str(record.seq))
 
@@ -231,6 +239,40 @@ class Features(UserDict):
 
         self._checkForGaps()
 
+    def __getitem__(self, name):
+        """
+        Find a feature by name. This produces a dictionary with the following
+        keys and values for the feature:
+
+            {
+                'function': A string description of the feature's function,
+                    if one was present in the GenBank file.
+                'product': A string description of the product of the feature.
+                    if one was present in the GenBank file.
+                'name': The string name.
+                'note': A string note, if one was is present in the GenBank
+                    file.
+                'sequence': The string nucleotide sequence.
+                'start': A 0-based integer offset of the first nucleotide of
+                    the feature in the complete genome.
+                'stop': A 0-based integer offset of the nucleotide after the
+                    last nucleotide in the feature in the complete genome.
+                    Thus start and stop can be used in the regular Python
+                    way of slicing out substrings.
+                'translation': The amino acid translation of the feature, if
+                    one is provided by the GenBank record. Note that
+                    translations may not be provided for all features! If you
+                    need to know what is actually translated, use the
+                    TRANSLATED set defined at the top of this file.
+            }
+
+
+        @param name: A C{str} feature name to look up.
+        @raise KeyError: If the name is unknown.
+        @return: A C{dict} for the feature, as above.
+        """
+        return self.data[self.canonicalName(name)]
+
     def canonicalName(self, name):
         """
         Get the canonical name for a feature.
@@ -245,42 +287,34 @@ class Features(UserDict):
         nameLower = name.lower()
         for featureName in self:
             if nameLower == featureName.lower():
-                return nameLower
+                return featureName
 
         alias = ALIASES.get(nameLower)
-        if alias:
+        if alias is None:
+            raise KeyError(name)
+        else:
             assert alias in self
             return alias
 
-        raise KeyError(name)
-
-    def __getitem__(self, name):
+    def aliases(self, name):
         """
-        Find a feature by name.
+        Get all aliases for a name.
 
-        @param name: A C{str} feature name to look up.
-        @return: A C{dict} for the feature.
+        @param name: A C{str} feature name.
+        @return: A C{set} of C{str} canonical names.
         """
-        try:
-            return self.data[name]
-        except KeyError:
-            nameLower = name.lower()
-            for featureName in self.data:
-                if nameLower == featureName.lower():
-                    name = featureName
-                    break
-            else:
-                alt = ALIASES.get(nameLower)
-                if alt is None:
-                    raise KeyError(name)
-                else:
-                    name = alt
+        canonicalName = self.canonicalName(name)
+        result = {canonicalName}
 
-        return self.data[name]
+        for alias, canonical in ALIASES.items():
+            if canonical == canonicalName:
+                result.add(alias)
+
+        return result
 
     def _checkForGaps(self):
         """
-        Check there are no gaps in the reference or and feature sequence.
+        Check there are no gaps in the reference or any feature sequence.
 
         @raise ReferenceWithGapError: If the reference sequence or the
             sequence of any of its features has a gap.
@@ -310,9 +344,9 @@ class Features(UserDict):
         """
         return self[name]['start'] + offset * (3 if aa else 1)
 
-    def featuresAt(self, offset, includeUntranslated=False):
+    def getFeatureNames(self, offset, includeUntranslated=False):
         """
-        Get the names of features that overlap a given offset.
+        Get the names of all features that overlap a given offset.
 
         @param offset: An C{int} offset into the genome.
         @param includeUntranslated: If C{True}, also return features that are
@@ -330,27 +364,29 @@ class Features(UserDict):
 
     def getFeature(self, offset, featureName=None, includeUntranslated=False):
         """
-        Find a feature by name or raise an error.
+        Find a single feature at an offset.
 
-        @param offset: The C{int} offset that was used to find C{features}.
-        @param featureName: A C{str} feature name. If C{None}, a feature will
-            be returned if there is only one at the offset.
-        @param includeUntranslated: If C{True}, also return features that are
+        @param offset: An C{int} offset into the genome.
+        @param featureName: A C{str} feature name. Used for disambiguation when
+            multiple features are present at the offset. If C{None}, a feature
+            will be returned if there is only one at the given offset.
+        @param includeUntranslated: If C{True}, also consider features that are
             not translated.
         @raise MissingFeatureError: if the requested feature does not overlap
             the given C{offset} or if there are no features at the offset.
         @raise AmbiguousFeatureError: if there are multiple features at the
             offset and a feature name is not given.
-        @return: A 2-tuple, containing 1) a features C{dict}, if the requested
-            feature is present in the features at the offset, and 2) the set of
-            C{str} feature names present at the offset.
+        @return: A 2-tuple, containing 1) a features C{dict} (as returned by
+            __getitem__), if the requested feature is among those present at
+            the offset, and 2) the set of all C{str} feature names present at
+            the offset.
         """
-        features = self.featuresAt(offset, includeUntranslated)
+        features = self.getFeatureNames(offset, includeUntranslated)
 
         if featureName is None:
             if features:
-                # There are some features here, but we weren't told which
-                # one to use. Only proceed if there's just one.
+                # There are some features here, but we weren't told which one
+                # to use. Only proceed if there's just one.
                 if len(features) == 1:
                     featureName = list(features)[0]
                     feature = self[featureName]

@@ -1,4 +1,5 @@
 from unittest import TestCase
+from pathlib import Path
 
 from dark.reads import DNARead
 
@@ -16,6 +17,22 @@ class TestFeatures(TestCase):
         The getitem method must return a dict.
         """
         self.assertIsInstance(_FEATURES['spike'], dict)
+
+    def testPassStringSpecAndAReference(self):
+        """
+        If a string specification is passed as well as a reference, a
+        ValueError must be raised.
+        """
+        error = r'^A reference cannot be passed with a string specification\.$'
+        self.assertRaisesRegex(ValueError, error, Features, 'spec', 'ref')
+
+    def testPassPathSpecAndAReference(self):
+        """
+        If a Path specification is passed as well as a reference, a
+        ValueError must be raised.
+        """
+        error = r'^A reference cannot be passed with a Path specification\.$'
+        self.assertRaisesRegex(ValueError, error, Features, Path('spec'), 'rf')
 
     def testUnknownFeature(self):
         """
@@ -143,28 +160,28 @@ class TestFeatures(TestCase):
             {
                 'membrane glycoprotein'
             },
-            _FEATURES.featuresAt(26522))
+            _FEATURES.getFeatureNames(26522))
 
     def testFeaturesAtTooHighOffset(self):
         """
         Test we get nothing back if we ask what features are at an offset that
         is much bigger than the genome length.
         """
-        self.assertEqual(set(), _FEATURES.featuresAt(1E9))
+        self.assertEqual(set(), _FEATURES.getFeatureNames(1E9))
 
     def testFeaturesAtNegativeOffset(self):
         """
         Test we get nothing back if we ask what features are at a negative
         offset.
         """
-        self.assertEqual(set(), _FEATURES.featuresAt(-1))
+        self.assertEqual(set(), _FEATURES.getFeatureNames(-1))
 
     def testFeaturesAtZeroOffset(self):
         """
         Test we get nothing back if we ask what features are at offset zero
         and do not ask for untranslated features.
         """
-        self.assertEqual(set(), _FEATURES.featuresAt(0))
+        self.assertEqual(set(), _FEATURES.getFeatureNames(0))
 
     def testFeaturesAtZeroOffsetIncludeUntranslated(self):
         """
@@ -175,7 +192,7 @@ class TestFeatures(TestCase):
             {
                 "5'UTR",
             },
-            _FEATURES.featuresAt(0, includeUntranslated=True))
+            _FEATURES.getFeatureNames(0, includeUntranslated=True))
 
     def testFeaturesAtOrf1abOffset(self):
         """
@@ -188,7 +205,7 @@ class TestFeatures(TestCase):
                 'ORF1ab polyprotein',
                 'ORF1a polyprotein',
             },
-            _FEATURES.featuresAt(265))
+            _FEATURES.getFeatureNames(265))
 
     def testFeaturesAtNsp2Offset(self):
         """
@@ -201,7 +218,7 @@ class TestFeatures(TestCase):
                 'ORF1ab polyprotein',
                 'ORF1a polyprotein',
             },
-            _FEATURES.featuresAt(2700))
+            _FEATURES.getFeatureNames(2700))
 
     def testFeaturesAtRdRPOffsetWithStemLoops(self):
         """
@@ -214,7 +231,7 @@ class TestFeatures(TestCase):
                 'ORF1ab polyprotein',
                 'RNA-dependent RNA polymerase',
             },
-            _FEATURES.featuresAt(13500))
+            _FEATURES.getFeatureNames(13500))
 
     def testFeaturesAtRdRPOffsetWithStemLoopsIncludeUntranslated(self):
         """
@@ -229,7 +246,7 @@ class TestFeatures(TestCase):
                 'stem loop 1',
                 'stem loop 2',
             },
-            _FEATURES.featuresAt(13500, includeUntranslated=True))
+            _FEATURES.getFeatureNames(13500, includeUntranslated=True))
 
     def testFeaturesAtRdRPOffset(self):
         """
@@ -241,7 +258,7 @@ class TestFeatures(TestCase):
                 'ORF1ab polyprotein',
                 'RNA-dependent RNA polymerase',
             },
-            _FEATURES.featuresAt(13550))
+            _FEATURES.getFeatureNames(13550))
 
     def testCanonicalName(self):
         """
@@ -252,6 +269,24 @@ class TestFeatures(TestCase):
         self.assertEqual(_FEATURES.canonicalName('m'), 'membrane glycoprotein')
         self.assertEqual(_FEATURES.canonicalName('n'),
                          'nucleocapsid phosphoprotein')
+
+    def testAliases(self):
+        """
+        It must be possible to get the aliases of a feature name, regardless of
+        case.
+        """
+        aliases = _FEATURES.aliases
+        spikeNames = {'s', 'spike', 'surface glycoprotein'}
+        for name in spikeNames:
+            self.assertEqual(spikeNames, aliases(name))
+            self.assertEqual(spikeNames, aliases(name.upper()))
+            self.assertEqual(spikeNames, aliases(name.title()))
+
+        nsp1Names = {'leader', 'leader protein', 'nsp1'}
+        for name in nsp1Names:
+            self.assertEqual(nsp1Names, aliases(name))
+            self.assertEqual(nsp1Names, aliases(name.upper()))
+            self.assertEqual(nsp1Names, aliases(name.title()))
 
     def testExpectedNames(self):
         """

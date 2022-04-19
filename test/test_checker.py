@@ -25,7 +25,7 @@ class Test_EPI_ISL_601443(TestCase):
         If an check on a non-existent index is attempted, an IndexError must
         be raised.
         """
-        checker = Checker('spike', 'N500001Y', False)
+        checker = Checker('spike', 'N500001Y', aa=True)
         error = (r"^Index 500000 out of range trying to access feature "
                  r"'spike' of length 1274 sequence 'NC_045512.2 \(surface "
                  r"glycoprotein\)' via expected change specification "
@@ -36,15 +36,15 @@ class Test_EPI_ISL_601443(TestCase):
         """
         The variant has the N501Y change.
         """
-        checker = Checker('spike', 'N501Y', False)
+        checker = Checker('spike', 'N501Y', aa=True)
         self.assertTrue(checker(self.genome))
 
     def testN501YandA570D(self):
         """
         The variant has the A570D change. Check with the base Checker class.
         """
-        checker = (Checker('spike', 'N501Y', False) and
-                   Checker('spike', 'A570D', False))
+        checker = (Checker('spike', 'N501Y', aa=True) and
+                   Checker('spike', 'A570D', aa=True))
         self.assertTrue(checker(self.genome))
 
     def testN501YAA(self):

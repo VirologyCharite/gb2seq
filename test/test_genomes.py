@@ -24,7 +24,7 @@ class _Mixin:
     def testLength(self):
         self.assertGreater(len(self.genomeRead), 28000)
 
-    def check(self, featureName, changes, nt):
+    def check(self, featureName, changes, aa=False):
         """
         Check that a set of changes all happened as expected.
 
@@ -35,10 +35,10 @@ class _Mixin:
             and S is a sequence base. So, e.g., 'L28S P1003Q' indicates that
             we expected a change from 'L' to 'S' at offset 28 and from 'P' to
             'Q' at offset 1003.
-        @param nt: If C{True} check nucleotide sequences. Else protein.
+        @param aa: If C{True} check amino acid sequences. Else nucleotide.
         """
         _, errorCount, result = self.genome.checkFeature(
-            featureName, changes, nt)
+            featureName, changes, aa)
         if errorCount:
             for change, (referenceOK, _, genomeOK, _) in result.items():
                 if not referenceOK:
@@ -75,7 +75,7 @@ class Test_EPI_ISL_601443(TestCase, _Mixin):
         """
         The spike protein should have the three deletions.
         """
-        self.check('spike', 'H69- V70- Y144-', nt=False)
+        self.check('spike', 'H69- V70- Y144-', True)
 
     def testSpikeMutationsAa(self):
         """
@@ -84,7 +84,7 @@ class Test_EPI_ISL_601443(TestCase, _Mixin):
         don't say what reference their SNPs are relative to)
         """
         self.check('spike', 'N501Y A570D D614G P681H T716I S982A D1118H',
-                   False)
+                   True)
 
     def testSpikeDeletionVariant(self):
         """
@@ -148,13 +148,13 @@ class Test_EPI_ISL_601443(TestCase, _Mixin):
         """
         The ORF1a protein should have the expected deletions.
         """
-        self.check('orf1a', 'S3675- G3676- F3677-', False)
+        self.check('orf1a', 'S3675- G3676- F3677-', True)
 
     def testORF1aMutationsAa(self):
         """
         The ORF1a protein should have the expected amino acid changes.
         """
-        self.check('orf1a', 'T1001I A1708D I2230T', False)
+        self.check('orf1a', 'T1001I A1708D I2230T', True)
 
     def testORF1abTranslationBug(self):
         """
@@ -170,13 +170,13 @@ class Test_EPI_ISL_601443(TestCase, _Mixin):
         """
         The ORF1ab protein should have the expected deletions.
         """
-        self.check('orf1ab', 'S3675- G3676- F3677-', False)
+        self.check('orf1ab', 'S3675- G3676- F3677-', True)
 
     def testORF1abMutationsAa(self):
         """
         The ORF1ab protein should have the expected amino acid changes.
         """
-        self.check('orf1ab', 'T1001I A1708D I2230T', False)
+        self.check('orf1ab', 'T1001I A1708D I2230T', True)
 
     def testNucleocapsidMutationsNt(self):
         """
@@ -186,20 +186,20 @@ class Test_EPI_ISL_601443(TestCase, _Mixin):
         # location 235. That's a 0-based offset of 234 = 702 in the
         # genome. The change is an S -> via a TCT -> TTT mutation in the
         # middle position, or 703 in 0-based, and 704 in 1-based.
-        self.check('N', 'G7C A8T T9A G608A G609A G610C C704T', True)
+        self.check('N', 'G7C A8T T9A G608A G609A G610C C704T', False)
 
     def testNucleocapsidMutationsAa(self):
         """
         The nucleocapsid protein should have the expected amino acid changes.
         Note that the UK report does not include mention of R203K or G204R.
         """
-        self.check('N', 'D3L R203K G204R S235F', False)
+        self.check('N', 'D3L R203K G204R S235F', True)
 
     def testORF8MutationsAa(self):
         """
         The ORF8 protein should have the expected amino acid changes.
         """
-        self.check('orf8', 'Q27* R52I Y73C', False)
+        self.check('orf8', 'Q27* R52I Y73C', True)
 
     def testSNPs(self):
         """
@@ -232,19 +232,19 @@ class Test_BavPat2(TestCase, _Mixin):
         """
         The spike genome should have the expected change.
         """
-        self.check('spike', 'A1841G', True)
+        self.check('spike', 'A1841G', False)
 
     def testSpikeMutationsAa(self):
         """
         The spike protein should have the expected amino acid change.
         """
-        self.check('spike', 'D614G', False)
+        self.check('spike', 'D614G', True)
 
     def testORF1aMutationsNt(self):
         """
         The ORF1a genome should have the expected change.
         """
-        self.check('orf1a', 'C2772T', True)
+        self.check('orf1a', 'C2772T', False)
 
     def testSpikeDeletionVariant(self):
         """
@@ -423,14 +423,14 @@ class Test_EPI_ISL_678597(TestCase, _Mixin):
         """
         The spike protein should have the three deletions.
         """
-        self.check('spike', 'L241- L242- A243-', nt=False)
+        self.check('spike', 'L241- L242- A243-', True)
 
     def testSpikeMutationsAa(self):
         """
         The spike protein should have the expected amino acid changes.
         """
         self.check('spike', 'D80A D215G K417N E484K N501Y D614G A701V',
-                   False)
+                   True)
 
     def testSpikeDeletionVariant(self):
         """
@@ -473,35 +473,35 @@ class Test_EPI_ISL_678597(TestCase, _Mixin):
         testCount, errorCount, _ = self.genome.checkVariant('VOC_20201201_UK')
         self.assertEqual(20, testCount)
         self.assertEqual(16, errorCount)
-        self.check('spike', 'N501Y', False)
-        self.check('orf1ab', 'S3675- G3676- F3677-', False)
+        self.check('spike', 'N501Y', True)
+        self.check('orf1ab', 'S3675- G3676- F3677-', True)
 
     def testORF1aDeletionsAa(self):
         """
         The ORF1a protein should have the expected deletions.
         """
-        self.check('orf1a', 'S3675- G3676- F3677-', False)
+        self.check('orf1a', 'S3675- G3676- F3677-', True)
 
     def testORF1aMutationsAa(self):
         """
         The ORF1a protein should have the expected amino acid changes.
         """
-        self.check('orf1a', 'T265I K1655N K3353R', False)
+        self.check('orf1a', 'T265I K1655N K3353R', True)
 
     def testNucleocapsidMutationsNt(self):
         """
         The nucleocapsid genome should have the expected changes.
         """
-        self.check('N', 'C614T', True)
+        self.check('N', 'C614T', False)
 
     def testNucleocapsidMutationsAa(self):
         """
         The nucleocapsid protein should have the expected amino acid changes.
         """
-        self.check('N', 'T205I', False)
+        self.check('N', 'T205I', True)
 
     def testORF3aMutationsAa(self):
         """
         The ORF3a protein should have the expected amino acid changes.
         """
-        self.check('orf3a', 'Q57H S171L', False)
+        self.check('orf3a', 'Q57H S171L', True)

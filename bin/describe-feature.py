@@ -100,7 +100,7 @@ if __name__ == '__main__':
 
     parser.add_argument(
         '--gbFile', metavar='file.gb', default=Features.REF_GB,
-        help='The Genbank file to examine.')
+        help='The GenBank file to examine.')
 
     parser.add_argument(
         '--name', metavar='NAME',

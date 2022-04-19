@@ -14,7 +14,8 @@ from sars2seq.change import splitChange
 from sars2seq.features import (
     Features, AmbiguousFeatureError, MissingFeatureError)
 from sars2seq.genome import (
-    SARS2Genome, getGappedOffsets, alignmentEnd, offsetInfoMultipleGenomes)
+    SARS2Genome, getGappedOffsets, alignmentEnd, offsetInfoMultipleGenomes,
+    AlignmentError)
 from sars2seq.translate import NoSlipperySequenceError
 
 from .fasta import getSequence
@@ -27,6 +28,43 @@ class TestSARS2Genome(TestCase):
     """
     Test the SARS2Genome class.
     """
+    def testUnequalPreAlignedSequences(self):
+        """
+        If pre-aligned sequences are passed that are not of equal length, a
+        AlignmentError must be raised.
+        """
+        error = (r'^The length of the given pre-aligned reference \(5\) does '
+                 r'not match the length of the given pre-aligned genome '
+                 r'\(4\)\.$')
+        self.assertRaisesRegex(AlignmentError, error, SARS2Genome,
+                               DNARead('ref', 'ATGC'), features={},
+                               referenceAligned=DNARead('ref-aln', 'AT-GC'),
+                               genomeAligned=DNARead('gen-aln', 'AT-G'))
+
+    def testPreAlignedSequencesBothStartWithAGap(self):
+        """
+        If pre-aligned sequences are passed and both start with a gap, an
+        AlignmentError must be raised.
+        """
+        error = (r'^The reference and genome alignment sequences both start '
+                 r'with a "-" character\.$')
+        self.assertRaisesRegex(AlignmentError, error, SARS2Genome,
+                               DNARead('ref', 'ATGC'), features={},
+                               referenceAligned=DNARead('ref-aln', '-ATGC'),
+                               genomeAligned=DNARead('gen-aln', '-ATGC'))
+
+    def testPreAlignedSequencesBothEndWithAGap(self):
+        """
+        If pre-aligned sequences are passed and both end with a gap, an
+        AlignmentError must be raised.
+        """
+        error = (r'^The reference and genome alignment sequences both end '
+                 r'with a "-" character\.$')
+        self.assertRaisesRegex(AlignmentError, error, SARS2Genome,
+                               DNARead('ref', 'ATGC'), features={},
+                               referenceAligned=DNARead('ref-aln', 'ATGC-'),
+                               genomeAligned=DNARead('gen-aln', 'ATGC-'))
+
     def testNtSequences(self):
         """
         It must be possible to retrieve aligned nucleotide sequences.
@@ -70,7 +108,7 @@ class TestSARS2Genome(TestCase):
 
         # Note: 1-based locations.
         testCount, errorCount, result = genome.checkFeature(
-            'spike', 'A1A T2A A3T T4T', True)
+            'spike', 'A1A T2A A3T T4T', False)
 
         self.assertEqual(4, testCount)
         self.assertEqual(3, errorCount)
@@ -100,7 +138,7 @@ class TestSARS2Genome(TestCase):
                  r"'spike' of length 4 sequence 'refId \(spike\)' via "
                  r"expected change specification 'A100000A'\.$")
         self.assertRaisesRegex(IndexError, error, genome.checkFeature,
-                               'spike', 'A100000A', True)
+                               'spike', 'A100000A', False)
 
     def testNtSequencesIndexErrorPrint(self):
         """
@@ -134,7 +172,7 @@ class TestSARS2Genome(TestCase):
             "\n"
         )
         testCount, errorCount, result = genome.checkFeature(
-            'spike', 'A100000A', nt=True, onError='print', errFp=err)
+            'spike', 'A100000A', aa=False, onError='print', errFp=err)
         self.assertEqual(error, err.getvalue())
 
         self.assertEqual(1, testCount)
@@ -161,7 +199,7 @@ class TestSARS2Genome(TestCase):
 
         err = StringIO()
         testCount, errorCount, result = genome.checkFeature(
-            'spike', 'A100000A', nt=True, onError='ignore', errFp=err)
+            'spike', 'A100000A', aa=False, onError='ignore', errFp=err)
         self.assertEqual('', err.getvalue())
 
         self.assertEqual(1, testCount)
@@ -188,7 +226,8 @@ class TestSARS2Genome(TestCase):
         # Note: 0-based offsets.
         testCount, errorCount, result = genome.checkFeature(
             'spike',
-            (('A', 0, 'A'), ('T', 1, 'A'), ('A', 2, 'T'), ('T', 3, 'T')), True)
+            (('A', 0, 'A'), ('T', 1, 'A'), ('A', 2, 'T'), ('T', 3, 'T')),
+            aa=False)
 
         self.assertEqual(4, testCount)
         self.assertEqual(3, errorCount)
@@ -227,7 +266,7 @@ class TestSARS2Genome(TestCase):
         self.assertEqual('refId (spike)', referenceNt.id)
 
         testCount, errorCount, result = genome.checkFeature(
-            'spike', 'T19A', True)
+            'spike', 'T19A', False)
 
         self.assertEqual(1, testCount)
         self.assertEqual(0, errorCount)
@@ -262,7 +301,7 @@ class TestSARS2Genome(TestCase):
         self.assertEqual('genId (spike)', genomeNt.id)
 
         testCount, errorCount, result = genome.checkFeature(
-            'spike', 'T5-', True)
+            'spike', 'T5-', False)
 
         self.assertEqual(1, testCount)
         self.assertEqual(0, errorCount)
@@ -270,8 +309,7 @@ class TestSARS2Genome(TestCase):
 
     def testAaSequencesTranslationErrorRaise(self):
         """
-        Check that a TranslationError is raised when checking AA
-        sequences.
+        Check that a TranslationError is raised when checking AA sequences.
         """
         features = Features(
             {
@@ -289,7 +327,7 @@ class TestSARS2Genome(TestCase):
         error = r"^No slippery sequence found\.$"
         self.assertRaisesRegex(
             NoSlipperySequenceError, error, genome.checkFeature,
-            'orf1ab', 'A100000A', False)
+            'orf1ab', 'A100000A', True)
 
     def testAaSequencesTranslationErrorPrint(self):
         """
@@ -314,7 +352,7 @@ class TestSARS2Genome(TestCase):
         error = 'No slippery sequence found.\n'
 
         testCount, errorCount, result = genome.checkFeature(
-            'orf1ab', 'A100000A', nt=False, onError='print', errFp=err)
+            'orf1ab', 'A100000A', aa=True, onError='print', errFp=err)
         self.assertEqual(error, err.getvalue())
 
         self.assertEqual(1, testCount)
@@ -342,7 +380,7 @@ class TestSARS2Genome(TestCase):
         err = StringIO()
 
         testCount, errorCount, result = genome.checkFeature(
-            'orf1ab', 'A100000A', nt=False, onError='ignore', errFp=err)
+            'orf1ab', 'A100000A', aa=True, onError='ignore', errFp=err)
         self.assertEqual('', err.getvalue())
 
         self.assertEqual(1, testCount)
@@ -1015,9 +1053,6 @@ class TestOffsetInfo(TestCase):
         genome = SARS2Genome(
             DNARead('genId', 'TTCCCAAATTGCTACTTTGATTGAG'),
             features=features)
-
-        print(genome.referenceAligned.sequence)
-        print(genome.genomeAligned.sequence)
 
         self.assertEqual(
             {

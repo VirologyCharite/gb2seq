@@ -1,7 +1,7 @@
 """
 Tests for specific genomes in ../data
 
-See test_genome.py for tests of more basic SARS2Genome functionality.
+See test_alignment.py for tests of more basic SARS2Alignment functionality.
 """
 
 from unittest import TestCase
@@ -9,8 +9,8 @@ from unittest import TestCase
 from .fasta import getSequence
 
 from sars2seq import DATA_DIR
+from sars2seq.alignment import SARS2Alignment
 from sars2seq.features import Features
-from sars2seq.genome import SARS2Genome
 from sars2seq.variants import VARIANTS
 
 REF_GB = DATA_DIR / 'NC_045512.2.gb'
@@ -19,7 +19,7 @@ FEATURES = Features(REF_GB)
 
 class _Mixin:
     """
-    Mixin for SARS2Genome class tests.
+    Mixin for SARS2Alignment class tests.
     """
     def testLength(self):
         self.assertGreater(len(self.genomeRead), 28000)
@@ -37,7 +37,7 @@ class _Mixin:
             'Q' at offset 1003.
         @param aa: If C{True} check amino acid sequences. Else nucleotide.
         """
-        _, errorCount, result = self.genome.checkFeature(
+        _, errorCount, result = self.alignment.checkFeature(
             featureName, changes, aa)
         if errorCount:
             for change, (referenceOK, _, genomeOK, _) in result.items():
@@ -69,7 +69,7 @@ class Test_EPI_ISL_601443(TestCase, _Mixin):
     investigation-of-novel-sars-cov-2-variant-variant-of-concern-20201201
     """
     genomeRead = getSequence(DATA_DIR / 'EPI_ISL_601443.fasta')
-    genome = SARS2Genome(genomeRead, FEATURES)
+    alignment = SARS2Alignment(genomeRead, FEATURES)
 
     def testSpikeDeletionsAa(self):
         """
@@ -91,7 +91,7 @@ class Test_EPI_ISL_601443(TestCase, _Mixin):
         The genome must fulfil all the requirements of a spike deletion
         variant.
         """
-        testCount, errorCount, result = self.genome.checkVariant(
+        testCount, errorCount, result = self.alignment.checkVariant(
             'spikeDeletion')
         self.assertEqual(2, testCount)
         self.assertEqual(0, errorCount)
@@ -111,7 +111,7 @@ class Test_EPI_ISL_601443(TestCase, _Mixin):
         """
         The genome must be an N501Y variant.
         """
-        testCount, errorCount, result = self.genome.checkVariant('N501Y')
+        testCount, errorCount, result = self.alignment.checkVariant('N501Y')
         self.assertEqual(1, testCount)
         self.assertEqual(0, errorCount)
         self.assertEqual(
@@ -130,7 +130,8 @@ class Test_EPI_ISL_601443(TestCase, _Mixin):
         The genome must fulfil all the requirements of the UK variant of
         concern 202012/01.
         """
-        testCount, errorCount, _ = self.genome.checkVariant('VOC_20201201_UK')
+        testCount, errorCount, _ = self.alignment.checkVariant(
+            'VOC_20201201_UK')
         self.assertEqual(20, testCount)
         self.assertEqual(0, errorCount)
 
@@ -140,7 +141,7 @@ class Test_EPI_ISL_601443(TestCase, _Mixin):
         concern 202012/01 when a dictionary describing the variant is passed.
         """
         changes = VARIANTS['VOC_20201201_UK']['changes']
-        testCount, errorCount, _ = self.genome.checkVariant(changes)
+        testCount, errorCount, _ = self.alignment.checkVariant(changes)
         self.assertEqual(20, testCount)
         self.assertEqual(0, errorCount)
 
@@ -162,7 +163,7 @@ class Test_EPI_ISL_601443(TestCase, _Mixin):
         ensures that https://github.com/VirologyCharite/sars2seq/issues/9 is
         fixed and does not revert.
         """
-        _, errorCount, _ = self.genome.checkFeature(
+        _, errorCount, _ = self.alignment.checkFeature(
             'orf1ab', '-4402F -4403K', False)
         self.assertEqual(2, errorCount)
 
@@ -226,7 +227,7 @@ class Test_BavPat2(TestCase, _Mixin):
     Test the BavPat2 sequence. This is Bavarian patient #2.
     """
     genomeRead = getSequence(DATA_DIR / 'BavPat2.fasta')
-    genome = SARS2Genome(genomeRead, FEATURES)
+    alignment = SARS2Alignment(genomeRead, FEATURES)
 
     def testSpikeMutationsNt(self):
         """
@@ -250,7 +251,7 @@ class Test_BavPat2(TestCase, _Mixin):
         """
         The genome is not a spike deletion variant.
         """
-        testCount, errorCount, result = self.genome.checkVariant(
+        testCount, errorCount, result = self.alignment.checkVariant(
             'spikeDeletion')
         self.assertEqual(2, testCount)
         self.assertEqual(2, errorCount)
@@ -270,7 +271,7 @@ class Test_BavPat2(TestCase, _Mixin):
         """
         The genome must not be an N501Y variant.
         """
-        testCount, errorCount, result = self.genome.checkVariant('N501Y')
+        testCount, errorCount, result = self.alignment.checkVariant('N501Y')
         self.assertEqual(1, testCount)
         self.assertEqual(1, errorCount)
         self.assertEqual(
@@ -289,7 +290,8 @@ class Test_BavPat2(TestCase, _Mixin):
         The genome must not have any of the UK variant of concern 202012/01
         changes.
         """
-        testCount, errorCount, _ = self.genome.checkVariant('VOC_20201201_UK')
+        testCount, errorCount, _ = self.alignment.checkVariant(
+            'VOC_20201201_UK')
         self.assertEqual(20, testCount)
         self.assertEqual(20, errorCount)
 
@@ -297,47 +299,47 @@ class Test_BavPat2(TestCase, _Mixin):
         """
         The nucleocapsid genome should be identical to the reference.
         """
-        genomeNt, referenceNt = self.genome.ntSequences('N')
+        genomeNt, referenceNt = self.alignment.ntSequences('N')
         self.assertEqual(genomeNt.sequence, referenceNt.sequence)
 
     def testORF8Identical(self):
         """
         The ORF8 genome should be identical to the reference.
         """
-        genomeNt, referenceNt = self.genome.ntSequences('orf8')
+        genomeNt, referenceNt = self.alignment.ntSequences('orf8')
         self.assertEqual(genomeNt.sequence, referenceNt.sequence)
 
-        genomeAa, referenceAa = self.genome.aaSequences('orf8')
+        genomeAa, referenceAa = self.alignment.aaSequences('orf8')
         self.assertEqual(genomeAa.sequence, referenceAa.sequence)
 
     def testEnvelopeIdentical(self):
         """
         The envelope should be identical to the reference.
         """
-        genomeNt, referenceNt = self.genome.ntSequences('E')
+        genomeNt, referenceNt = self.alignment.ntSequences('E')
         self.assertEqual(genomeNt.sequence, referenceNt.sequence)
 
-        genomeAa, referenceAa = self.genome.aaSequences('E')
+        genomeAa, referenceAa = self.alignment.aaSequences('E')
         self.assertEqual(genomeAa.sequence, referenceAa.sequence)
 
     def testMembraneIdentical(self):
         """
         The membrane should be identical to the reference.
         """
-        genomeNt, referenceNt = self.genome.ntSequences('M')
+        genomeNt, referenceNt = self.alignment.ntSequences('M')
         self.assertEqual(genomeNt.sequence, referenceNt.sequence)
 
-        genomeAa, referenceAa = self.genome.aaSequences('M')
+        genomeAa, referenceAa = self.alignment.aaSequences('M')
         self.assertEqual(genomeAa.sequence, referenceAa.sequence)
 
     def testRdRpIdentical(self):
         """
         The polymerase should be identical to the reference.
         """
-        genomeNt, referenceNt = self.genome.ntSequences('rdrp')
+        genomeNt, referenceNt = self.alignment.ntSequences('rdrp')
         self.assertEqual(genomeNt.sequence, referenceNt.sequence)
 
-        genomeAa, referenceAa = self.genome.aaSequences('rdrp')
+        genomeAa, referenceAa = self.alignment.aaSequences('rdrp')
         self.assertEqual(genomeAa.sequence, referenceAa.sequence)
 
 
@@ -347,27 +349,27 @@ class Test_NC_045512(TestCase, _Mixin):
     the default feature reference.
     """
     genomeRead = getSequence(DATA_DIR / 'NC_045512.2.fasta')
-    genome = SARS2Genome(genomeRead, FEATURES)
+    alignment = SARS2Alignment(genomeRead, FEATURES)
 
     def testSpikeIdenticalNt(self):
         """
         The spike nucleotides should be identical.
         """
-        genomeNt, referenceNt = self.genome.ntSequences('S')
+        genomeNt, referenceNt = self.alignment.ntSequences('S')
         self.assertEqual(genomeNt.sequence, referenceNt.sequence)
 
     def testSpikeIdentical(self):
         """
         The spike protein should be identical.
         """
-        genomeAa, referenceAa = self.genome.aaSequences('S')
+        genomeAa, referenceAa = self.alignment.aaSequences('S')
         self.assertEqual(genomeAa.sequence, referenceAa.sequence)
 
     def testSpikeDeletionVariant(self):
         """
         The genome is not a spike deletion variant.
         """
-        testCount, errorCount, result = self.genome.checkVariant(
+        testCount, errorCount, result = self.alignment.checkVariant(
             'spikeDeletion')
         self.assertEqual(2, testCount)
         self.assertEqual(2, errorCount)
@@ -387,7 +389,7 @@ class Test_NC_045512(TestCase, _Mixin):
         """
         The genome must not be an N501Y variant.
         """
-        testCount, errorCount, result = self.genome.checkVariant('N501Y')
+        testCount, errorCount, result = self.alignment.checkVariant('N501Y')
         self.assertEqual(1, testCount)
         self.assertEqual(1, errorCount)
         self.assertEqual(
@@ -406,7 +408,8 @@ class Test_NC_045512(TestCase, _Mixin):
         The genome must not have any of the UK variant of concern 202012/01
         changes.
         """
-        testCount, errorCount, _ = self.genome.checkVariant('VOC_20201201_UK')
+        testCount, errorCount, _ = self.alignment.checkVariant(
+            'VOC_20201201_UK')
         self.assertEqual(20, testCount)
         self.assertEqual(20, errorCount)
 
@@ -417,7 +420,7 @@ class Test_EPI_ISL_678597(TestCase, _Mixin):
     concern.
     """
     genomeRead = getSequence(DATA_DIR / 'EPI_ISL_678597.fasta')
-    genome = SARS2Genome(genomeRead, FEATURES)
+    alignment = SARS2Alignment(genomeRead, FEATURES)
 
     def testSpikeDeletionsAa(self):
         """
@@ -436,7 +439,7 @@ class Test_EPI_ISL_678597(TestCase, _Mixin):
         """
         The genome is not a spike deletion variant.
         """
-        testCount, errorCount, result = self.genome.checkVariant(
+        testCount, errorCount, result = self.alignment.checkVariant(
             'spikeDeletion')
         self.assertEqual(2, errorCount)
 
@@ -444,7 +447,7 @@ class Test_EPI_ISL_678597(TestCase, _Mixin):
         """
         The genome is an N501Y variant.
         """
-        testCount, errorCount, result = self.genome.checkVariant('N501Y')
+        testCount, errorCount, result = self.alignment.checkVariant('N501Y')
         self.assertEqual(1, testCount)
         self.assertEqual(0, errorCount)
         self.assertEqual(
@@ -462,7 +465,7 @@ class Test_EPI_ISL_678597(TestCase, _Mixin):
         """
         The genome must be a 501Y.V2 variant.
         """
-        testCount, errorCount, _ = self.genome.checkVariant('501Y.V2')
+        testCount, errorCount, _ = self.alignment.checkVariant('501Y.V2')
         self.assertEqual(8, testCount)
         self.assertEqual(0, errorCount)
 
@@ -470,7 +473,8 @@ class Test_EPI_ISL_678597(TestCase, _Mixin):
         """
         The genome is not a UK variant of concern 202012/01.
         """
-        testCount, errorCount, _ = self.genome.checkVariant('VOC_20201201_UK')
+        testCount, errorCount, _ = self.alignment.checkVariant(
+            'VOC_20201201_UK')
         self.assertEqual(20, testCount)
         self.assertEqual(16, errorCount)
         self.check('spike', 'N501Y', True)

@@ -13,8 +13,8 @@ from dark.aa import compareAaReads, matchToString as aaMatchToString
 from dark.dna import compareDNAReads, matchToString as dnaMatchToString
 from dark.reads import Read, Reads
 
+from sars2seq.alignment import SARS2Alignment, addAlignerOption
 from sars2seq.features import Features
-from sars2seq.genome import SARS2Genome, addAlignerOption
 from sars2seq.translate import TranslationError
 from sars2seq.variants import VARIANTS
 
@@ -131,7 +131,7 @@ def printVariantSummary(genome, fp, args):
     Print a summary of whether the genome fulfils the various variant
     properties.
 
-    @param genome: A C{SARS2Genome} instance.
+    @param genome: A C{SARS2Alignment} instance.
     @param fp: An open file pointer to write to.
     @param args: A C{Namespace} instance as returned by argparse with
         values for command-line options.
@@ -168,7 +168,7 @@ def processFeature(featureName, genome, fps, featureNumber, args):
     Process a feature from a genome.
 
     @param featureName: A C{str} feature name.
-    @param genome: A C{SARS2Genome} instance.
+    @param genome: A C{SARS2Alignment} instance.
     @param fps: A C{dict} of file pointers for the various output streams.
     @param featureNumber: The C{int} 0-based count of the features requested.
         This will be zero for the first feature, 1 for the second, etc.
@@ -282,16 +282,16 @@ def main(args):
                       file=sys.stderr)
                 continue
 
-        genome = SARS2Genome(read, features, aligner=args.aligner)
+        alignment = SARS2Alignment(read, features, aligner=args.aligner)
 
         if args.checkVariant:
             with genomeFilePointer(read, args, '-variant-summary.txt') as fp:
                 print(read.id, file=fp)
-                printVariantSummary(genome, fp, args)
+                printVariantSummary(alignment, fp, args)
 
         for i, featureName in enumerate(wantedFeatures):
             with featureFilePointers(read, featureName, args) as fps:
-                processFeature(featureName, genome, fps, i, args)
+                processFeature(featureName, alignment, fps, i, args)
 
     print(f'Examined {count} genome{"" if count == 1 else "s"}.')
 

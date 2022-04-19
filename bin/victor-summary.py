@@ -13,8 +13,8 @@ from dark.aa import compareAaReads, matchToString as aaMatchToString
 from dark.dna import compareDNAReads, matchToString as dnaMatchToString
 from dark.reads import Read, Reads
 
+from sars2seq.alignment import SARS2Alignment, addAlignerOption
 from sars2seq.features import Features
-from sars2seq.genome import SARS2Genome, addAlignerOption
 from sars2seq.variants import VARIANTS
 
 CHANGE_SETS = {
@@ -142,7 +142,7 @@ def printVariantSummary(genome, fp, args):
     Print a summary of whether the genome fulfils the various
     variant properties.
 
-    @param genome: A C{SARS2Genome} instance.
+    @param genome: A C{SARS2Alignment} instance.
     @param fp: An open file pointer to write to.
     @param args: A C{Namespace} instance as returned by argparse with
         values for command-line options.
@@ -222,7 +222,7 @@ def processFeature(featureName, features, genome, fps, featureNumber, args):
 
     @param featureName: A C{str} feature name.
     @param features: A C{Features} instance.
-    @param genome: A C{SARS2Genome} instance.
+    @param genome: A C{SARS2Alignment} instance.
     @param fps: A C{dict} of file pointers for the various output streams.
     @param featureNumber: The C{int} 0-based count of the features requested.
         This will be zero for the first feature, 1 for the second, etc.
@@ -322,19 +322,19 @@ def main(args):
     print('\nPER-SEQUENCE RESULTS\n')
 
     for read in reads:
-        genome = SARS2Genome(read, features, aligner=args.aligner)
+        alignment = SARS2Alignment(read, features, aligner=args.aligner)
 
         if args.checkVariant:
             with genomeFilePointer(read, args, '-variant-summary.txt') as fp:
-                nCount = genome.genome.sequence.count('N')
-                genomeLen = len(genome.genome)
+                nCount = alignment.genome.sequence.count('N')
+                genomeLen = len(alignment.genome)
                 nonNCount = genomeLen - nCount
                 coverage = nonNCount / genomeLen
                 print(f'{read.id} (coverage {nonNCount}/{genomeLen} = '
                       f'{coverage * 100.0:.2f} %)', file=fp)
 
                 theseNamedMatches, theseFoundSets = printVariantSummary(
-                    genome, fp, args)
+                    alignment, fp, args)
 
                 for match, ids in theseNamedMatches.items():
                     namedMatches[match].extend(ids)
@@ -346,7 +346,7 @@ def main(args):
 
         for i, featureName in enumerate(wantedFeatures):
             with featureFilePointers(read, featureName, args) as fps:
-                processFeature(featureName, features, genome, fps, i, args)
+                processFeature(featureName, features, alignment, fps, i, args)
 
     print('\nSUMMARY\n')
 

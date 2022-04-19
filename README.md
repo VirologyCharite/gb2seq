@@ -379,7 +379,7 @@ from sars2seq.features import Features
 >>> f.aliases('s')
 {'spike', 'surface glycoprotein', 's'}
 
-# Given an offset relative to a feature, get the offset in the overall genome:
+# Given an offset relative to a feature, get the offset in the genome:
 >>> f.referenceOffset('spike', 1503)
 23065
 
@@ -406,20 +406,20 @@ You pass it a `Read` instance from the
 installed for you when you install `sars2seq`).
 
 ```py
-from sars2seq.genome import SARS2Alignment
+from sars2seq.alignment import SARS2Alignment
 from dark.reads import Read
 
-genome = SARS2Alignment(Read('id', 'AGCT...'))
+alignment = SARS2Alignment(Read('id', 'AGCT...'))
 ```
 
 These can also be read from a FASTA file:
 
 ```py
-from sars2seq.genome import SARS2Alignment
+from sars2seq.alignment import SARS2Alignment
 from dark.fasta import FastaReads
 
 for read in FastaReads('sequences.fasta'):
-    genome = SARS2Alignment(read)
+    alignment = SARS2Alignment(read)
 ```
 
 Once you have a `SARS2Alignment` instance, you can ask it for the aligned
@@ -432,7 +432,7 @@ sequence, which you can find in
 ```py
 >>> from pathlib import Path
 >>> from pprint import pprint as pp
->>> from sars2seq.genome import SARS2Alignment
+>>> from sars2seq.alignment import SARS2Alignment
 >>> from dark.fasta import FastaReads
 
 >>> alpha = list(FastaReads(Path('data/EPI_ISL_601443.fasta')))[0]
@@ -443,38 +443,38 @@ sequence, which you can find in
 >>> alpha.sequence[:50]
 'AGATCTGTTCTCTAAACGAACTTTAAAATCTGTGTGGCTGTCACTCGGCT'
 
->>> genome = SARS2Alignment(alpha)
+>>> alignment = SARS2Alignment(alpha)
 ```
 
-You'll find the aligned reference and genome in `genome.referenceAligned`
-and `genome.genomeAligned`, both of which are  `Read` instances:
+You'll find the aligned reference and genome in `alignment.referenceAligned`
+and `alignment.genomeAligned`, both of which are  `Read` instances:
 
 ```py
->>> len(genome.referenceAligned)
+>>> len(alignment.referenceAligned)
 29903
->>> len(genome.genomeAligned)
+>>> len(alignment.genomeAligned)
 29903
 
 # Get the nucleotide sequence for the spike protein for the reference and genome.
->>> referenceSpikeNt, genomeSpikeNt = genome.ntSequences('spike')
+>>> referenceSpikeNt, genomeSpikeNt = alignment.ntSequences('spike')
 >>> len(referenceSpikeNt)
 3822
 
 # Get the amino acid sequence for the spike protein for the reference and genome.
->>> referenceSpikeAa, genomeSpikeAa = genome.aaSequences('spike')
+>>> referenceSpikeAa, genomeSpikeAa = alignment.aaSequences('spike')
 >>> len(referenceSpikeAa)
 1274
 
 # There were three deletions in the alpha spike, so it only covers 3813 of the
 # 3822 bases in the reference spike.
->>> genome.coverage('s')
+>>> alignment.coverage('s')
 (3813, 3822)
 
 # Get information about what's at an offset (0-based). This is what the describe-site.py
 # utility does (though it takes a 1-based site).
 #
 # Here is the Alpha N501Y change:
->>> pp(genome.offsetInfo(500, relativeToFeature=True, aa=True, featureName='s'))
+>>> pp(alignment.offsetInfo(500, relativeToFeature=True, aa=True, featureName='s'))
 {'featureName': 'surface glycoprotein',
  'featureNames': {'surface glycoprotein'},
  'alignmentOffset': 23062,
@@ -495,7 +495,7 @@ and `genome.genomeAligned`, both of which are  `Read` instances:
 You can check a feature for an expected change:
 
 ``` py
->>> genome.checkFeature('spike', 'N501Y', aa=True)
+>>> alignment.checkFeature('spike', 'N501Y', aa=True)
 (1, 0, {'N501Y': (True, 'N', True, 'Y')})
 ```
 
@@ -511,7 +511,7 @@ You can test multiple things:
 # Note that we use 501Y in the following, not N501Y, since we might just
 # want to check that something is in the genome without knowing or caring
 # about what's in the reference.
->>> pp(genome.checkFeature('spike', '501Y 69- 70-', aa=True))
+>>> pp(alignment.checkFeature('spike', '501Y 69- 70-', aa=True))
 (3,
  0,
  {'501Y': (True, 'N', True, 'Y'),
@@ -530,7 +530,7 @@ Continuing from the above:
 # Make a Boolean checker function to test whether a genome has the N501Y
 # and A570D spike changes seen in Alpha.
 >>> checker = AAChecker('spike', 'N501Y') & AAChecker('spike', 'A570D')
->>> checker(genome)
+>>> checker(alignment)
 True
 
 # Check for some nucleotide changes in the nucleocapsid and some amino
@@ -540,7 +540,7 @@ checker = (NTChecker('N', 'G7C A8T T9A G608A G609A G610C C704T') &
 
 # You can also use `|` to check an OR condition.
 >>> checker = AAChecker('spike', 'E484K') | AAChecker('spike', 'E484Q')
->>> checker(genome)
+>>> checker(alignment)
 False
 ```
 
@@ -552,7 +552,7 @@ Similiar to the `--checkVariant` argument to `describe-genome.py` (above),
 you can also check a pre-defined variant:
 
 ```py
->>> pp(genome.checkVariant('VOC_20201201_UK'))
+>>> pp(alignment.checkVariant('VOC_20201201_UK'))
 (20,
  0,
  {'n': {'aa': {'235F': (True, 'S', True, 'F'), '3L': (True, 'D', True, 'L')}},
@@ -585,9 +585,10 @@ You can pass your own variant dictionary specifying what you want checked.
 ## To learn more
 
 See the `Features` and `SARS2Alignment` classes in
-[sars2seq/feature.py](sars2seq/genome.py) and
-[sars2seq/genome.py](sars2seq/genome.py). Also, the tests (e.g., in
-[test/test_genome.py](test/test_genome.py),
+[sars2seq/feature.py](sars2seq/feature.py) and
+[sars2seq/alignment.py](sars2seq/alignment.py). Also, the tests (e.g., in
+[test/test_feature.py](test/test_feature.py),
+[test/test_alignment.py](test/test_alignment.py),
 [test/test_checker.py](test/test_checker.py)
 [test/test_variants.py](test/test_variants.py)) show you example uses of
 these classes and their methods.  You can also look to see how the three

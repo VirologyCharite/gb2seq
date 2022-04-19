@@ -1,26 +1,27 @@
-## A library and utility scripts for working with SARS-CoV-2 sequences
+# A Python library and command-line scripts for working with SARS-CoV-2 sequences
 
 `sars2seq` provides three general utility scripts for examining SARS-CoV-2
-genome sequences and a Python library API that you can call from your own
-code.
+genome sequences and a Python library API.
 
 The library code knows how to extract genes at the nucleotide or amino acid
-level, how to identify or check for expected substitutions, how to
-translate between aa and nt offsets, and about all genome features.
+level, how to identify or check for expected genome changes, how to
+translate between aa and nt offsets, and about all SARS-CoV-2 genome
+features.
 
-### Conventions
+## Conventions
 
-When giving locations within a genome or genome feature (e.g., the spike
+When giving locations within a genome or a genome feature (e.g., the spike
 protein), a "site" refers to a 1-based location, as would normally be used
-by a regular person on the command line (an oxymoron?), whereas an
-"offset" refers to a 0-based location, as would be used by a Python
-programmer.  So the utility scripts, run from the command line, expect the
-former, whereas library code called by a programmer expects the latter.
+by a regular person on the command line (an oxymoron?), whereas an "offset"
+refers to a 0-based location, as would be used by a Python programmer.  The
+utility scripts, run from the command line, expect the former, whereas
+library code called by a programmer expects the latter. This terminology is
+used throughout the code as well.
 
 In code that deals with both the reference and a genome sequence, the
 reference is always given or returned first.
 
-### Alignment
+## Alignment
 
 `sars2seq` makes an alignment between each genome you give it and a
 reference sequence
@@ -32,12 +33,12 @@ is reliable. You can also run scripts with `--aligner edlib` (or pass
 wrapper](https://pypi.org/project/edlib/) for the extremely fast
 [edlib](https://github.com/Martinsos/edlib) library.
 
-## Utility scripts
+# Utility scripts
 
 The three scripts described below all accept a `--help` option. Below is
 some representative usage.
 
-### describe-feature.py
+## describe-feature.py
 
 The simplest script is `describe-feature.py`, which can be used to get
 information about features in a SARS-CoV-2 reference genome (you can
@@ -125,7 +126,7 @@ stem loop 5: sl5
 surface glycoprotein: s, spike
 ```
 
-### describe-genome.py
+## describe-genome.py
 
 `describe-genome.py` has many uses. It can extract multiple features from
 multiple given genomes, as amino acids or nucleotides (or both). It will
@@ -225,7 +226,7 @@ VARIANTS = {
 }
 ```
 
-### describe-site.py
+## describe-site.py
 
 Will print information about a given location (a "site") in the genome,
 showing you what's in the reference and in the genome you (optionally)
@@ -334,12 +335,12 @@ location in the genome, `--includeFeature` to also receive information
 about the feature at the site, and `--minReferenceCoverage` to exclude
 low-coverage genomes or features from the results.
 
-## Python API
+# Python API
 
 There are two main Python classes provided by `sars2seq`: `Features` and
 `SARS2Genome`.
 
-### Features
+## Features
 
 The `Features` class provides methods for accessing information about
 SARS-CoV-2 genome features obtained from [a GenBank flat
@@ -395,7 +396,7 @@ from sars2seq.features import Features
 {'ORF1ab polyprotein', "2'-O-ribose methyltransferase"}
 ```
 
-### SARS2Genome
+## SARS2Genome
 
 The `SARS2Genome` class can be used to extract and compare features from
 the reference and the given genome sequence.
@@ -581,7 +582,7 @@ the amino acid and nucleotide checks.
 
 You can pass your own variant dictionary specifying what you want checked.
 
-### To learn more
+## To learn more
 
 See the `Features` and `SARS2Genome` classes in
 [sars2seq/feature.py](sars2seq/genome.py) and
@@ -593,7 +594,7 @@ these classes and their methods.  You can also look to see how the three
 utility scripts described above (which can all be found in the [bin
 directory](bin)) call the library functions and use the results.
 
-## Developing
+# Developing
 
 Run the tests via 
 

@@ -338,7 +338,7 @@ low-coverage genomes or features from the results.
 # Python API
 
 There are two main Python classes provided by `sars2seq`: `Features` and
-`SARS2Genome`.
+`SARS2Alignment`.
 
 ## Features
 
@@ -358,11 +358,11 @@ will be used.
 You can use a `Features` instance like a dictionary:
 
 ```py
-from pprint import pprint
+from pprint import pprint as pp
 from sars2seq.features import Features
 
 >>> f = Features()
->>> pprint(f['e'])
+>>> pp(f['e'])
 {'name': 'envelope protein',
  'note': 'ORF4; structural protein; E protein',
  'product': 'envelope protein',
@@ -396,9 +396,9 @@ from sars2seq.features import Features
 {'ORF1ab polyprotein', "2'-O-ribose methyltransferase"}
 ```
 
-## SARS2Genome
+## SARS2Alignment
 
-The `SARS2Genome` class can be used to extract and compare features from
+The `SARS2Alignment` class can be used to extract and compare features from
 the reference and the given genome sequence.
 
 You pass it a `Read` instance from the
@@ -406,23 +406,23 @@ You pass it a `Read` instance from the
 installed for you when you install `sars2seq`).
 
 ```py
-from sars2seq.genome import SARS2Genome
+from sars2seq.genome import SARS2Alignment
 from dark.reads import Read
 
-genome = SARS2Genome(Read('id', 'AGCT...'))
+genome = SARS2Alignment(Read('id', 'AGCT...'))
 ```
 
 These can also be read from a FASTA file:
 
 ```py
-from sars2seq.genome import SARS2Genome
+from sars2seq.genome import SARS2Alignment
 from dark.fasta import FastaReads
 
 for read in FastaReads('sequences.fasta'):
-    genome = SARS2Genome(read)
+    genome = SARS2Alignment(read)
 ```
 
-Once you have a `SARS2Genome` instance, you can ask it for the aligned
+Once you have a `SARS2Alignment` instance, you can ask it for the aligned
 sequences or features.
 
 Below I'll use the GISAID `EPI_ISL_601443` (B.1.1.7, or Alpha, variant)
@@ -432,7 +432,7 @@ sequence, which you can find in
 ```py
 >>> from pathlib import Path
 >>> from pprint import pprint as pp
->>> from sars2seq.genome import SARS2Genome
+>>> from sars2seq.genome import SARS2Alignment
 >>> from dark.fasta import FastaReads
 
 >>> alpha = list(FastaReads(Path('data/EPI_ISL_601443.fasta')))[0]
@@ -443,7 +443,7 @@ sequence, which you can find in
 >>> alpha.sequence[:50]
 'AGATCTGTTCTCTAAACGAACTTTAAAATCTGTGTGGCTGTCACTCGGCT'
 
->>> genome = SARS2Genome(alpha)
+>>> genome = SARS2Alignment(alpha)
 ```
 
 You'll find the aligned reference and genome in `genome.referenceAligned`
@@ -584,7 +584,7 @@ You can pass your own variant dictionary specifying what you want checked.
 
 ## To learn more
 
-See the `Features` and `SARS2Genome` classes in
+See the `Features` and `SARS2Alignment` classes in
 [sars2seq/feature.py](sars2seq/genome.py) and
 [sars2seq/genome.py](sars2seq/genome.py). Also, the tests (e.g., in
 [test/test_genome.py](test/test_genome.py),

@@ -372,7 +372,7 @@ if __name__ == '__main__':
 
     parser.add_argument(
         '--gbFile', metavar='file.gb', default=Features.REF_GB,
-        help='The Genbank file to read for SARS-CoV-2 features.')
+        help='The GenBank file to read for SARS-CoV-2 features.')
 
     parser.add_argument(
         '--minReferenceCoverage', metavar='coverage', type=float,

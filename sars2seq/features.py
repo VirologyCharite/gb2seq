@@ -123,8 +123,8 @@ class Features(UserDict):
     Manage sequence features from the information in C{gbFile}.
 
     @param spec: Either:
-        * A C{str} name or C{Path} of a Genbank file containing the features.
-        * A C{str} Genbank accession id.
+        * A C{str} name or C{Path} of a GenBank file containing the features.
+        * A C{str} GenBank accession id.
         * A C{dict} of pre-prepared features, in which case C{reference}
               must not be C{None}. Passing a C{dict} is provided for testing.
         * C{None}, in which case the default reference, NC_045512.2.gb, is
@@ -151,7 +151,7 @@ class Features(UserDict):
                 with open(path) as fp:
                     record = SeqIO.read(fp, 'genbank')
             else:
-                print(f'Fetching Genbank record for {spec!r}.',
+                print(f'Fetching GenBank record for {spec!r}.',
                       file=sys.stderr)
                 client = Entrez.efetch(db='nucleotide', rettype='gb',
                                        retmode='text', id=spec)
@@ -246,9 +246,9 @@ class Features(UserDict):
 
             {
                 'function': A string description of the feature's function,
-                    if one was present in the Genbank file.
+                    if one was present in the GenBank file.
                 'product': A string description of the product of the feature.
-                    if one was present in the Genbank file.
+                    if one was present in the GenBank file.
                 'name': The string name.
                 'note': A string note, if one was is present in the GenBank
                     file.

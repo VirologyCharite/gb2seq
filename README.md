@@ -600,7 +600,7 @@ directory](bin)) call the library functions and use the results.
 Run the tests via 
 
 ```sh
-$ pytest`
+$ pytest
 ```
 
 More could probably be added here :-)

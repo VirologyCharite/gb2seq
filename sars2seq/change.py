@@ -14,15 +14,16 @@ def splitChange(s):
     if not s:
         # Passing any false value (e.g., 0 or None), not just the empty string,
         # will trigger this exception.
-        raise ValueError(f'Could not parse change argument {s!r}.')
+        raise ValueError(f"Could not parse change argument {s!r}.")
 
     try:
         site = int(s)
     except ValueError:
         pass
     else:
-        raise ValueError(f'Change string {s!r} does not include a '
-                         f'reference or genome base.')
+        raise ValueError(
+            f"Change string {s!r} does not include a " f"reference or genome base."
+        )
 
     try:
         site = int(s[1:])  # E.g., D400
@@ -32,7 +33,7 @@ def splitChange(s):
         return s[0], site - 1, None
 
     # Don't let a leading gap indicator be taken as negative site.
-    if s[0] != '-':
+    if s[0] != "-":
         try:
             site = int(s[:-1])  # E.g., 400D
         except ValueError:
@@ -47,4 +48,4 @@ def splitChange(s):
     else:
         return s[0], site - 1, s[-1]
 
-    raise ValueError(f'Could not parse change string {s!r}.')
+    raise ValueError(f"Could not parse change string {s!r}.")

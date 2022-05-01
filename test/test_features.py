@@ -12,54 +12,55 @@ class TestFeatures(TestCase):
     """
     Test the Features class.
     """
+
     def testGetFeatures(self):
         """
         The getitem method must return a dict.
         """
-        self.assertIsInstance(_FEATURES['spike'], dict)
+        self.assertIsInstance(_FEATURES["spike"], dict)
 
     def testPassStringSpecAndAReference(self):
         """
         If a string specification is passed as well as a reference, a
         ValueError must be raised.
         """
-        error = r'^A reference cannot be passed with a string specification\.$'
-        self.assertRaisesRegex(ValueError, error, Features, 'spec', 'ref')
+        error = r"^A reference cannot be passed with a string specification\.$"
+        self.assertRaisesRegex(ValueError, error, Features, "spec", "ref")
 
     def testPassPathSpecAndAReference(self):
         """
         If a Path specification is passed as well as a reference, a
         ValueError must be raised.
         """
-        error = r'^A reference cannot be passed with a Path specification\.$'
-        self.assertRaisesRegex(ValueError, error, Features, Path('spec'), 'rf')
+        error = r"^A reference cannot be passed with a Path specification\.$"
+        self.assertRaisesRegex(ValueError, error, Features, Path("spec"), "rf")
 
     def testUnknownFeature(self):
         """
         If an unknown feature is asked for, a KeyError must be raised.
         """
-        self.assertRaisesRegex(KeyError, "^'xx'$", _FEATURES.__getitem__, 'xx')
+        self.assertRaisesRegex(KeyError, "^'xx'$", _FEATURES.__getitem__, "xx")
 
     def testPassingDict(self):
         """
         It must be possible to initialize a Features instance via a dict.
         """
         value = {
-            'name': 'spike',
-            'sequence': 'ATTC',
-            'start': 0,
-            'stop': 4,
+            "name": "spike",
+            "sequence": "ATTC",
+            "start": 0,
+            "stop": 4,
         }
-        features = Features({'spike': value})
+        features = Features({"spike": value})
 
-        self.assertIn('spike', features)
-        self.assertEqual(value, features['spike'])
+        self.assertIn("spike", features)
+        self.assertEqual(value, features["spike"])
 
     def testPassingRefence(self):
         """
         It must be possible to pass a reference
         """
-        reference = DNARead('refId', 'ATTC')
+        reference = DNARead("refId", "ATTC")
         features = Features({}, reference)
         self.assertIs(reference, features.reference)
 
@@ -68,43 +69,44 @@ class TestFeatures(TestCase):
         A getitem request that results in a alias lookup must return
         the expected dict.
         """
-        self.assertNotIn('membrane', _FEATURES)
-        self.assertEqual(_FEATURES['membrane'],
-                         _FEATURES['membrane glycoprotein'])
+        self.assertNotIn("membrane", _FEATURES)
+        self.assertEqual(_FEATURES["membrane"], _FEATURES["membrane glycoprotein"])
 
     def testMembrane(self):
         """
         Test the returned dictionary when requesting the membrane protein.
         """
         expected = {
-            'name': 'membrane glycoprotein',
-            'start': 26522,
-            'stop': 27191,
-            'note': 'ORF5; structural protein',
-            'product': 'membrane glycoprotein',
-            'sequence': (
-                'ATGGCAGATTCCAACGGTACTATTACCGTTGAAGAGCTTAAAAAGCTCCTTGAAC'
-                'AATGGAACCTAGTAATAGGTTTCCTATTCCTTACATGGATTTGTCTTCTACAATT'
-                'TGCCTATGCCAACAGGAATAGGTTTTTGTATATAATTAAGTTAATTTTCCTCTGG'
-                'CTGTTATGGCCAGTAACTTTAGCTTGTTTTGTGCTTGCTGCTGTTTACAGAATAA'
-                'ATTGGATCACCGGTGGAATTGCTATCGCAATGGCTTGTCTTGTAGGCTTGATGTG'
-                'GCTCAGCTACTTCATTGCTTCTTTCAGACTGTTTGCGCGTACGCGTTCCATGTGG'
-                'TCATTCAATCCAGAAACTAACATTCTTCTCAACGTGCCACTCCATGGCACTATTC'
-                'TGACCAGACCGCTTCTAGAAAGTGAACTCGTAATCGGAGCTGTGATCCTTCGTGG'
-                'ACATCTTCGTATTGCTGGACACCATCTAGGACGCTGTGACATCAAGGACCTGCCT'
-                'AAAGAAATCACTGTTGCTACATCACGAACGCTTTCTTATTACAAATTGGGAGCTT'
-                'CGCAGCGTGTAGCAGGTGACTCAGGTTTTGCTGCATACAGTCGCTACAGGATTGG'
-                'CAACTATAAATTAAACACAGACCATTCCAGTAGCAGTGACAATATTGCTTTGCTT'
-                'GTACAGTAA'),
-            'translation': (
-                'MADSNGTITVEELKKLLEQWNLVIGFLFLTWICLLQFAYANRNRFLYIIKLIFLW'
-                'LLWPVTLACFVLAAVYRINWITGGIAIAMACLVGLMWLSYFIASFRLFARTRSMW'
-                'SFNPETNILLNVPLHGTILTRPLLESELVIGAVILRGHLRIAGHHLGRCDIKDLP'
-                'KEITVATSRTLSYYKLGASQRVAGDSGFAAYSRYRIGNYKLNTDHSSSSDNIALL'
-                'VQ*'),
+            "name": "membrane glycoprotein",
+            "start": 26522,
+            "stop": 27191,
+            "note": "ORF5; structural protein",
+            "product": "membrane glycoprotein",
+            "sequence": (
+                "ATGGCAGATTCCAACGGTACTATTACCGTTGAAGAGCTTAAAAAGCTCCTTGAAC"
+                "AATGGAACCTAGTAATAGGTTTCCTATTCCTTACATGGATTTGTCTTCTACAATT"
+                "TGCCTATGCCAACAGGAATAGGTTTTTGTATATAATTAAGTTAATTTTCCTCTGG"
+                "CTGTTATGGCCAGTAACTTTAGCTTGTTTTGTGCTTGCTGCTGTTTACAGAATAA"
+                "ATTGGATCACCGGTGGAATTGCTATCGCAATGGCTTGTCTTGTAGGCTTGATGTG"
+                "GCTCAGCTACTTCATTGCTTCTTTCAGACTGTTTGCGCGTACGCGTTCCATGTGG"
+                "TCATTCAATCCAGAAACTAACATTCTTCTCAACGTGCCACTCCATGGCACTATTC"
+                "TGACCAGACCGCTTCTAGAAAGTGAACTCGTAATCGGAGCTGTGATCCTTCGTGG"
+                "ACATCTTCGTATTGCTGGACACCATCTAGGACGCTGTGACATCAAGGACCTGCCT"
+                "AAAGAAATCACTGTTGCTACATCACGAACGCTTTCTTATTACAAATTGGGAGCTT"
+                "CGCAGCGTGTAGCAGGTGACTCAGGTTTTGCTGCATACAGTCGCTACAGGATTGG"
+                "CAACTATAAATTAAACACAGACCATTCCAGTAGCAGTGACAATATTGCTTTGCTT"
+                "GTACAGTAA"
+            ),
+            "translation": (
+                "MADSNGTITVEELKKLLEQWNLVIGFLFLTWICLLQFAYANRNRFLYIIKLIFLW"
+                "LLWPVTLACFVLAAVYRINWITGGIAIAMACLVGLMWLSYFIASFRLFARTRSMW"
+                "SFNPETNILLNVPLHGTILTRPLLESELVIGAVILRGHLRIAGHHLGRCDIKDLP"
+                "KEITVATSRTLSYYKLGASQRVAGDSGFAAYSRYRIGNYKLNTDHSSSSDNIALL"
+                "VQ*"
+            ),
         }
 
-        for name in 'membrane glycoprotein', 'membrane', 'm', 'orf5':
+        for name in "membrane glycoprotein", "membrane", "m", "orf5":
             self.assertEqual(expected, _FEATURES[name])
             self.assertEqual(expected, _FEATURES[name.upper()])
 
@@ -113,8 +115,7 @@ class TestFeatures(TestCase):
         If a genome offset for an unknown feature is requested, a KeyError
         must be raised.
         """
-        self.assertRaisesRegex(KeyError, "^'xx'$",
-                               _FEATURES.referenceOffset, 'xx', 10)
+        self.assertRaisesRegex(KeyError, "^'xx'$", _FEATURES.referenceOffset, "xx", 10)
 
     def testAaOffsetInMembrane(self):
         """
@@ -124,8 +125,8 @@ class TestFeatures(TestCase):
         offset = 5
         # 26522 is from the membrane test above.
         self.assertEqual(
-            26522 + 3 * offset,
-            _FEATURES.referenceOffset('membrane', offset, aa=True))
+            26522 + 3 * offset, _FEATURES.referenceOffset("membrane", offset, aa=True)
+        )
 
     def testNtOffsetInMembraneDefaultIsNt(self):
         """
@@ -135,9 +136,7 @@ class TestFeatures(TestCase):
         """
         offset = 5
         # 26522 is from the membrane test above.
-        self.assertEqual(
-            26522 + offset,
-            _FEATURES.referenceOffset('membrane', offset))
+        self.assertEqual(26522 + offset, _FEATURES.referenceOffset("membrane", offset))
 
     def testNtOffsetInMembrane(self):
         """
@@ -147,8 +146,8 @@ class TestFeatures(TestCase):
         offset = 5
         # 26522 is from the membrane test above.
         self.assertEqual(
-            26522 + offset,
-            _FEATURES.referenceOffset('membrane', offset, aa=False))
+            26522 + offset, _FEATURES.referenceOffset("membrane", offset, aa=False)
+        )
 
     def testFeaturesAtMembraneOffset(self):
         """
@@ -156,18 +155,14 @@ class TestFeatures(TestCase):
         an offset it contains.
         """
         # 26522 is from the membrane test above.
-        self.assertEqual(
-            {
-                'membrane glycoprotein'
-            },
-            _FEATURES.getFeatureNames(26522))
+        self.assertEqual({"membrane glycoprotein"}, _FEATURES.getFeatureNames(26522))
 
     def testFeaturesAtTooHighOffset(self):
         """
         Test we get nothing back if we ask what features are at an offset that
         is much bigger than the genome length.
         """
-        self.assertEqual(set(), _FEATURES.getFeatureNames(1E9))
+        self.assertEqual(set(), _FEATURES.getFeatureNames(1e9))
 
     def testFeaturesAtNegativeOffset(self):
         """
@@ -192,7 +187,8 @@ class TestFeatures(TestCase):
             {
                 "5'UTR",
             },
-            _FEATURES.getFeatureNames(0, includeUntranslated=True))
+            _FEATURES.getFeatureNames(0, includeUntranslated=True),
+        )
 
     def testFeaturesAtOrf1abOffset(self):
         """
@@ -201,11 +197,12 @@ class TestFeatures(TestCase):
         """
         self.assertEqual(
             {
-                'leader protein',
-                'ORF1ab polyprotein',
-                'ORF1a polyprotein',
+                "leader protein",
+                "ORF1ab polyprotein",
+                "ORF1a polyprotein",
             },
-            _FEATURES.getFeatureNames(265))
+            _FEATURES.getFeatureNames(265),
+        )
 
     def testFeaturesAtNsp2Offset(self):
         """
@@ -214,11 +211,12 @@ class TestFeatures(TestCase):
         """
         self.assertEqual(
             {
-                'nsp2',
-                'ORF1ab polyprotein',
-                'ORF1a polyprotein',
+                "nsp2",
+                "ORF1ab polyprotein",
+                "ORF1a polyprotein",
             },
-            _FEATURES.getFeatureNames(2700))
+            _FEATURES.getFeatureNames(2700),
+        )
 
     def testFeaturesAtRdRPOffsetWithStemLoops(self):
         """
@@ -228,10 +226,11 @@ class TestFeatures(TestCase):
         """
         self.assertEqual(
             {
-                'ORF1ab polyprotein',
-                'RNA-dependent RNA polymerase',
+                "ORF1ab polyprotein",
+                "RNA-dependent RNA polymerase",
             },
-            _FEATURES.getFeatureNames(13500))
+            _FEATURES.getFeatureNames(13500),
+        )
 
     def testFeaturesAtRdRPOffsetWithStemLoopsIncludeUntranslated(self):
         """
@@ -241,12 +240,13 @@ class TestFeatures(TestCase):
         """
         self.assertEqual(
             {
-                'ORF1ab polyprotein',
-                'RNA-dependent RNA polymerase',
-                'stem loop 1',
-                'stem loop 2',
+                "ORF1ab polyprotein",
+                "RNA-dependent RNA polymerase",
+                "stem loop 1",
+                "stem loop 2",
             },
-            _FEATURES.getFeatureNames(13500, includeUntranslated=True))
+            _FEATURES.getFeatureNames(13500, includeUntranslated=True),
+        )
 
     def testFeaturesAtRdRPOffset(self):
         """
@@ -255,20 +255,20 @@ class TestFeatures(TestCase):
         """
         self.assertEqual(
             {
-                'ORF1ab polyprotein',
-                'RNA-dependent RNA polymerase',
+                "ORF1ab polyprotein",
+                "RNA-dependent RNA polymerase",
             },
-            _FEATURES.getFeatureNames(13550))
+            _FEATURES.getFeatureNames(13550),
+        )
 
     def testCanonicalName(self):
         """
         Converting abbreviated names into canonical names must work.
         """
-        self.assertEqual(_FEATURES.canonicalName('s'), 'surface glycoprotein')
-        self.assertEqual(_FEATURES.canonicalName('e'), 'envelope protein')
-        self.assertEqual(_FEATURES.canonicalName('m'), 'membrane glycoprotein')
-        self.assertEqual(_FEATURES.canonicalName('n'),
-                         'nucleocapsid phosphoprotein')
+        self.assertEqual(_FEATURES.canonicalName("s"), "surface glycoprotein")
+        self.assertEqual(_FEATURES.canonicalName("e"), "envelope protein")
+        self.assertEqual(_FEATURES.canonicalName("m"), "membrane glycoprotein")
+        self.assertEqual(_FEATURES.canonicalName("n"), "nucleocapsid phosphoprotein")
 
     def testAliases(self):
         """
@@ -276,13 +276,13 @@ class TestFeatures(TestCase):
         case.
         """
         aliases = _FEATURES.aliases
-        spikeNames = {'s', 'spike', 'surface glycoprotein'}
+        spikeNames = {"s", "spike", "surface glycoprotein"}
         for name in spikeNames:
             self.assertEqual(spikeNames, aliases(name))
             self.assertEqual(spikeNames, aliases(name.upper()))
             self.assertEqual(spikeNames, aliases(name.title()))
 
-        nsp1Names = {'leader', 'leader protein', 'nsp1'}
+        nsp1Names = {"leader", "leader protein", "nsp1"}
         for name in nsp1Names:
             self.assertEqual(nsp1Names, aliases(name))
             self.assertEqual(nsp1Names, aliases(name.upper()))

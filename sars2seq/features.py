@@ -14,19 +14,19 @@ from sars2seq import Sars2SeqError, DATA_DIR
 # Set ENTREZ_EMAIL in your environment to have your requests to NCBI Entez
 # be accompanied by your address. If you don't do this you'll see warning
 # messages and be limited to a lower rate of querying.
-Entrez.email = environ.get('ENTREZ_EMAIL')
+Entrez.email = environ.get("ENTREZ_EMAIL")
 
 
 class ReferenceWithGapError(Sars2SeqError):
-    'A GenBank reference sequence had a gap.'
+    "A GenBank reference sequence had a gap."
 
 
 class MissingFeatureError(Sars2SeqError):
-    'A feature expected at an offset is not present.'
+    "A feature expected at an offset is not present."
 
 
 class AmbiguousFeatureError(Sars2SeqError):
-    'More than one feature is referred to by an offset.'
+    "More than one feature is referred to by an offset."
 
 
 # Provide convenient aliases for feature names. The alias is the key, the
@@ -39,46 +39,46 @@ class AmbiguousFeatureError(Sars2SeqError):
 # aliases to the Features constructor.
 
 ALIASES = {
-    '2': "2'-O-ribose methyltransferase",
-    '3clpro': '3C-like proteinase',
-    '3utr': "3'UTR",
-    '5utr': "5'UTR",
-    'e': 'envelope protein',
-    'endornase': 'endoRNAse',
-    'envelope': 'envelope protein',
-    'exon': "3'-to-5' exonuclease",
-    'exonuclease': "3'-to-5' exonuclease",
-    'leader': 'leader protein',
-    'm': 'membrane glycoprotein',
-    'membrane': 'membrane glycoprotein',
-    'mpro': '3C-like proteinase',
-    'n': 'nucleocapsid phosphoprotein',
-    'nsp1': 'leader protein',
-    'nsp5': '3C-like proteinase',
-    'nsp12': 'RNA-dependent RNA polymerase',
-    'nsp13': 'helicase',
-    'nsp14': "3'-to-5' exonuclease",
-    'nsp15': 'endoRNAse',
-    'orf4': 'envelope protein',
-    'orf5': 'membrane glycoprotein',
-    'orf1a': 'ORF1a polyprotein',
-    'orf1ab': 'ORF1ab polyprotein',
-    'orf3a': 'ORF3a protein',
-    'orf6': 'ORF6 protein',
-    'orf7a': 'ORF7a protein',
-    'orf7b': 'ORF7b',
-    'orf8': 'ORF8 protein',
-    'orf9': 'nucleocapsid phosphoprotein',
-    'orf10': 'ORF10 protein',
-    'rdrp': 'RNA-dependent RNA polymerase',
-    's': 'surface glycoprotein',
-    'sl1': 'stem loop 1',
-    'sl2': 'stem loop 2',
-    'sl3': 'stem loop 3',
-    'sl4': 'stem loop 4',
-    'sl5': 'stem loop 5',
-    's': 'surface glycoprotein',
-    'spike': 'surface glycoprotein',
+    "2": "2'-O-ribose methyltransferase",
+    "3clpro": "3C-like proteinase",
+    "3utr": "3'UTR",
+    "5utr": "5'UTR",
+    "e": "envelope protein",
+    "endornase": "endoRNAse",
+    "envelope": "envelope protein",
+    "exon": "3'-to-5' exonuclease",
+    "exonuclease": "3'-to-5' exonuclease",
+    "leader": "leader protein",
+    "m": "membrane glycoprotein",
+    "membrane": "membrane glycoprotein",
+    "mpro": "3C-like proteinase",
+    "n": "nucleocapsid phosphoprotein",
+    "nsp1": "leader protein",
+    "nsp5": "3C-like proteinase",
+    "nsp12": "RNA-dependent RNA polymerase",
+    "nsp13": "helicase",
+    "nsp14": "3'-to-5' exonuclease",
+    "nsp15": "endoRNAse",
+    "orf4": "envelope protein",
+    "orf5": "membrane glycoprotein",
+    "orf1a": "ORF1a polyprotein",
+    "orf1ab": "ORF1ab polyprotein",
+    "orf3a": "ORF3a protein",
+    "orf6": "ORF6 protein",
+    "orf7a": "ORF7a protein",
+    "orf7b": "ORF7b",
+    "orf8": "ORF8 protein",
+    "orf9": "nucleocapsid phosphoprotein",
+    "orf10": "ORF10 protein",
+    "rdrp": "RNA-dependent RNA polymerase",
+    "s": "surface glycoprotein",
+    "sl1": "stem loop 1",
+    "sl2": "stem loop 2",
+    "sl3": "stem loop 3",
+    "sl4": "stem loop 4",
+    "sl5": "stem loop 5",
+    "s": "surface glycoprotein",
+    "spike": "surface glycoprotein",
 }
 
 # Name of translated features, with (case sensitive!) names matching those in
@@ -89,32 +89,32 @@ ALIASES = {
 
 TRANSLATED = {
     "3'-to-5' exonuclease",  # nsp14
-    '3C-like proteinase',  # nsp5
-    'endoRNAse',  # nsp15
-    'envelope protein',  # ORF4
-    'helicase',  # nsp13
-    'leader protein',  # nsp1
-    'membrane glycoprotein',  # ORF5
-    'nsp2',
-    'nsp3',
-    'nsp4',
-    'nsp6',
-    'nsp7',
-    'nsp8',
-    'nsp9',
-    'nsp10',
-    'nsp11',
-    'nucleocapsid phosphoprotein',  # ORF9
-    'ORF1a polyprotein',
-    'ORF1ab polyprotein',
-    'ORF3a protein',
-    'ORF6 protein',
-    'ORF7a protein',
-    'ORF7b',
-    'ORF8 protein',
-    'ORF10 protein',
-    'RNA-dependent RNA polymerase',  # nsp12
-    'surface glycoprotein',
+    "3C-like proteinase",  # nsp5
+    "endoRNAse",  # nsp15
+    "envelope protein",  # ORF4
+    "helicase",  # nsp13
+    "leader protein",  # nsp1
+    "membrane glycoprotein",  # ORF5
+    "nsp2",
+    "nsp3",
+    "nsp4",
+    "nsp6",
+    "nsp7",
+    "nsp8",
+    "nsp9",
+    "nsp10",
+    "nsp11",
+    "nucleocapsid phosphoprotein",  # ORF9
+    "ORF1a polyprotein",
+    "ORF1ab polyprotein",
+    "ORF3a protein",
+    "ORF6 protein",
+    "ORF7a protein",
+    "ORF7b",
+    "ORF8 protein",
+    "ORF10 protein",
+    "RNA-dependent RNA polymerase",  # nsp12
+    "surface glycoprotein",
 }
 
 
@@ -136,7 +136,8 @@ class Features(UserDict):
     @raise ReferenceWithGapError: If the reference or one of its features has a
         gap in its nucleotide sequence.
     """
-    REF_GB = DATA_DIR / 'NC_045512.2.gb'
+
+    REF_GB = DATA_DIR / "NC_045512.2.gb"
 
     def __init__(self, spec=None, reference=None):
         super().__init__()
@@ -144,32 +145,34 @@ class Features(UserDict):
 
         if isinstance(spec, str):
             if reference is not None:
-                raise ValueError('A reference cannot be passed with a string '
-                                 'specification.')
+                raise ValueError(
+                    "A reference cannot be passed with a string " "specification."
+                )
             path = Path(spec)
             if path.exists():
                 with open(path) as fp:
-                    record = SeqIO.read(fp, 'genbank')
+                    record = SeqIO.read(fp, "genbank")
             else:
-                print(f'Fetching GenBank record for {spec!r}.',
-                      file=sys.stderr)
-                client = Entrez.efetch(db='nucleotide', rettype='gb',
-                                       retmode='text', id=spec)
-                record = SeqIO.read(client, 'gb')
+                print(f"Fetching GenBank record for {spec!r}.", file=sys.stderr)
+                client = Entrez.efetch(
+                    db="nucleotide", rettype="gb", retmode="text", id=spec
+                )
+                record = SeqIO.read(client, "gb")
                 client.close()
             self._initializeFromGenBankRecord(record)
         elif isinstance(spec, Path):
             if reference is not None:
-                raise ValueError('A reference cannot be passed with a Path '
-                                 'specification.')
+                raise ValueError(
+                    "A reference cannot be passed with a Path " "specification."
+                )
             with open(spec) as fp:
-                record = SeqIO.read(fp, 'genbank')
+                record = SeqIO.read(fp, "genbank")
             self._initializeFromGenBankRecord(record)
         elif isinstance(spec, dict):
             self.update(spec)
             self.reference = reference
         else:
-            raise ValueError(f'Unrecognized specification {spec!r}.')
+            raise ValueError(f"Unrecognized specification {spec!r}.")
 
     def _initializeFromGenBankRecord(self, record):
         """
@@ -190,31 +193,33 @@ class Features(UserDict):
             if type_ == "3'UTR" or type_ == "5'UTR":
                 name = type_
 
-            elif type_ == 'stem_loop':
+            elif type_ == "stem_loop":
                 for n in itertools.count(1):
-                    name = f'stem loop {n}'
+                    name = f"stem loop {n}"
                     if name not in self:
                         break
-                value['function'] = feature.qualifiers['function'][0]
+                value["function"] = feature.qualifiers["function"][0]
 
-            elif type_ in {'CDS', 'mat_peptide'}:
-                name = feature.qualifiers['product'][0]
-                value['product'] = name
+            elif type_ in {"CDS", "mat_peptide"}:
+                name = feature.qualifiers["product"][0]
+                value["product"] = name
 
-            elif type_ in {'source', 'gene'}:
+            elif type_ in {"source", "gene"}:
                 continue
 
             else:
-                raise ValueError(f'Unknown feature type {type_!r}.')
+                raise ValueError(f"Unknown feature type {type_!r}.")
 
-            value.update({
-                'name': name,
-                'sequence': str(record.seq)[start:stop],
-                'start': start,
-                'stop': stop,
-            })
+            value.update(
+                {
+                    "name": name,
+                    "sequence": str(record.seq)[start:stop],
+                    "start": start,
+                    "stop": stop,
+                }
+            )
 
-            for optional in 'translation', 'note':
+            for optional in "translation", "note":
                 try:
                     value[optional] = feature.qualifiers[optional][0]
                 except KeyError:
@@ -224,13 +229,15 @@ class Features(UserDict):
             # indicator if there is not one already and the sequence ends
             # with a stop codon.
             try:
-                translation = value['translation']
+                translation = value["translation"]
             except KeyError:
                 pass
             else:
-                if (not translation.endswith('*') and
-                        value['sequence'][-3:].upper() in STOP_CODONS):
-                    value['translation'] += '*'
+                if (
+                    not translation.endswith("*")
+                    and value["sequence"][-3:].upper() in STOP_CODONS
+                ):
+                    value["translation"] += "*"
 
             if name in self:
                 assert self[name] == value
@@ -320,15 +327,17 @@ class Features(UserDict):
             sequence of any of its features has a gap.
         """
         referenceId = self.reference.id
-        if self.reference.sequence.find('-') > -1:
+        if self.reference.sequence.find("-") > -1:
             raise ReferenceWithGapError(
-                f'Reference sequence {referenceId!r} has a gap!')
+                f"Reference sequence {referenceId!r} has a gap!"
+            )
 
         for featureInfo in self.values():
-            if featureInfo['sequence'].find('-') > -1:
+            if featureInfo["sequence"].find("-") > -1:
                 raise ReferenceWithGapError(
                     f'Feature {featureInfo["name"]!r} sequence in '
-                    f'{referenceId!r} has a gap!')
+                    f"{referenceId!r} has a gap!"
+                )
 
     def referenceOffset(self, name, offset, aa=False):
         """
@@ -342,7 +351,7 @@ class Features(UserDict):
         @raise KeyError: If the name is unknown.
         @return: An C{int} nucleotide offset into the reference genome.
         """
-        return self[name]['start'] + offset * (3 if aa else 1)
+        return self[name]["start"] + offset * (3 if aa else 1)
 
     def getFeatureNames(self, offset, includeUntranslated=False):
         """
@@ -356,8 +365,9 @@ class Features(UserDict):
         result = set()
 
         for name, feature in self.items():
-            if (feature['start'] <= offset < feature['stop'] and (
-                    name in TRANSLATED or includeUntranslated)):
+            if feature["start"] <= offset < feature["stop"] and (
+                name in TRANSLATED or includeUntranslated
+            ):
                 result.add(name)
 
         return result
@@ -391,11 +401,12 @@ class Features(UserDict):
                     featureName = list(features)[0]
                     feature = self[featureName]
                 else:
-                    present = ', '.join(f'{f!r}' for f in sorted(features))
+                    present = ", ".join(f"{f!r}" for f in sorted(features))
                     raise AmbiguousFeatureError(
-                        f'There are multiple features at site {offset + 1}: '
-                        f'{present}. Pass a feature name to specify which '
-                        f'one you want.')
+                        f"There are multiple features at site {offset + 1}: "
+                        f"{present}. Pass a feature name to specify which "
+                        f"one you want."
+                    )
             else:
                 # There were no features at this offset.
                 feature = None
@@ -404,17 +415,19 @@ class Features(UserDict):
             feature = self[canonicalName]
             if canonicalName not in features:
                 if features:
-                    present = ', '.join(f'{f!r}' for f in sorted(features))
+                    present = ", ".join(f"{f!r}" for f in sorted(features))
                     raise MissingFeatureError(
-                        f'Requested feature {featureName!r} (located at sites '
+                        f"Requested feature {featureName!r} (located at sites "
                         f'{feature["start"] + 1}-{feature["stop"]}) does not '
-                        f'overlap site {offset + 1}. The feature(s) at '
-                        f'that site are: {present}.')
+                        f"overlap site {offset + 1}. The feature(s) at "
+                        f"that site are: {present}."
+                    )
                 else:
                     raise MissingFeatureError(
-                        f'Feature {featureName!r} (located at sites '
+                        f"Feature {featureName!r} (located at sites "
                         f'{feature["start"] + 1}-{feature["stop"]}) '
-                        f'does not overlap site {offset + 1}. There are no '
-                        f'features at that site.')
+                        f"does not overlap site {offset + 1}. There are no "
+                        f"features at that site."
+                    )
 
         return feature, features

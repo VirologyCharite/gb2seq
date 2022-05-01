@@ -1,19 +1,13 @@
-.PHONY: pycodestyle, pyflakes, flake8, wc, clean, clobber, upload
+.PHONY: test flake8 wc clean clobber upload
 
 XARGS := xargs $(shell test $$(uname) = Linux && echo -r)
 PYDIRS := sars2seq bin test
 
-pytest:
-	env PYTHONPATH=. pytest -v
-
-tcheck:
-	env PYTHONPATH=. trial test
-
-pycodestyle:
-	find $(PYDIRS) -name '*.py' -print0 | xargs -0 pycodestyle
+test:
+	env PYTHONPATH=. pytest
 
 flake8:
-	find $(PYDIRS) -name '*.py' -print0 | $(XARGS) -0 flake8 --ignore E402,W504
+	find $(PYDIRS) -name '*.py' -print0 | $(XARGS) -0 flake8 --black-config pyproject.toml --ignore E203,W503 --max-line-length 88
 
 wc:
 	find $(PYDIRS) -name '*.py' -print0 | xargs -0 wc -l

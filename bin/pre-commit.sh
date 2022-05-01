@@ -13,6 +13,8 @@ then
     PATH="$VIRTUAL_ENV/bin:$PATH"
 fi
 
+black .
+
 make flake8
 
 if [ $? -ne 0 ]
@@ -21,10 +23,10 @@ then
     exit 1
 fi
 
-make pytest
+make test
 
 if [ $? -ne 0 ]
 then
-    echo 'COMMIT FAILED: make pytest did not run cleanly:' >&2
+    echo 'COMMIT FAILED: make test did not run cleanly:' >&2
     exit 1
 fi

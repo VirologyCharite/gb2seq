@@ -16,8 +16,8 @@ class Checker:
         @param aa: If C{True} check amino acid sequences. Else nucleotide.
         """
         self.description = (
-            f'Check {featureName!r} for {"aa" if aa else "nt"} '
-            f'changes {changes!r}')
+            f'Check {featureName!r} for {"aa" if aa else "nt"} ' f"changes {changes!r}"
+        )
 
         def check(genome):
             _, errorCount, _ = genome.checkFeature(featureName, changes, aa)
@@ -32,24 +32,21 @@ class Checker:
         return self._func(genome)
 
     def __and__(self, other):
-
         def check(genome):
             return self(genome) and other(genome)
 
         newChecker = copy.copy(self)
         newChecker._func = check
-        newChecker.description = (
-            f'({self.description} AND {other.description})')
+        newChecker.description = f"({self.description} AND {other.description})"
         return newChecker
 
     def __or__(self, other):
-
         def check(genome):
             return self(genome) or other(genome)
 
         newChecker = copy.copy(self)
         newChecker._func = check
-        newChecker.description = f'({self.description} OR {other.description})'
+        newChecker.description = f"({self.description} OR {other.description})"
         return newChecker
 
 

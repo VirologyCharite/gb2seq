@@ -3,6 +3,7 @@ from os import environ
 import itertools
 from collections import UserDict
 from pathlib import Path
+from typing import Optional, Union
 
 from Bio import Entrez, SeqIO
 
@@ -139,7 +140,9 @@ class Features(UserDict):
 
     REF_GB = DATA_DIR / "NC_045512.2.gb"
 
-    def __init__(self, spec=None, reference=None):
+    def __init__(
+        self, spec: Union[str, Path] = None, reference: Optional[DNARead] = None
+    ) -> None:
         super().__init__()
         spec = self.REF_GB if spec is None else spec
 
@@ -170,11 +173,11 @@ class Features(UserDict):
             self._initializeFromGenBankRecord(record)
         elif isinstance(spec, dict):
             self.update(spec)
-            self.reference = reference
+            self.reference: Optional[DNARead] = reference
         else:
             raise ValueError(f"Unrecognized specification {spec!r}.")
 
-    def _initializeFromGenBankRecord(self, record):
+    def _initializeFromGenBankRecord(self, record: SeqIO.SeqRecord) -> None:
         """
         Initialize from a GenBank record.
 
@@ -246,7 +249,7 @@ class Features(UserDict):
 
         self._checkForGaps()
 
-    def __getitem__(self, name):
+    def __getitem__(self, name: str) -> dict:
         """
         Find a feature by name. This produces a dictionary with the following
         keys and values for the feature:
@@ -280,7 +283,7 @@ class Features(UserDict):
         """
         return self.data[self.canonicalName(name)]
 
-    def canonicalName(self, name):
+    def canonicalName(self, name: str) -> str:
         """
         Get the canonical name for a feature.
 
@@ -303,7 +306,7 @@ class Features(UserDict):
             assert alias in self
             return alias
 
-    def aliases(self, name):
+    def aliases(self, name: str) -> set:
         """
         Get all aliases for a name.
 
@@ -319,7 +322,7 @@ class Features(UserDict):
 
         return result
 
-    def _checkForGaps(self):
+    def _checkForGaps(self) -> None:
         """
         Check there are no gaps in the reference or any feature sequence.
 
@@ -339,7 +342,7 @@ class Features(UserDict):
                     f"{referenceId!r} has a gap!"
                 )
 
-    def referenceOffset(self, name, offset, aa=False):
+    def referenceOffset(self, name: str, offset: int, aa: bool = False) -> int:
         """
         Get the (nucleotide) offset in the reference, given an offset in a
         feature.
@@ -353,7 +356,7 @@ class Features(UserDict):
         """
         return self[name]["start"] + offset * (3 if aa else 1)
 
-    def getFeatureNames(self, offset, includeUntranslated=False):
+    def getFeatureNames(self, offset: int, includeUntranslated: bool = False) -> set:
         """
         Get the names of all features that overlap a given offset.
 
@@ -372,7 +375,12 @@ class Features(UserDict):
 
         return result
 
-    def getFeature(self, offset, featureName=None, includeUntranslated=False):
+    def getFeature(
+        self,
+        offset: int,
+        featureName: Optional[str] = None,
+        includeUntranslated: bool = False,
+    ):
         """
         Find a single feature at an offset.
 

@@ -1,3 +1,6 @@
+from typing import Dict, Iterable, Iterator, List, Optional, TextIO, Tuple, Union
+
+import argparse
 from Bio.Seq import Seq
 
 from dark.aligners import edlibAlign, mafft
@@ -32,7 +35,7 @@ class AlignmentError(Sars2SeqError):
     "There is an unexpected problem in the alignment."
 
 
-def addAlignerOption(parser):
+def addAlignerOption(parser: argparse.Namespace) -> None:
     """
     Add a command line option for specifying an aligner for SARS2Alignment.
 
@@ -46,7 +49,7 @@ def addAlignerOption(parser):
     )
 
 
-def getGappedOffsets(s):
+def getGappedOffsets(s: str) -> dict:
     """
     Make a dictionary mapping offsets in a sequence with no gaps to the
     equivalent offset in a gapped sequence.
@@ -83,7 +86,7 @@ def getGappedOffsets(s):
     return result
 
 
-def alignmentEnd(s, startOffset, length):
+def alignmentEnd(s: str, startOffset: int, length: int) -> int:
     """
     Find the offset where an aligned sequence (i.e., potentially with gaps in
     it) of a given length ends.
@@ -217,25 +220,32 @@ class SARS2Alignment:
 
     def __init__(
         self,
-        genome,
-        features=None,
-        referenceAligned=None,
-        genomeAligned=None,
-        aligner=DEFAULT_ALIGNER,
-        matchAmbiguous=True,
+        genome: DNARead,
+        features: Optional[Features] = None,
+        referenceAligned: Optional[DNARead] = None,
+        genomeAligned: Optional[DNARead] = None,
+        aligner: str = DEFAULT_ALIGNER,
+        matchAmbiguous: bool = True,
     ):
         # Geneious uses ? to indicate unknown nucleotides, at least when it
         # exports a consensus / alignment. Replace with N.
         self.genome = DNARead(genome.id, genome.sequence.replace("?", "N"))
-        self.features = Features() if features is None else features
+        # self.features = Features() if features is None else features
+        if features is None:
+            self.features = Features()
+        else:
+            self.features = features
         self._matchAmbiguous = matchAmbiguous
         self._getAlignment(referenceAligned, genomeAligned, aligner)
         self.gappedOffsets = getGappedOffsets(self.referenceAligned.sequence)
-        self._cache = {"aa": {}, "nt": {}}
+        self._cache: dict = {"aa": {}, "nt": {}}
 
     def _getAlignment(
-        self, referenceAligned=None, genomeAligned=None, aligner=DEFAULT_ALIGNER
-    ):
+        self,
+        referenceAligned: Optional[DNARead] = None,
+        genomeAligned: Optional[DNARead] = None,
+        aligner: str = DEFAULT_ALIGNER,
+    ) -> None:
         """
         Align the reference and the genome.
 
@@ -334,10 +344,10 @@ class SARS2Alignment:
                 'both end with a "-" character.'
             )
 
-        self.referenceAligned = referenceAligned
-        self.genomeAligned = genomeAligned
+        self.referenceAligned: DNARead = referenceAligned
+        self.genomeAligned: DNARead = genomeAligned
 
-    def ntSequences(self, featureName):
+    def ntSequences(self, featureName: str) -> Tuple[DNARead, DNARead]:
         """
         Get the aligned nucelotide sequences.
 
@@ -389,7 +399,7 @@ class SARS2Alignment:
 
         return referenceNt, genomeNt
 
-    def aaSequences(self, featureName):
+    def aaSequences(self, featureName: str) -> Tuple[DNARead, DNARead]:
         """
         Match the genome and the reference at the amino acid level.
 
@@ -467,7 +477,16 @@ class SARS2Alignment:
         self._cache["aa"][featureName] = referenceAaAligned, genomeAaAligned
         return referenceAaAligned, genomeAaAligned
 
-    def _checkChange(self, base, offset, read, change, featureName, onError, errFp):
+    def _checkChange(
+        self,
+        base: str,
+        offset: int,
+        read: DNARead,
+        change: str,
+        featureName: str,
+        onError,
+        errFp,
+    ) -> [bool, Optional[str]]:
         """
         Check that a base occurs at an offset.
 
@@ -486,8 +505,8 @@ class SARS2Alignment:
         @raise IndexError: If the offset is out of range.
         @return: A C{list} containing a C{bool} indicating whether the read
             sequence has C{base} at C{offset} (or C{True} if C{base} is
-            C{None}) and the base found at the offset. If there is an error
-            (and C{onError} is not 'raise'), return [False, None].
+            C{None}) and the C{str} base found at the offset. If there is an
+            error (and C{onError} is not 'raise'), return [False, None].
         """
         try:
             actual = read.sequence[offset]
@@ -509,7 +528,14 @@ class SARS2Alignment:
         else:
             return [(base is None or actual == base), actual]
 
-    def checkFeature(self, featureName, changes, aa=False, onError="raise", errFp=None):
+    def checkFeature(
+        self,
+        featureName: str,
+        changes: Union[str, Iterable[Tuple[str, int, str]]],
+        aa: bool = False,
+        onError: str = "raise",
+        errFp: Optional[TextIO] = None,
+    ) -> Tuple[int, int, Dict[str, Tuple[bool, Optional[str], bool, Optional[str]]]]:
         """Check that a set of changes all happened as expected.
 
         @param featureName: A C{str} feature name.
@@ -541,12 +567,14 @@ class SARS2Alignment:
             found, then the same thing for the genome. E.g., a tuple of
             (True, 'A', False, 'T') would indicate that the expected reference
             base was found, that it was an 'A', but that the expected genome
-            base was not found and that instead a 'T' was found. If C{nt} is
-            C{False} and there is a translation error, the 4-tuple will contain
+            base was not found and that instead a 'T' was found. If C{aa} is
+            C{True} and there is a translation error, the 4-tuple will contain
             (False, None, False, None).
         """
 
-        def _getChanges(changes):
+        def _getChanges(
+            changes: Union[str, Tuple[str, int, str]]
+        ) -> Iterator[Tuple[bool, Optional[str], bool, Optional[str]]]:
             if isinstance(changes, str):
                 for change in changes.split():
                     referenceBase, offset, genomeBase = splitChange(change)
@@ -597,7 +625,12 @@ class SARS2Alignment:
 
         return testCount, errorCount, result
 
-    def checkVariant(self, variant, onError="raise", errFp=None):
+    def checkVariant(
+        self,
+        variant: Union[str, dict],
+        onError: str = "raise",
+        errFp: Optional[TextIO] = None,
+    ) -> Tuple[int, int, Dict[str, Tuple[bool, Optional[str], bool, Optional[str]]]]:
         """
         Check that a set of changes in different features all happened as
         expected.
@@ -612,7 +645,7 @@ class SARS2Alignment:
             Only used if C{onError} is 'print'.
         @raise ValueError: If incorrect arguments are passed (see below).
         @return: A 3-C{tuple} with the number of checks done, the number of
-            errors, and a C{dict} keyed by changes in C{changes}, with values
+            errors, and a C{dict} keyed by C{str} changes in C{changes}, with values
             a 2-C{tuple} of Booleans to indicate success or failure of the
             check for the reference and the genome respectively. There is no
             specific indication of any TranslationError when checking amino
@@ -654,7 +687,7 @@ class SARS2Alignment:
 
         return testCountTotal, errorCountTotal, result
 
-    def coverage(self, featureName=None):
+    def coverage(self, featureName: Optional[str] = None) -> Tuple[int, int]:
         """
         Get the coverage of a feature or the whole genome.
 
@@ -681,13 +714,13 @@ class SARS2Alignment:
 
     def offsetInfo(
         self,
-        offset,
-        relativeToFeature=False,
-        aa=False,
-        featureName=None,
-        includeUntranslated=False,
-        minReferenceCoverage=None,
-    ):
+        offset: int,
+        relativeToFeature: bool = False,
+        aa: bool = False,
+        featureName: Optional[str] = None,
+        includeUntranslated: bool = False,
+        minReferenceCoverage: Optional[float] = None,
+    ) -> dict:
         """
         Get information about genome features at an offset.
 
@@ -822,4 +855,86 @@ class SARS2Alignment:
 
         result["alignmentOffset"] = gappedOffset
 
+        return result
+
+
+def offsetInfoMultipleGenomes(
+    genomes: Iterable[SARS2Alignment],
+    offset: int,
+    relativeToFeature: bool = False,
+    aa: bool = False,
+    featureName: Optional[str] = None,
+    includeUntranslated: bool = False,
+    minReferenceCoverage: Optional[float] = None,
+) -> Optional[dict]:
+    """
+    Get information about an offset for multiple SARS2Alignment instances.
+
+    @param genomes: An interable of C{SARS2Alignment} instances.
+    @param offset: An C{int} offset.
+    @param relativeToFeature: If C{True}, the offset is relative to the
+        start of the feature that occurs at this offset.
+    @param aa: If C{True}, the offset is a number of amino acids, else a
+        number of nucleotides.
+    @param featureName: If not C{None} and multiple features occur at this
+        offset, use the feature with this name.
+    @param includeUntranslated: If C{True}, also return features that are
+        not translated.
+    @param minReferenceCoverage: The C{float} fraction of non-N bases required
+        in the genome (or feature, if one is given) in order for it to be
+        processed. If the required coveragel is not met, C{None} is returned.
+    @raise KeyError: If the feature name is unknown.
+    @raise ValueError: If an incorrect arguments is passed
+        (see SARS2Alignment.offsetInfo) or if all genomes were not aligned
+        against the same reference id.
+    @raise AmbiguousFeatureError: If multiple features occur at the offset
+        and C{featureName} does not indicate the one to use.
+    @return: A C{dict} with information about what is found in the
+        reference and the genomes at the offset. This is identical to the
+        result dictionary returned by C{SARS2Alignment.offsetInfo}, but the
+        'genome' key is replaced with a 'genomes' key that holds a C{list}
+        of genome results (each is a C{dict}, as returned by
+        C{SARS2Alignment.offsetInfo}). The order of genome info in the list
+        matches the order in the passed C{genomes}.  If no genomes are passed,
+        or all passed genomes have insufficient coverage, C{None} is returned.
+    """
+    ids = set(genome.features.reference.id for genome in genomes)
+
+    if len(ids) == 0:
+        raise ValueError("No SARS2Alignment instances given.")
+    elif len(ids) != 1:
+        raise ValueError(
+            f"SARS2Alignment instances with differing reference ids "
+            f'passed to offsetInfoMultipleGenomes: {", ".join(sorted(ids))}.'
+        )
+
+    first = True
+    result = None
+    genomeResults = []
+
+    for genome in genomes:
+        thisResult = genome.offsetInfo(
+            offset,
+            relativeToFeature=relativeToFeature,
+            aa=aa,
+            featureName=featureName,
+            includeUntranslated=includeUntranslated,
+            minReferenceCoverage=minReferenceCoverage,
+        )
+
+        if first and thisResult:
+            result = thisResult.copy()
+            # Make sure nothing crucial has changed in the returned dict
+            # from SARS2Alignment.offsetInfo
+            assert "genome" in result
+            assert "genomes" not in result
+            del result["genome"]
+            first = False
+
+        genomeResults.append(thisResult["genome"] if thisResult else None)
+
+    if result is None:
+        return None
+    else:
+        result["genomes"] = genomeResults
         return result

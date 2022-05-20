@@ -1,7 +1,9 @@
 from Bio.Seq import Seq
 from itertools import groupby
+from typing import List, Optional
 
 from dark.aa import CODONS, STOP_CODONS
+from dark.reads import AARead
 
 
 class TranslationError(Exception):
@@ -39,7 +41,6 @@ codons = dict(
     + [("---", "-")]
 )
 
-
 # The maximum difference (number of nucleotides) to allow between the
 # offset of the start of the slippery sequence and the downstream stop
 # codon.
@@ -50,7 +51,7 @@ SLIPPERY_SEQUENCE = "TTTAAAC"
 _SLIPPERY_LEN = len(SLIPPERY_SEQUENCE)
 
 
-def translate(seq, name=None):
+def translate(seq: str, name: Optional[str] = None) -> str:
     """
     Translate a sequence.
 
@@ -98,7 +99,7 @@ def translate(seq, name=None):
     return Seq(seq).translate()
 
 
-def translateSpike(seq):
+def translateSpike(seq: str) -> str:
     """
     Translate a Spike sequence, taking into account gaps introduced in the
     nucleotide alignment. This means that the amino acid sequences do not
@@ -167,7 +168,7 @@ def translateSpike(seq):
 _NO_COVERAGE = "no coverage "
 
 
-def _summarizeNoCoverage(changes):
+def _summarizeNoCoverage(changes: List[str]) -> List[str]:
     """
     Summarize genome regions that have no coverage.
 
@@ -192,7 +193,9 @@ def _summarizeNoCoverage(changes):
     return result
 
 
-def getSubstitutionsString(referenceAa, genomeAa, summarizeNoCoverage=False):
+def getSubstitutionsString(
+    referenceAa: AARead, genomeAa: AARead, summarizeNoCoverage: bool = False
+) -> str:
     """
     Get a string with the substitutions.
 
@@ -417,14 +420,13 @@ KNOWN_INSERTIONS = (
 )
 
 
-def checkSpikeInsertions(accession, referenceAa, genomeAa):
+def checkSpikeInsertions(accession: str, referenceAa: AARead, genomeAa: AARead) -> str:
     """
     Check and parse out known insertions in the Spike protein.
 
     @param accession: The C{str} accession number of the sequence.
     @param referenceAa: A C(dark.AARead) reference sequence.
     @param genomeAa: A C(dark.AARead) aligned genome sequence.
-
     @return: The C{str} corrected translated sequence.
     """
     seq = genomeAa.sequence

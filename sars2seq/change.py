@@ -1,4 +1,7 @@
-def splitChange(s):
+from typing import Optional, Tuple
+
+
+def splitChange(s: str) -> Tuple[Optional[str], int, Optional[str]]:
     """
     Split a change string.
 

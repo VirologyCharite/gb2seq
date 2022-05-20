@@ -22,10 +22,10 @@ class _Mixin:
     Mixin for SARS2Alignment class tests.
     """
 
-    def testLength(self):
+    def testLength(self) -> None:
         self.assertGreater(len(self.genomeRead), 28000)
 
-    def check(self, featureName, changes, aa=False):
+    def check(self, featureName: str, changes: str, aa: bool = False) -> None:
         """
         Check that a set of changes all happened as expected.
 

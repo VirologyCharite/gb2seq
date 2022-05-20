@@ -2,7 +2,7 @@ import copy
 
 
 class Checker:
-    def __init__(self, featureName, changes, aa=False):
+    def __init__(self, featureName: str, changes: str, aa: bool = False) -> None:
         """
         Check genome changes occurred.
 
@@ -51,10 +51,10 @@ class Checker:
 
 
 class AAChecker(Checker):
-    def __init__(self, featureName, changes):
+    def __init__(self, featureName: str, changes: str) -> None:
         super().__init__(featureName, changes, True)
 
 
 class NTChecker(Checker):
-    def __init__(self, featureName, changes):
+    def __init__(self, featureName: str, changes: str) -> None:
         super().__init__(featureName, changes, False)

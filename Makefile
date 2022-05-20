@@ -7,7 +7,7 @@ test:
 	env PYTHONPATH=. pytest
 
 flake8:
-	find $(PYDIRS) -name '*.py' -print0 | $(XARGS) -0 flake8 --black-config pyproject.toml --ignore E203,W503 --max-line-length 88
+	find $(PYDIRS) -name '*.py' -print0 | $(XARGS) -0 flake8 --select BLK
 
 wc:
 	find $(PYDIRS) -name '*.py' -print0 | xargs -0 wc -l

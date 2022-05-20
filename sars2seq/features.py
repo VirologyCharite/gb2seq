@@ -149,7 +149,7 @@ class Features(UserDict):
         if isinstance(spec, str):
             if reference is not None:
                 raise ValueError(
-                    "A reference cannot be passed with a string " "specification."
+                    "A reference cannot be passed with a string specification."
                 )
             path = Path(spec)
             if path.exists():
@@ -166,7 +166,7 @@ class Features(UserDict):
         elif isinstance(spec, Path):
             if reference is not None:
                 raise ValueError(
-                    "A reference cannot be passed with a Path " "specification."
+                    "A reference cannot be passed with a Path specification."
                 )
             with open(spec) as fp:
                 record = SeqIO.read(fp, "genbank")

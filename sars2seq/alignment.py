@@ -755,7 +755,7 @@ class SARS2Alignment:
         if relativeToFeature:
             if featureName is None:
                 raise ValueError(
-                    "If relativeToFeature is True, a feature " "name must be given."
+                    "If relativeToFeature is True, a feature name must be given."
                 )
             referenceOffset = self.features.referenceOffset(featureName, offset, aa)
         else:

@@ -17,7 +17,7 @@ VARIANTS = {
     },
     "B117-typing": {
         "description": (
-            "UK variant, based on just two tests (as in " "typing-PCR assays."
+            "UK variant, based on just two tests (as in typing-PCR assays)."
         ),
         "changes": {
             "spike": {

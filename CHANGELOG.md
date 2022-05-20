@@ -1,3 +1,7 @@
+## 0.1.2 May 1, 2022
+
+Switch to use [black](https://black.readthedocs.io/en/stable/index.html) formatting.
+
 ## 0.1.1 April 19, 2022
 
 Renamed the `SARS2Genome` to `SARS2Alignment`. The old name is still

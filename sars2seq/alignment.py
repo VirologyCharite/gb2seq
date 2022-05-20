@@ -111,6 +111,88 @@ def alignmentEnd(s: str, startOffset: int, length: int) -> int:
     return index
 
 
+def offsetInfoMultipleGenomes(
+    genomes,
+    offset,
+    relativeToFeature=False,
+    aa=False,
+    featureName=None,
+    includeUntranslated=False,
+    minReferenceCoverage=None,
+):
+    """
+    Get information about an offset for multiple SARS2Alignment instances.
+
+    @param genomes: An interable of C{SARS2Alignment} instances.
+    @param offset: An C{int} offset.
+    @param relativeToFeature: If C{True}, the offset is relative to the
+        start of the feature that occurs at this offset.
+    @param aa: If C{True}, the offset is a number of amino acids, else a
+        number of nucleotides.
+    @param featureName: If not C{None} and multiple features occur at this
+        offset, use the feature with this name.
+    @param includeUntranslated: If C{True}, also return features that are
+        not translated.
+    @param minReferenceCoverage: The C{float} fraction of non-N bases required
+        in the genome (or feature, if one is given) in order for it to be
+        processed. If the required coveragel is not met, C{None} is returned.
+    @raise KeyError: If the feature name is unknown.
+    @raise ValueError: If an incorrect arguments is passed
+        (see SARS2Alignment.offsetInfo) or if all genomes were not aligned
+        against the same reference id.
+    @raise AmbiguousFeatureError: If multiple features occur at the offset
+        and C{featureName} does not indicate the one to use.
+    @return: A C{dict} with information about what is found in the
+        reference and the genomes at the offset. This is identical to the
+        result dictionary returned by C{SARS2Alignment.offsetInfo}, but the
+        'genome' key is replaced with a 'genomes' key that holds a C{list}
+        of genome results (each is a C{dict}, as returned by
+        C{SARS2Alignment.offsetInfo}). The order of genome info in the list
+        matches the order in the passed C{genomes}.  If no genomes are passed,
+        or all passed genomes have insufficient coverage, C{None} is returned.
+    """
+    ids = set(genome.features.reference.id for genome in genomes)
+
+    if len(ids) == 0:
+        raise ValueError("No SARS2Alignment instances given.")
+    elif len(ids) != 1:
+        raise ValueError(
+            f"SARS2Alignment instances with differing reference ids "
+            f'passed to offsetInfoMultipleGenomes: {", ".join(sorted(ids))}.'
+        )
+
+    first = True
+    result = None
+    genomeResults = []
+
+    for genome in genomes:
+        thisResult = genome.offsetInfo(
+            offset,
+            relativeToFeature=relativeToFeature,
+            aa=aa,
+            featureName=featureName,
+            includeUntranslated=includeUntranslated,
+            minReferenceCoverage=minReferenceCoverage,
+        )
+
+        if first and thisResult:
+            result = thisResult.copy()
+            # Make sure nothing crucial has changed in the returned dict
+            # from SARS2Alignment.offsetInfo
+            assert "genome" in result
+            assert "genomes" not in result
+            del result["genome"]
+            first = False
+
+        genomeResults.append(thisResult["genome"] if thisResult else None)
+
+    if result is None:
+        return None
+    else:
+        result["genomes"] = genomeResults
+        return result
+
+
 class SARS2Alignment:
     """
     Methods for working with a SARS-CoV-2 genome aligned to a reference.

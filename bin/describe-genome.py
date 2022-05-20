@@ -34,9 +34,9 @@ def genomeFilePointer(read, args, suffix):
         and then closes it.
     """
     if args.outDir:
-        prefix = read.id.split()[0].replace('/', '_')
+        prefix = read.id.split()[0].replace("/", "_")
         filename = join(args.outDir, f"{prefix}{suffix}")
-        with open(filename, 'w') as fp:
+        with open(filename, "w") as fp:
             yield fp
     else:
         yield sys.stdout
@@ -54,6 +54,7 @@ def featureFilePointers(read, feature, args=None):
     @param args: A C{Namespace} instance as returned by argparse with
         values for command-line options.
     """
+
     def fp(suffix, nt):
         """
         Get a file pointer.
@@ -63,11 +64,11 @@ def featureFilePointers(read, feature, args=None):
         @return: An file pointer open for writing.
         """
         if args.outDir:
-            prefix = read.id.split()[0].replace('/', '_')
+            prefix = read.id.split()[0].replace("/", "_")
             filename = join(
-                args.outDir,
-                f"{prefix}-{feature}{('-nt' if nt else '-aa')}{suffix}")
-            return open(filename, 'w')
+                args.outDir, f"{prefix}-{feature}{('-nt' if nt else '-aa')}{suffix}"
+            )
+            return open(filename, "w")
         else:
             return sys.stdout
 
@@ -75,19 +76,19 @@ def featureFilePointers(read, feature, args=None):
 
     try:
         if args.printNtMatch:
-            fps['nt-match'] = fp('-match.txt', True)
+            fps["nt-match"] = fp("-match.txt", True)
         if args.printAaMatch:
-            fps['aa-match'] = fp('-match.txt', False)
+            fps["aa-match"] = fp("-match.txt", False)
 
         if args.printNtSequence:
-            fps['nt-sequence'] = fp('-sequence.fasta', True)
+            fps["nt-sequence"] = fp("-sequence.fasta", True)
         if args.printAaSequence:
-            fps['aa-sequence'] = fp('-sequence.fasta', False)
+            fps["aa-sequence"] = fp("-sequence.fasta", False)
 
         if args.printNtAlignment:
-            fps['nt-align'] = fp('-align.fasta', True)
+            fps["nt-align"] = fp("-align.fasta", True)
         if args.printAaAlignment:
-            fps['aa-align'] = fp('-align.fasta', False)
+            fps["aa-align"] = fp("-align.fasta", False)
 
         yield fps
 
@@ -97,7 +98,7 @@ def featureFilePointers(read, feature, args=None):
                 fp.close()
 
 
-def printDiffs(read1, read2, nt, referenceOffset, fp, indent=''):
+def printDiffs(read1, read2, nt, referenceOffset, fp, indent=""):
     """
     Print differences between sequences.
 
@@ -112,18 +113,31 @@ def printDiffs(read1, read2, nt, referenceOffset, fp, indent=''):
     width = int(log10(max(len1, len2))) + 1
     headerPrinted = False
     multiplier = 1 if nt else 3
-    what = 'nt' if nt else 'aa'
-    header = '%sDifferences: site, %s1, %s2, ref nt %s' % (
-        indent, what, what, 'site' if nt else 'codon start')
+    what = "nt" if nt else "aa"
+    header = "%sDifferences: site, %s1, %s2, ref nt %s" % (
+        indent,
+        what,
+        what,
+        "site" if nt else "codon start",
+    )
 
     for site, (a, b) in enumerate(zip(read1.sequence, read2.sequence)):
         if a != b:
             if not headerPrinted:
                 print(header, file=fp)
                 headerPrinted = True
-            print('%s  %*d %s %s %5d' % (
-                indent, width, site + 1, a, b,
-                referenceOffset + (multiplier * site) + 1), file=fp)
+            print(
+                "%s  %*d %s %s %5d"
+                % (
+                    indent,
+                    width,
+                    site + 1,
+                    a,
+                    b,
+                    referenceOffset + (multiplier * site) + 1,
+                ),
+                file=fp,
+            )
 
 
 def printVariantSummary(genome, fp, args):
@@ -136,14 +150,14 @@ def printVariantSummary(genome, fp, args):
     @param args: A C{Namespace} instance as returned by argparse with
         values for command-line options.
     """
-    print('Variant summary:', file=fp)
+    print("Variant summary:", file=fp)
     for variant in args.checkVariant:
         testCount, errorCount, tests = genome.checkVariant(
-            variant, args.onError, sys.stderr)
+            variant, args.onError, sys.stderr
+        )
         successCount = testCount - errorCount
         print(f'  {VARIANTS[variant]["description"]}:', file=fp)
-        print(f'  {testCount} checks, {successCount} passed.',
-              file=fp)
+        print(f"  {testCount} checks, {successCount} passed.", file=fp)
         for feature in tests:
             for type_ in tests[feature]:
                 passed = set()
@@ -153,13 +167,11 @@ def printVariantSummary(genome, fp, args):
                         passed.add(change)
                     else:
                         failed.add(change)
-                print(f'    {feature} {type_}:', file=fp, end='')
+                print(f"    {feature} {type_}:", file=fp, end="")
                 if passed:
-                    print(' PASS:', ', '.join(sorted(passed)), file=fp,
-                          end='')
+                    print(" PASS:", ", ".join(sorted(passed)), file=fp, end="")
                 if failed:
-                    print(' FAIL:', ', '.join(sorted(failed)), file=fp,
-                          end='')
+                    print(" FAIL:", ", ".join(sorted(failed)), file=fp, end="")
                 print(file=fp)
 
 
@@ -182,52 +194,56 @@ def processFeature(featureName, genome, fps, featureNumber, args):
         try:
             referenceAa, genomeAa = genome.aaSequences(featureName)
         except TranslationError as e:
-            if args.onError == 'raise':
+            if args.onError == "raise":
                 raise
-            elif args.onError == 'print':
-                print(f'Could not translate feature {featureName} in genome '
-                      f'{genome.genome.id}: {e}', file=sys.stderr)
+            elif args.onError == "print":
+                print(
+                    f"Could not translate feature {featureName} in genome "
+                    f"{genome.genome.id}: {e}",
+                    file=sys.stderr,
+                )
             referenceAa = genomeAa = None
 
     newlineNeeded = False
 
     if args.printNtMatch:
-        fp = fps['nt-match']
+        fp = fps["nt-match"]
         if featureNumber:
             print(file=fp)
-        print(f'Feature: {featureName} nucleotide match', file=fp)
+        print(f"Feature: {featureName} nucleotide match", file=fp)
         print(f'  Reference nt location {feature["start"] + 1}', file=fp)
         match = compareDNAReads(referenceNt, genomeNt)
-        print(dnaMatchToString(match, referenceNt, genomeNt,
-                               matchAmbiguous=False, indent='  '), file=fp)
-        printDiffs(referenceNt, genomeNt, True, feature['start'], fp,
-                   indent='    ')
+        print(
+            dnaMatchToString(
+                match, referenceNt, genomeNt, matchAmbiguous=False, indent="  "
+            ),
+            file=fp,
+        )
+        printDiffs(referenceNt, genomeNt, True, feature["start"], fp, indent="    ")
         newlineNeeded = True
 
     if args.printAaMatch and genomeAa:
-        fp = fps['aa-match']
+        fp = fps["aa-match"]
         if newlineNeeded or featureNumber:
             print(file=fp)
-        print(f'Feature: {featureName} amino acid match', file=fp)
+        print(f"Feature: {featureName} amino acid match", file=fp)
         match = compareAaReads(referenceAa, genomeAa)
-        print(aaMatchToString(match, referenceAa, genomeAa, indent='  '),
-              file=fp)
-        printDiffs(referenceAa, genomeAa, False, feature['start'], fp,
-                   indent='    ')
+        print(aaMatchToString(match, referenceAa, genomeAa, indent="  "), file=fp)
+        printDiffs(referenceAa, genomeAa, False, feature["start"], fp, indent="    ")
 
     if args.printNtSequence:
-        noGaps = Read(genomeNt.id, genomeNt.sequence.replace('-', ''))
-        Reads([noGaps]).save(fps['nt-sequence'])
+        noGaps = Read(genomeNt.id, genomeNt.sequence.replace("-", ""))
+        Reads([noGaps]).save(fps["nt-sequence"])
 
     if args.printAaSequence and genomeAa:
-        noGaps = Read(genomeAa.id, genomeAa.sequence.replace('-', ''))
-        Reads([noGaps]).save(fps['aa-sequence'])
+        noGaps = Read(genomeAa.id, genomeAa.sequence.replace("-", ""))
+        Reads([noGaps]).save(fps["aa-sequence"])
 
     if args.printNtAlignment:
-        Reads([genomeNt, referenceNt]).save(fps['nt-align'])
+        Reads([genomeNt, referenceNt]).save(fps["nt-align"])
 
     if args.printAaAlignment and genomeAa:
-        Reads([genomeAa, referenceAa]).save(fps['aa-align'])
+        Reads([genomeAa, referenceAa]).save(fps["aa-align"])
 
 
 def main(args):
@@ -257,35 +273,39 @@ def main(args):
             wantedFeatures = sorted(features)
 
     if not (args.checkVariant or wantedFeatures):
-        print('No action specified - I have nothing to do!', file=sys.stderr)
+        print("No action specified - I have nothing to do!", file=sys.stderr)
         return 1
 
     if args.variantFile:
         try:
-            VARIANTS.update(
-                load(open(args.variantFile, encoding='utf-8')))
+            VARIANTS.update(load(open(args.variantFile, encoding="utf-8")))
         except Exception as e:
-            print(f'Could not parse variant JSON in {args.variantFile!r}: {e}',
-                  file=sys.stderr)
+            print(
+                f"Could not parse variant JSON in {args.variantFile!r}: {e}",
+                file=sys.stderr,
+            )
             sys.exit(1)
 
     count = ignoredDueToCoverageCount = 0
 
     for count, read in enumerate(FastaReads(args.genome), start=1):
         if args.minReferenceCoverage is not None:
-            coverage = ((len(read) - read.sequence.upper().count('N')) /
-                        len(features.reference))
+            coverage = (len(read) - read.sequence.upper().count("N")) / len(
+                features.reference
+            )
             if coverage < args.minReferenceCoverage:
                 ignoredDueToCoverageCount += 1
-                print(f'Genome {read.id!r} ignored due to low '
-                      f'({coverage * 100.0:.2f}%) coverage of the reference.',
-                      file=sys.stderr)
+                print(
+                    f"Genome {read.id!r} ignored due to low "
+                    f"({coverage * 100.0:.2f}%) coverage of the reference.",
+                    file=sys.stderr,
+                )
                 continue
 
         alignment = SARS2Alignment(read, features, aligner=args.aligner)
 
         if args.checkVariant:
-            with genomeFilePointer(read, args, '-variant-summary.txt') as fp:
+            with genomeFilePointer(read, args, "-variant-summary.txt") as fp:
                 print(read.id, file=fp)
                 printVariantSummary(alignment, fp, args)
 
@@ -296,98 +316,153 @@ def main(args):
     print(f'Examined {count} genome{"" if count == 1 else "s"}.')
 
     if args.minReferenceCoverage is not None:
-        print(f'Ignored {ignoredDueToCoverageCount} genomes due to low '
-              f'coverage.')
+        print(f"Ignored {ignoredDueToCoverageCount} genomes due to low " f"coverage.")
 
     return 0
 
 
-if __name__ == '__main__':
+if __name__ == "__main__":
 
     parser = argparse.ArgumentParser(
         formatter_class=argparse.ArgumentDefaultsHelpFormatter,
-        description='Describe a SARS-CoV-2 genome (or genomes).')
+        description="Describe a SARS-CoV-2 genome (or genomes).",
+    )
 
     parser.add_argument(
-        '--genome', metavar='file.fasta', type=argparse.FileType('r'),
+        "--genome",
+        metavar="file.fasta",
+        type=argparse.FileType("r"),
         default=sys.stdin,
-        help='The FASTA file containing the SARS-CoV-2 genome(s) to examine.')
+        help="The FASTA file containing the SARS-CoV-2 genome(s) to examine.",
+    )
 
     parser.add_argument(
-        '--feature', action='append', metavar='FEATURE',
-        help='The feature to describe (e.g., nsp2). May be repeated.')
+        "--feature",
+        action="append",
+        metavar="FEATURE",
+        help="The feature to describe (e.g., nsp2). May be repeated.",
+    )
 
     parser.add_argument(
-        '--outDir', metavar='DIR',
-        help=('The directory to write alignments and sequences to. If not '
-              'specified, standard output is used.'))
+        "--outDir",
+        metavar="DIR",
+        help=(
+            "The directory to write alignments and sequences to. If not "
+            "specified, standard output is used."
+        ),
+    )
 
     parser.add_argument(
-        '--checkVariant', action='append',
-        help=(f'Check whether the genome matches the changes in a known '
-              f'variant. The checked variant(s) must either be found in the '
-              f'known variants (currently {", ".join(sorted(VARIANTS))}) '
-              f'or else be given in a JSON file using --variantFile. '
-              f'In case of conflict, names in any given --variantFile have '
-              f'precedence over the predefined names. May be repeated.'))
+        "--checkVariant",
+        action="append",
+        help=(
+            f"Check whether the genome matches the changes in a known "
+            f"variant. The checked variant(s) must either be found in the "
+            f'known variants (currently {", ".join(sorted(VARIANTS))}) '
+            f"or else be given in a JSON file using --variantFile. "
+            f"In case of conflict, names in any given --variantFile have "
+            f"precedence over the predefined names. May be repeated."
+        ),
+    )
 
     parser.add_argument(
-        '--variantFile', metavar='VARIANT-FILE.json',
-        help=('A JSON file of variant information. See sars2seq/variants.py '
-              'for the required format.'))
+        "--variantFile",
+        metavar="VARIANT-FILE.json",
+        help=(
+            "A JSON file of variant information. See sars2seq/variants.py "
+            "for the required format."
+        ),
+    )
 
     parser.add_argument(
-        '--printNtSequence', '--printNTSequence', action='store_true',
-        help='Print the nucleotide sequence.')
+        "--printNtSequence",
+        "--printNTSequence",
+        action="store_true",
+        help="Print the nucleotide sequence.",
+    )
 
     parser.add_argument(
-        '--printAaSequence', '--printAASequence', action='store_true',
-        help='Print the amino acid sequence.')
+        "--printAaSequence",
+        "--printAASequence",
+        action="store_true",
+        help="Print the amino acid sequence.",
+    )
 
     parser.add_argument(
-        '--printNtMatch', '--printNTMatch', action='store_true',
-        help='Print details of the nucleotide match with the reference.')
+        "--printNtMatch",
+        "--printNTMatch",
+        action="store_true",
+        help="Print details of the nucleotide match with the reference.",
+    )
 
     parser.add_argument(
-        '--printAaMatch', '--printAAMatch', action='store_true',
-        help='Print details of the amino acid match with the reference.')
+        "--printAaMatch",
+        "--printAAMatch",
+        action="store_true",
+        help="Print details of the amino acid match with the reference.",
+    )
 
     parser.add_argument(
-        '--printNtAlignment', '--printNTAlignment', action='store_true',
-        help='Print the nucleotide alignment with the reference.')
+        "--printNtAlignment",
+        "--printNTAlignment",
+        action="store_true",
+        help="Print the nucleotide alignment with the reference.",
+    )
 
     parser.add_argument(
-        '--printAaAlignment', '--printAAAlignment', action='store_true',
-        help='Print the amino acid alignment with the reference.')
+        "--printAaAlignment",
+        "--printAAAlignment",
+        action="store_true",
+        help="Print the amino acid alignment with the reference.",
+    )
 
     parser.add_argument(
-        '--canonicalNames', action='store_true',
-        help=('Use canonical feature names for output files, as oppposed to '
-              'aliases that might be given on the command line. This can be '
-              'used to ensure that output files have predictable names.'))
+        "--canonicalNames",
+        action="store_true",
+        help=(
+            "Use canonical feature names for output files, as oppposed to "
+            "aliases that might be given on the command line. This can be "
+            "used to ensure that output files have predictable names."
+        ),
+    )
 
     parser.add_argument(
-        '--noFeatures', action='store_true',
-        help='Do not look up any features by default.')
+        "--noFeatures",
+        action="store_true",
+        help="Do not look up any features by default.",
+    )
 
     parser.add_argument(
-        '--gbFile', metavar='file.gb', default=Features.REF_GB,
-        help='The GenBank file to read for SARS-CoV-2 features.')
+        "--gbFile",
+        metavar="file.gb",
+        default=Features.REF_GB,
+        help="The GenBank file to read for SARS-CoV-2 features.",
+    )
 
     parser.add_argument(
-        '--minReferenceCoverage', metavar='coverage', type=float,
-        help=('The fraction of non-N bases required in the genome(s) in order '
-              'for them to be processed. Genomes with lower coverage will be '
-              'ignored, with a message printed to standard error. Note that '
-              'the denominator used to compute the coverage fraction is the '
-              'length of the reference. I.e., coverage is computed as number '
-              'of non-N bases in the genome divided by the length of the '
-              'reference.'))
+        "--minReferenceCoverage",
+        metavar="coverage",
+        type=float,
+        help=(
+            "The fraction of non-N bases required in the genome(s) in order "
+            "for them to be processed. Genomes with lower coverage will be "
+            "ignored, with a message printed to standard error. Note that "
+            "the denominator used to compute the coverage fraction is the "
+            "length of the reference. I.e., coverage is computed as number "
+            "of non-N bases in the genome divided by the length of the "
+            "reference."
+        ),
+    )
 
     parser.add_argument(
-        '--onError', choices=('ignore', 'print', 'raise'), default='print',
-        help=('What to do if an error occurs (e.g., due to translating or an '
-              'index out of range.'))
+        "--onError",
+        choices=("ignore", "print", "raise"),
+        default="print",
+        help=(
+            "What to do if an error occurs (e.g., due to translating or an "
+            "index out of range."
+        ),
+    )
 
     addAlignerOption(parser)
 

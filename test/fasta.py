@@ -16,4 +16,4 @@ def getSequence(filename, id_=None):
         if id_ is None or read.id.split()[0] == id_:
             return read
 
-    raise ValueError(f'Sequence {id_} not found in {filename!r}.')
+    raise ValueError(f"Sequence {id_} not found in {filename!r}.")

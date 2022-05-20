@@ -20,10 +20,10 @@ def printNames(features):
         @param name: A C{str} feature name.
         @return: A C{str} C{int} 2-tuple for sorting feature names.
         """
-        if name.startswith('nsp'):
-            return 'nsp', int(name[3:])
-        elif name.startswith('ORF'):
-            return 'orf', int(name[3:].split()[0].rstrip('ab'))
+        if name.startswith("nsp"):
+            return "nsp", int(name[3:])
+        elif name.startswith("ORF"):
+            return "orf", int(name[3:].split()[0].rstrip("ab"))
         else:
             return name.lower(), 0
 
@@ -34,11 +34,11 @@ def printNames(features):
 
     for featureName in featureNames:
         try:
-            akas = ' ' + ', '.join(sorted(aka[featureName]))
+            akas = " " + ", ".join(sorted(aka[featureName]))
         except KeyError:
-            akas = ''
+            akas = ""
 
-        print(f'{featureName}:{akas}')
+        print(f"{featureName}:{akas}")
 
 
 def main(args):
@@ -58,63 +58,84 @@ def main(args):
         wantedName = features.canonicalName(args.name)
     else:
         wantedName = None
-        print(f'Features for {features.reference.id}:')
+        print(f"Features for {features.reference.id}:")
 
     for featureName, feature in sorted(features.items()):
         if wantedName and featureName != wantedName:
             continue
-        print(f'{featureName}:')
-        print('  start:', feature['start'])
-        print('  stop:', feature['stop'])
-        print('  length:', feature['stop'] - feature['start'])
+        print(f"{featureName}:")
+        print("  start:", feature["start"])
+        print("  stop:", feature["stop"])
+        print("  length:", feature["stop"] - feature["start"])
         try:
-            print('  product:', feature['product'])
+            print("  product:", feature["product"])
         except KeyError:
             pass
         try:
-            print('  function:', feature['function'])
+            print("  function:", feature["function"])
         except KeyError:
             pass
 
-        sequence = feature['sequence']
-        print(f'  sequence    (len {len(sequence):5d} nt):',
-              (sequence[:args.maxLen] + '...') if len(sequence) > args.maxLen
-              else sequence)
+        sequence = feature["sequence"]
+        print(
+            f"  sequence    (len {len(sequence):5d} nt):",
+            (sequence[: args.maxLen] + "...")
+            if len(sequence) > args.maxLen
+            else sequence,
+        )
 
         try:
-            translation = feature['translation']
+            translation = feature["translation"]
         except KeyError:
             # Some features (e.g., UTR, stem loops) do not have a translation.
             pass
         else:
-            print(f'  translation (len {len(translation):5d} aa):',
-                  (translation[:args.maxLen] + '...')
-                  if len(translation) > args.maxLen else translation)
+            print(
+                f"  translation (len {len(translation):5d} aa):",
+                (translation[: args.maxLen] + "...")
+                if len(translation) > args.maxLen
+                else translation,
+            )
 
 
-if __name__ == '__main__':
+if __name__ == "__main__":
 
     parser = argparse.ArgumentParser(
         formatter_class=argparse.ArgumentDefaultsHelpFormatter,
-        description='Describe a SARS-CoV-2 sequence.')
+        description="Describe a SARS-CoV-2 sequence.",
+    )
 
     parser.add_argument(
-        '--gbFile', metavar='file.gb', default=Features.REF_GB,
-        help='The GenBank file to examine.')
+        "--gbFile",
+        metavar="file.gb",
+        default=Features.REF_GB,
+        help="The GenBank file to examine.",
+    )
 
     parser.add_argument(
-        '--name', metavar='NAME',
-        help=('The feature to print information for (all features are '
-              'printed if not specified).'))
+        "--name",
+        metavar="NAME",
+        help=(
+            "The feature to print information for (all features are "
+            "printed if not specified)."
+        ),
+    )
 
     parser.add_argument(
-        '--maxLen', type=int, default=80,
-        help=('The maximum sequence length to print. Longer sequences will '
-              'be truncated.'))
+        "--maxLen",
+        type=int,
+        default=80,
+        help=(
+            "The maximum sequence length to print. Longer sequences will "
+            "be truncated."
+        ),
+    )
 
     parser.add_argument(
-        '--names', action='store_true',
-        help='Only print feature names and aliases (if any).')
+        "--names",
+        action="store_true",
+        help="Only print feature names and aliases (if any).",
+    )
 
     args = parser.parse_args()
 

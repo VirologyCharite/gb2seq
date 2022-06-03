@@ -1,9 +1,11 @@
 #!/usr/bin/env python
 
+import sys
 import argparse
 from collections import defaultdict
 
-from sars2seq.features import Features, ALIASES
+from sars2seq.features import Features
+from sars2seq.sars2 import SARS_COV_2_ALIASES
 
 
 def printNames(features):
@@ -29,7 +31,7 @@ def printNames(features):
 
     featureNames = sorted(features, key=key)
     aka = defaultdict(set)
-    for alias, name in ALIASES.items():
+    for alias, name in SARS_COV_2_ALIASES.items():
         aka[name].add(alias)
 
     for featureName in featureNames:
@@ -48,54 +50,35 @@ def main(args):
     @param args: A C{Namespace} instance as returned by argparse with
         values for command-line options.
     """
-    features = Features(args.gbFile)
+    features = Features(
+        args.reference,
+        sars2=args.sars2,
+        addUnannotatedRegions=args.addUnannotatedRegions,
+    )
 
     if args.names:
         printNames(features)
         return
 
     if args.name:
-        wantedName = features.canonicalName(args.name)
+        try:
+            wantedName = features.canonicalName(args.name)
+        except KeyError:
+            forgot = (
+                " It looks like you forget to use --sars2."
+                if args.name.lower() in SARS_COV_2_ALIASES
+                else ""
+            )
+            print(f"Feature {args.name!r} is not known.{forgot}", file=sys.stderr)
+            sys.exit(1)
     else:
         wantedName = None
+        # All features are wanted, so print a little title.
         print(f"Features for {features.reference.id}:")
 
-    for featureName, feature in sorted(features.items()):
-        if wantedName and featureName != wantedName:
-            continue
-        print(f"{featureName}:")
-        print("  start:", feature["start"])
-        print("  stop:", feature["stop"])
-        print("  length:", feature["stop"] - feature["start"])
-        try:
-            print("  product:", feature["product"])
-        except KeyError:
-            pass
-        try:
-            print("  function:", feature["function"])
-        except KeyError:
-            pass
-
-        sequence = feature["sequence"]
-        print(
-            f"  sequence    (len {len(sequence):5d} nt):",
-            (sequence[: args.maxLen] + "...")
-            if len(sequence) > args.maxLen
-            else sequence,
-        )
-
-        try:
-            translation = feature["translation"]
-        except KeyError:
-            # Some features (e.g., UTR, stem loops) do not have a translation.
-            pass
-        else:
-            print(
-                f"  translation (len {len(translation):5d} aa):",
-                (translation[: args.maxLen] + "...")
-                if len(translation) > args.maxLen
-                else translation,
-            )
+    for name in sorted(features):
+        if not wantedName or name == wantedName:
+            print(features.toString(name, args.maxLen))
 
 
 if __name__ == "__main__":
@@ -106,6 +89,7 @@ if __name__ == "__main__":
     )
 
     parser.add_argument(
+        "--reference",
         "--gbFile",
         metavar="file.gb",
         default=Features.REF_GB,
@@ -135,6 +119,22 @@ if __name__ == "__main__":
         "--names",
         action="store_true",
         help="Only print feature names and aliases (if any).",
+    )
+
+    parser.add_argument(
+        "--sars2",
+        action="store_true",
+        help="The sequence is from SARS-CoV-2.",
+    )
+
+    parser.add_argument(
+        "--addUnannotatedRegions",
+        action="store_true",
+        help=(
+            "Add unannotated regions (i.e., genome regions that have "
+            'no features). These will be named "unannotated region N" '
+            "where N is a natural number."
+        ),
     )
 
     args = parser.parse_args()

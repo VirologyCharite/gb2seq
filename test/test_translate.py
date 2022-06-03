@@ -77,6 +77,13 @@ class TestTranslate(TestCase):
         """
         self.assertEqual("K", translate("AAA"))
 
+    def testAAAPlusStop(self):
+        """
+        An AAA codon followed by a stop codon must translate to a Lysine (K)
+        followed by a '*'.
+        """
+        self.assertEqual("K*", translate("AAATAG"))
+
     def testNameWithAAA(self):
         """
         An AAA codon must translate to a Lysine (K) when a name other than

@@ -658,7 +658,7 @@ class TestOffsetInfo(TestCase):
         error = (
             r"^Requested feature 'surface glycoprotein' \(located at "
             r"sites 1-6\) does not overlap site 11. The feature\(s\) "
-            r"at that site are: 'nsp10'\.$"
+            r"at that site are: 'nsp10' \(11 - 16\)\.$"
         )
         for relativeToFeature in False, True:
             self.assertRaisesRegex(
@@ -701,7 +701,7 @@ class TestOffsetInfo(TestCase):
         error = (
             r"^Requested feature 'surface glycoprotein' \(located at "
             r"sites 1-6\) does not overlap site 11. The feature\(s\) "
-            r"at that site are: 'nsp10', 'nsp11'\.$"
+            r"at that site are: 'nsp10' \(11 - 16\), 'nsp11' \(11 - 16\)\.$"
         )
         for relativeToFeature in False, True:
             self.assertRaisesRegex(
@@ -735,9 +735,8 @@ class TestOffsetInfo(TestCase):
         )
         alignment = SARS2Alignment(DNARead("genId", "AA"), features=features)
         error = (
-            r"^There are multiple features at site 13: 'nsp10', "
-            r"'nsp11'. Pass a feature name to specify which one you "
-            r"want\.$"
+            r"^There are multiple features at site 13: 'nsp10' \(11 - 16\), 'nsp11' "
+            r"\(11 - 16\). Pass a feature name to specify which one you want\.$"
         )
 
         self.assertRaisesRegex(AmbiguousFeatureError, error, alignment.offsetInfo, 12)

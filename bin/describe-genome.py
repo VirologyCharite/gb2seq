@@ -14,7 +14,7 @@ from dark.dna import compareDNAReads, matchToString as dnaMatchToString
 from dark.reads import Read, Reads
 
 from sars2seq.alignment import SARS2Alignment, addAlignerOption
-from sars2seq.features import Features
+from sars2seq.features import Features, addFeatureOptions
 from sars2seq.translate import TranslationError
 from sars2seq.variants import VARIANTS
 
@@ -248,7 +248,7 @@ def processFeature(featureName, genome, fps, featureNumber, args):
 
 def main(args):
     """
-    Describe a SARS-CoV-2 genome.
+    Describe a genome or genomes.
 
     @param args: A C{Namespace} instance as returned by argparse with
         values for command-line options.
@@ -259,7 +259,11 @@ def main(args):
         if not exists(outDir):
             os.makedirs(outDir)
 
-    features = Features(args.gbFile)
+    features = Features(
+        args.reference,
+        sars2=args.sars2,
+        addUnannotatedRegions=args.addUnannotatedRegions,
+    )
 
     if args.feature:
         if args.canonicalNames:
@@ -325,7 +329,7 @@ if __name__ == "__main__":
 
     parser = argparse.ArgumentParser(
         formatter_class=argparse.ArgumentDefaultsHelpFormatter,
-        description="Describe a SARS-CoV-2 genome (or genomes).",
+        description="Describe a genome (or genomes).",
     )
 
     parser.add_argument(
@@ -433,13 +437,6 @@ if __name__ == "__main__":
     )
 
     parser.add_argument(
-        "--gbFile",
-        metavar="file.gb",
-        default=Features.REF_GB,
-        help="The GenBank file to read for SARS-CoV-2 features.",
-    )
-
-    parser.add_argument(
         "--minReferenceCoverage",
         metavar="coverage",
         type=float,
@@ -464,6 +461,7 @@ if __name__ == "__main__":
         ),
     )
 
+    addFeatureOptions(parser)
     addAlignerOption(parser)
 
     args = parser.parse_args()

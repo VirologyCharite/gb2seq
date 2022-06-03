@@ -9,7 +9,7 @@ from dark.fasta import FastaReads
 
 from sars2seq import Sars2SeqError
 from sars2seq.alignment import SARS2Alignment, addAlignerOption
-from sars2seq.features import Features
+from sars2seq.features import Features, addFeatureOptions
 
 
 def report(genome, args, includeGenome=True):
@@ -73,7 +73,11 @@ def main(args):
         values for command-line options.
     @return: An C{int} exit status.
     """
-    features = Features(args.gbFile)
+    features = Features(
+        args.reference,
+        sars2=args.sars2,
+        addUnannotatedRegions=args.addUnannotatedRegions,
+    )
     count = 0
 
     if args.genome is None and os.isatty(0):
@@ -181,13 +185,7 @@ if __name__ == "__main__":
         ),
     )
 
-    parser.add_argument(
-        "--gbFile",
-        metavar="file.gb",
-        default=Features.REF_GB,
-        help="The GenBank file to read for SARS-CoV-2 features.",
-    )
-
+    addFeatureOptions(parser)
     addAlignerOption(parser)
 
     args = parser.parse_args()

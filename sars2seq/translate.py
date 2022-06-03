@@ -96,7 +96,7 @@ def translate(seq: str, name: Optional[str] = None) -> str:
     remainder = len(seq) % 3
     seq += "N" * (3 - remainder if remainder else 0)
 
-    return Seq(seq).translate()
+    return str(Seq(seq).translate())
 
 
 def translateSpike(seq: str) -> str:

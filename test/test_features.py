@@ -3,7 +3,7 @@ from pathlib import Path
 
 from dark.reads import DNARead
 
-from sars2seq.features import Features, ALIASES
+from sars2seq.features import Features
 
 _FEATURES = Features()
 
@@ -34,6 +34,13 @@ class TestFeatures(TestCase):
         """
         error = r"^A reference cannot be passed with a Path specification\.$"
         self.assertRaisesRegex(ValueError, error, Features, Path("spec"), "rf")
+
+    def testNonSars2NoSpecification(self):
+        """
+        If non-SARS-CoV-2 features are requested, a specification must be passed.
+        """
+        error = r"^A specification must be provided for non-SARS-CoV-2 features\.$"
+        self.assertRaisesRegex(ValueError, error, Features, sars2=False)
 
     def testUnknownFeature(self):
         """
@@ -82,6 +89,7 @@ class TestFeatures(TestCase):
             "stop": 27191,
             "note": "ORF5; structural protein",
             "product": "membrane glycoprotein",
+            "forward": True,
             "sequence": (
                 "ATGGCAGATTCCAACGGTACTATTACCGTTGAAGAGCTTAAAAAGCTCCTTGAAC"
                 "AATGGAACCTAGTAATAGGTTTCCTATTCCTTACATGGATTTGTCTTCTACAATT"
@@ -288,6 +296,47 @@ class TestFeatures(TestCase):
             self.assertEqual(nsp1Names, aliases(name.upper()))
             self.assertEqual(nsp1Names, aliases(name.title()))
 
+    def testNoAliasesForNonSars2(self):
+        """
+        For non-SARS-CoV-2 features there must be no aliases.
+        """
+        value = {
+            "name": "bike",
+            "sequence": "ATTC",
+            "start": 0,
+            "stop": 4,
+        }
+        features = Features({"bike": value}, sars2=False)
+        for name in "s", "spike", "surface glycoprotein":
+            self.assertEqual(set(), features.aliases(name))
+
+    def testTranslatedForNonSars2(self):
+        """
+        For non-SARS-CoV-2 features everything is assumed to be translated.
+        """
+        value = {
+            "name": "bike",
+            "sequence": "ATTC",
+            "start": 0,
+            "stop": 4,
+        }
+        features = Features({"bike": value}, sars2=False)
+        self.assertTrue(features.translated("bike"))
+
+    def testExplicitTranslatedEmpty(self):
+        """
+        It must be possible to pass an empty set of translated feature names.
+        """
+        features = Features(translated={})
+        self.assertFalse(features.translated("spike"))
+
+    def testExplicitTranslated(self):
+        """
+        It must be possible to pass a set of translated feature names.
+        """
+        features = Features(translated={"x"})
+        self.assertTrue(features.translated("x"))
+
     def testExpectedNames(self):
         """
         Test the full set of expected coronavirus feature names.
@@ -330,9 +379,3 @@ class TestFeatures(TestCase):
             "surface glycoprotein",
         }
         self.assertEqual(expected, set(_FEATURES))
-
-    def testAliasKeysLowerCase(self):
-        """
-        Alphanumeric alias keys must be lower case in order to be found.
-        """
-        self.assertTrue(all(key.islower() for key in ALIASES if key.isalpha()))

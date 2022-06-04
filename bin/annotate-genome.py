@@ -182,8 +182,8 @@ if __name__ == "__main__":
         "--reportDifferences",
         action="store_true",
         help=(
-            "If the genome ORF differs from the reference due to no start "
-            "or stop codon, print a message.",
+            "If the genome ORF differs from the reference due to no start or stop "
+            "codon, print a message."
         ),
     )
 

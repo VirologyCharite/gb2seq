@@ -11,7 +11,7 @@ from sars2seq.alignment import SARS2Alignment, addAlignerOption, alignmentEnd
 from sars2seq.features import Features, addFeatureOptions
 
 
-def main(args):
+def main(args: argparse.Namespace) -> int:
     """
     Add features to an unannotated genome and print the result as JSON.
 
@@ -145,7 +145,7 @@ def main(args):
             else:
                 lenDiff = f"{abs(n)} aa " + ("shorter" if n < 0 else "longer")
 
-            if aaDiff or lenDiff:
+            if not (aaDiff == lenDiff == "-"):
                 count += 1
                 print(
                     "\t".join(

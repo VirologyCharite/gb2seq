@@ -6,6 +6,7 @@ from pathlib import Path
 from typing import Dict, Optional, Set, Union
 from warnings import warn
 import json
+import argparse
 
 from Bio import Entrez, SeqIO
 from Bio.SeqRecord import SeqRecord
@@ -60,7 +61,7 @@ class Features(UserDict):
 
     def __init__(
         self,
-        spec: Union[str, Path] = None,
+        spec: Union[str, Dict, Path] = None,
         reference: Optional[DNARead] = None,
         sars2: bool = True,
         translated: Optional[Set[str]] = None,
@@ -149,7 +150,7 @@ class Features(UserDict):
             self._initializeFromGenBankRecord(record)
         elif isinstance(spec, dict):
             self.data.update(spec)
-            self.reference: Optional[DNARead] = reference
+            self.reference = reference
         else:
             raise ValueError(f"Unrecognized specification {spec!r}.")
 
@@ -216,10 +217,14 @@ class Features(UserDict):
                 forward = True
             else:
                 if not self.sars2:
-                    warn(
-                        f"Multiple reference genome ranges {genomeRanges} found "
-                        f"for feature {name!r} will not be translated reliably"
-                    )
+                    # At some point (soon) we should emit a warning. But let's first try
+                    # to fix things so we can translate anything.
+                    #
+                    # warn(
+                    #     f"Multiple reference genome ranges {genomeRanges} found "
+                    #     f"for feature {name!r} will not be translated reliably."
+                    # )
+                    pass
 
             sequence = str(record.seq)[start:stop]
 
@@ -289,7 +294,7 @@ class Features(UserDict):
         """
         Find unannotated regions and add them as features.
         """
-        annotatedOffsets = set()
+        annotatedOffsets: Set[int] = set()
         for feature in self.data.values():
             annotatedOffsets.update(range(feature["start"], feature["stop"]))
             feature["annotated"] = True
@@ -297,7 +302,7 @@ class Features(UserDict):
         start = None
         unannotatedRegionCount = 0
 
-        def _addNew(stop):
+        def _addNew(stop: int) -> None:
             nonlocal unannotatedRegionCount
             unannotatedRegionCount += 1
             name = f"unannotated region {unannotatedRegionCount}"
@@ -631,9 +636,10 @@ class Features(UserDict):
         return "\n".join(result)
 
 
-def addFeatureOptions(parser) -> None:
+def addFeatureOptions(parser: argparse.ArgumentParser) -> None:
     """
-    Add standard command-line options that can then be passed to the Feature constructor.
+    Add standard command-line options that can then be passed to the Feature
+    constructor.
 
     @args parser: An argparse parser to add options to.
     """
@@ -641,7 +647,6 @@ def addFeatureOptions(parser) -> None:
         "--reference",
         "--gbFile",  # The name originally used. Kept for backwards compatibility.
         metavar="file.gb",
-        default=Features.REF_GB,
         help="The GenBank file to read for features and sequences.",
     )
 

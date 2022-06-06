@@ -35,7 +35,7 @@ class AlignmentError(Sars2SeqError):
     "There is an unexpected problem in the alignment."
 
 
-def addAlignerOption(parser: argparse.Namespace) -> None:
+def addAlignerOption(parser: argparse.ArgumentParser) -> None:
     """
     Add a command line option for specifying an aligner for SARS2Alignment.
 
@@ -480,7 +480,7 @@ class SARS2Alignment:
         base: str,
         offset: int,
         read: DNARead,
-        change: str,
+        change: Union[str, Tuple[Optional[str], int, Optional[str]]],
         featureName: str,
         onError,
         errFp,
@@ -533,7 +533,14 @@ class SARS2Alignment:
         aa: bool = False,
         onError: str = "raise",
         errFp: Optional[TextIO] = None,
-    ) -> Tuple[int, int, Dict[str, Tuple[bool, Optional[str], bool, Optional[str]]]]:
+    ) -> Tuple[
+        int,
+        int,
+        Dict[
+            Union[str, Tuple[str, int, str]],
+            Tuple[bool, Optional[str], bool, Optional[str]],
+        ],
+    ]:
         """Check that a set of changes all happened as expected.
 
         @param featureName: A C{str} feature name.
@@ -571,8 +578,8 @@ class SARS2Alignment:
         """
 
         def _getChanges(
-            changes: Union[str, Tuple[str, int, str]]
-        ) -> Iterator[Tuple[bool, Optional[str], bool, Optional[str]]]:
+            changes: Union[str, Iterable[Tuple[str, int, str]]]
+        ) -> Iterator[Tuple[Union[str, Tuple[str, int, str]], str, int, str]]:
             if isinstance(changes, str):
                 for change in changes.split():
                     referenceBase, offset, genomeBase = splitChange(change)
@@ -582,7 +589,9 @@ class SARS2Alignment:
                     referenceBase, offset, genomeBase = change
                     yield change, referenceBase, offset, genomeBase
 
-        result = {}
+        result: Dict[
+            Union[str, Tuple[Optional[str], int, Optional[str]]],
+        ] = {}
         testCount = errorCount = 0
 
         try:
@@ -718,7 +727,7 @@ class SARS2Alignment:
         featureName: Optional[str] = None,
         includeUntranslated: bool = False,
         minReferenceCoverage: Optional[float] = None,
-    ) -> dict:
+    ) -> Union[dict, None]:
         """
         Get information about genome features at an offset.
 

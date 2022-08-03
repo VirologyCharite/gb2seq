@@ -130,6 +130,10 @@ class SARS2Alignment:
         ambiguous nucleotides that are possibly correct as actually being
         correct. Otherwise, the edlib aligner is strict and nucleotide codes
         only match themselves.
+    @param untranslatable: A C{dict} with C{str} keys and values. If any of
+        the keys appears in a codon, the corresponding value is added to the
+        translation. This can be used e.g., to make occurrences of '?'
+        translate into '-' or 'X'.
     @raise AlignmentError: If the genome and reference sequences both start
         or end with '-' characters, or if pre-aligned sequences are not of
         the same length.
@@ -144,20 +148,16 @@ class SARS2Alignment:
         genomeAligned: Optional[DNARead] = None,
         aligner: str = DEFAULT_ALIGNER,
         matchAmbiguous: bool = True,
+        untranslatable: Optional[Dict[str, str]] = None,
     ):
         if aligner not in ALIGNERS:
             raise ValueError(f"Unknown aligner {aligner!r}.")
 
-        # Geneious uses ? to indicate unknown nucleotides, at least when it
-        # exports a consensus / alignment. Replace with N.
-        self.genome = DNARead(genome.id, genome.sequence.replace("?", "N"))
-        # self.features = Features() if features is None else features
-        if features is None:
-            self.features = Features()
-        else:
-            self.features = features
+        self.genome = genome
+        self.features = Features() if features is None else features
         self._matchAmbiguous = matchAmbiguous
         self._aligner = aligner
+        self._untranslatable = untranslatable
         self._getAlignment(referenceAligned, genomeAligned)
         self.gappedOffsets = getGappedOffsets(self.referenceAligned.sequence)
         self._cache: dict = {"aa": {}, "nt": {}}
@@ -316,7 +316,7 @@ class SARS2Alignment:
         )
 
         # Use True as a default for 'forward' in the following, as some
-        # features may be unannotated region, and these do not have a
+        # features may be unannotated regions, and these do not have a
         # 'forward' key.
         if reverseComplement and not feature.get("forward", True):
             referenceNt = referenceNt.reverseComplement()
@@ -418,35 +418,58 @@ class SARS2Alignment:
 
             referenceAa = AARead(
                 self.features.reference.id + idSuffix,
-                feature.get("translation", translate(referenceNtNoGaps.sequence, name)),
+                feature.get(
+                    "translation",
+                    translate(
+                        referenceNtNoGaps.sequence,
+                        name,
+                        untranslatable=self._untranslatable,
+                    ),
+                ),
             )
 
             genomeNtNoGaps = DNARead(genomeNt.id, genomeNt.sequence.replace("-", ""))
 
-            genomeAa = AARead(
-                self.genome.id + idSuffix,
-                translate(genomeNtNoGaps.sequence, name),
-            )
-
-            if self._aligner == "mafft":
-                referenceAaAligned, genomeAaAligned = mafft(
-                    Reads([referenceAa, genomeAa]), options=MAFFT_OPTIONS
+            if len(genomeNtNoGaps) == 0:
+                # This feature has been deleted in the genome. Give back an
+                # "aligned" genome that is all gaps. This matches what
+                # ntSequences will return.
+                referenceAaAligned = referenceAa
+                genomeAaAligned = AARead(
+                    self.features.reference.id + idSuffix, "-" * len(referenceAaAligned)
                 )
             else:
-                assert self._aligner == "edlib"
-                # This is an AA alignment, so set matchAmbiguous=False
-                # unconditionally since the edlib aligner only knows about
-                # nucleotide ambiguities.
-                try:
-                    referenceAaAligned, genomeAaAligned = edlibAlign(
-                        Reads([referenceAa, genomeAa]), matchAmbiguous=False
+
+                genomeAa = AARead(
+                    self.genome.id + idSuffix,
+                    translate(
+                        genomeNtNoGaps.sequence,
+                        name,
+                        untranslatable=self._untranslatable,
+                    ),
+                )
+
+                if self._aligner == "mafft":
+                    referenceAaAligned, genomeAaAligned = mafft(
+                        Reads([referenceAa, genomeAa]), options=MAFFT_OPTIONS
                     )
-                except Exception as e:
-                    raise AlignmentError(
-                        f"Could not edlib align: {e}\n"
-                        f"  ref: {referenceAa.sequence}\n"
-                        f"  gen: {genomeAa.sequence}"
-                    )
+                else:
+                    assert self._aligner == "edlib"
+                    # This is an AA alignment, so set matchAmbiguous=False
+                    # unconditionally since the edlib aligner only knows about
+                    # nucleotide ambiguities.
+                    try:
+                        referenceAaAligned, genomeAaAligned = edlibAlign(
+                            Reads([referenceAa, genomeAa]), matchAmbiguous=False
+                        )
+                    except Exception as e:
+                        raise AlignmentError(
+                            f"Could not edlib align: {e}\n"
+                            f"  ref nt: {referenceNt.sequence}\n"
+                            f"  gen nt: {genomeNt.sequence}"
+                            f"  ref aa: {referenceAa.sequence}\n"
+                            f"  gen aa: {genomeAa.sequence}"
+                        )
 
         if DEBUG:
             print(f"AA MATCH {name}:")
@@ -533,6 +556,7 @@ class SARS2Alignment:
         aa: bool = False,
         onError: str = "raise",
         errFp: Optional[TextIO] = None,
+        raiseOnReferenceGaps: bool = True,
     ) -> Tuple[
         int,
         int,
@@ -561,6 +585,8 @@ class SARS2Alignment:
             case an error message will be printed to C{errFp}.
         @param errFp: An open file pointer to write error messages to, if any.
             Only used if C{onError} is 'print'.
+        @param raiseOnReferenceGaps: A C{bool}. If C{True} and the aligner
+            suggests a gap in the reference, raise a ReferenceInsertionError.
         @raise ValueError: If a change string cannot be parsed.
         @raise IndexError: If the offset of a change exceeds the length of the
             sequence being checked.
@@ -596,7 +622,9 @@ class SARS2Alignment:
 
         try:
             reference, genome = (
-                self.aaSequences(featureName) if aa else self.ntSequences(featureName)
+                self.aaSequences(featureName, raiseOnReferenceGaps=raiseOnReferenceGaps)
+                if aa
+                else self.ntSequences(featureName)
             )
         except TranslationError as e:
             if onError == "raise":
@@ -637,6 +665,7 @@ class SARS2Alignment:
         variant: Union[str, dict],
         onError: str = "raise",
         errFp: Optional[TextIO] = None,
+        raiseOnReferenceGaps: bool = True,
     ) -> Tuple[int, int, Dict[str, Tuple[bool, Optional[str], bool, Optional[str]]]]:
         """
         Check that a set of changes in different features all happened as
@@ -650,6 +679,8 @@ class SARS2Alignment:
             case an error message will be printed to C{errFp}.
         @param errFp: An open file pointer to write error messages to, if any.
             Only used if C{onError} is 'print'.
+        @param raiseOnReferenceGaps: A C{bool}. If C{True} and the aligner
+            suggests a gap in the reference, raise a ReferenceInsertionError.
         @raise ValueError: If incorrect arguments are passed (see below).
         @return: A 3-C{tuple} with the number of checks done, the number of
             errors, and a C{dict} keyed by C{str} changes in C{changes}, with values
@@ -687,6 +718,7 @@ class SARS2Alignment:
                         aa=(what == "aa"),
                         onError=onError,
                         errFp=errFp,
+                        raiseOnReferenceGaps=raiseOnReferenceGaps,
                     )
                     testCountTotal += testCount
                     errorCountTotal += errorCount

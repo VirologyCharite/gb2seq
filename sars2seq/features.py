@@ -4,7 +4,8 @@ import itertools
 from collections import UserDict
 from pathlib import Path
 from typing import Dict, Optional, Set, Union
-from warnings import warn
+
+# from warnings import warn
 import json
 import argparse
 
@@ -70,6 +71,7 @@ class Features(UserDict):
     ) -> None:
         super().__init__()
         self.sars2 = sars2
+        self.translatedNames: Optional[Set[str]] = None
 
         if sars2:
             spec = self.REF_GB if spec is None else spec

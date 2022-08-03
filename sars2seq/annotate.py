@@ -1,5 +1,6 @@
+import sys
 from operator import itemgetter
-from typing import Dict, List, Union
+from typing import Dict, List, Optional, Union
 
 from dark.reads import DNARead
 
@@ -7,7 +8,12 @@ from sars2seq.alignment import SARS2Alignment, alignmentEnd
 from sars2seq.features import Features
 
 
-def annotateGenome(features: Features, genome: DNARead, aligner: str) -> dict:
+def annotateGenome(
+    features: Features,
+    genome: DNARead,
+    aligner: str,
+    untranslatable: Optional[Dict[str, str]] = None,
+) -> dict:
     """
     Find features in an unannotated genome.
 
@@ -15,12 +21,18 @@ def annotateGenome(features: Features, genome: DNARead, aligner: str) -> dict:
         a sequence that is annotated.
     @param genome: The C{DNARead} of the genome to annotate.
     @aligner: A C{str} aligner name, such as 'edlib' or 'mafft'.
+    @param untranslatable: A C{dict} with C{str} keys and values. If any of
+        the keys appears in a codon, the corresponding value is added to the
+        translation. This can be used e.g., to make occurrences of '?'
+        translate into '-' or 'X'.
     @raise ValueError: If the result we plan to return cannot be used to
         initialize a new C{Features} instance.
     @return: A C{dict} with C{str} feature names as keys. See the 'result'
         variable below.
     """
-    alignment = SARS2Alignment(genome, features, aligner=aligner)
+    alignment = SARS2Alignment(
+        genome, features, aligner=aligner, untranslatable=untranslatable
+    )
 
     result = {
         "id": genome.id,
@@ -33,42 +45,104 @@ def annotateGenome(features: Features, genome: DNARead, aligner: str) -> dict:
     for feature in sorted(features.values(), key=itemgetter("start")):
         name = feature["name"]
         forward = feature["forward"]
-        gappedOffset = alignment.gappedOffsets[feature["start"]]
 
         referenceAA, genomeAA = alignment.aaSequences(name, raiseOnReferenceGaps=False)
 
-        start = gappedOffset - alignment.genomeAligned.sequence[:gappedOffset].count(
-            "-"
-        )
+        gappedOffset = alignment.gappedOffsets[feature["start"]]
+        # genomeStart = (
+        # gappedOffset - alignment.genomeAligned.sequence[:gappedOffset].count("-"))
 
         if forward:
-            assert 0 <= start < len(genome)
-            orf = genome.findORF(start, forward=True, requireStartCodon=False)
+            assert 0 <= gappedOffset < len(genome)
+            orf = alignment.genomeAligned.findORF(
+                gappedOffset,
+                forward=True,
+                requireStartCodon=False,
+                allowGaps=True,
+                untranslatable=untranslatable,
+            )
         else:
+            if False:
+                print(
+                    "REF START:",
+                    alignment.referenceAligned.sequence[
+                        gappedOffset : gappedOffset + 61
+                    ],
+                    file=sys.stderr,
+                )
+                print(
+                    "GEN START:",
+                    alignment.genomeAligned.sequence[gappedOffset : gappedOffset + 61],
+                    file=sys.stderr,
+                )
+                _end = alignment.gappedOffsets[feature["stop"]]
+                print(file=sys.stderr)
+                print(
+                    "REF END  :",
+                    alignment.referenceAligned.sequence[_end : _end + 61],
+                    file=sys.stderr,
+                )
+                print(
+                    "GEN END  :",
+                    alignment.genomeAligned.sequence[_end : _end + 61],
+                    file=sys.stderr,
+                )
+                print(file=sys.stderr)
+                print(
+                    "REF FEAT :",
+                    alignment.referenceAligned.sequence[gappedOffset:_end],
+                    file=sys.stderr,
+                )
+                print(
+                    "GEN FEAT :",
+                    alignment.genomeAligned.sequence[gappedOffset:_end],
+                    file=sys.stderr,
+                )
+
             reverseGappedOffset = alignment.gappedOffsets[feature["stop"]]
             reverseStart = (
                 len(alignment.genomeAligned)
                 - reverseGappedOffset
-                - alignment.genomeAligned.sequence[reverseGappedOffset:].count("-")
+                # - alignment.genomeAligned.sequence[reverseGappedOffset:].count("-")
             )
+
             assert 0 <= reverseStart < len(genome)
-            orf = genome.findORF(reverseStart, forward=False, requireStartCodon=False)
+            orf = alignment.genomeAligned.findORF(
+                reverseStart,
+                forward=False,
+                requireStartCodon=False,
+                allowGaps=True,
+                untranslatable=untranslatable,
+            )
+
+            if False:
+                print(f"{reverseGappedOffset=}", file=sys.stderr)
+                print(f"{reverseStart=}", file=sys.stderr)
+                print("ORF:", orf, file=sys.stderr)
+                print(
+                    "RC:",
+                    DNARead("id", orf["sequence"]).reverseComplement().sequence,
+                    file=sys.stderr,
+                )
 
         # Small sanity check.
         if not orf["foundStartCodon"]:
             assert genomeAA.sequence[0] != "M"
 
-        stop = start + orf["length"] * 3
+        genomeStart = gappedOffset - alignment.genomeAligned.sequence[
+            :gappedOffset
+        ].count("-")
+        genomeStop = genomeStart + orf["length"] * 3
 
-        resultFeatures[name] = feature.copy()
-        resultFeatures[name].update(
-            {
-                "start": start,
-                "stop": stop,
-                "sequence": genome.sequence[start:stop],
+        resultFeatures[name] = {
+            "genome": {
+                "start": genomeStart,
+                "stop": genomeStop,
+                "sequence": orf["sequence"],
                 "translation": orf["translation"],
-            }
-        )
+            },
+            "reference": feature,
+        }
 
         aaDiffs: Dict[str, Union[dict, List[str]]] = {}
 
@@ -114,13 +188,13 @@ def annotateGenome(features: Features, genome: DNARead, aligner: str) -> dict:
         Features(result, sars2=features.sars2)
     except Exception as e:
         raise ValueError(
-            f"Could not use the result to initialize a " f"fresh Features instance: {e}"
+            f"Could not use the result to initialize a fresh Features instance: {e}"
         )
 
     return result
 
 
-def summarizeDifferences(annotations: dict) -> None:
+def summarizeDifferences(annotations: dict) -> str:
     """
     Summarize new annotations.
 

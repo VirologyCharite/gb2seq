@@ -1,6 +1,6 @@
-from Bio.Seq import Seq
+from Bio.Seq import translate as bpTranslate
 from itertools import groupby
-from typing import List, Optional
+from typing import Dict, List, Optional
 
 from dark.aa import CODONS, STOP_CODONS
 from dark.reads import AARead
@@ -51,12 +51,20 @@ SLIPPERY_SEQUENCE = "TTTAAAC"
 _SLIPPERY_LEN = len(SLIPPERY_SEQUENCE)
 
 
-def translate(seq: str, name: Optional[str] = None) -> str:
+def translate(
+    seq: str,
+    name: Optional[str] = None,
+    untranslatable: Optional[Dict[str, str]] = None,
+) -> str:
     """
     Translate a sequence.
 
     @param seq: A C{str} nucelotide sequence.
     @param name: A C{str} feature name.
+    @param untranslatable: A C{dict} with C{str} keys and values. If any of
+        the keys appears in a codon, the corresponding value is added to the
+        translation. This can be used e.g., to make occurrences of '?'
+        translate into '-' or 'X'.
     @return: A translated C{str} amino acid sequence.
     """
     if name == "ORF1ab polyprotein":
@@ -96,7 +104,21 @@ def translate(seq: str, name: Optional[str] = None) -> str:
     remainder = len(seq) % 3
     seq += "N" * (3 - remainder if remainder else 0)
 
-    return str(Seq(seq).translate())
+    if untranslatable:
+        translation = []
+        for index in range(0, len(seq), 3):
+            codon = seq[index : index + 3]
+            assert len(codon) == 3
+            for char, replacement in untranslatable.items():
+                if char in codon:
+                    translation.append(replacement)
+                    break
+            else:
+                translation.append(bpTranslate(codon))
+
+        return "".join(translation)
+    else:
+        return bpTranslate(seq)
 
 
 def translateSpike(seq: str) -> str:

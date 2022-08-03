@@ -5,3 +5,4 @@ data/*.fai
 .DS_Store
 sars2seq.egg-info
 dist
+.coverage

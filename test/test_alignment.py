@@ -103,6 +103,7 @@ class TestGb2Alignment(TestCase):
                 },
             },
             DNARead("refId", "ATTC"),
+            sars2=True,
         )
 
         alignment = Gb2Alignment(DNARead("genId", "GGATTCGG"), features)
@@ -129,6 +130,7 @@ class TestGb2Alignment(TestCase):
                 },
             },
             DNARead("refId", "ATTC"),
+            sars2=True,
         )
 
         alignment = Gb2Alignment(DNARead("genId", "GGATTCGG"), features)
@@ -159,6 +161,7 @@ class TestGb2Alignment(TestCase):
                 },
             },
             DNARead("refId", "ATTC"),
+            sars2=True,
         )
 
         alignment = Gb2Alignment(DNARead("genId", "GGATTCGG"), features)
@@ -187,6 +190,7 @@ class TestGb2Alignment(TestCase):
                 },
             },
             DNARead("refId", "ATTC"),
+            sars2=True,
         )
 
         alignment = Gb2Alignment(DNARead("genId", "GGATTCGG"), features)
@@ -228,6 +232,7 @@ class TestGb2Alignment(TestCase):
                 },
             },
             DNARead("refId", "ATTC"),
+            sars2=True,
         )
 
         alignment = Gb2Alignment(DNARead("genId", "GGATTCGG"), features)
@@ -256,6 +261,7 @@ class TestGb2Alignment(TestCase):
                 },
             },
             DNARead("refId", "ATTC"),
+            sars2=True,
         )
 
         alignment = Gb2Alignment(DNARead("genId", "GGATTCGG"), features)
@@ -291,6 +297,7 @@ class TestGb2Alignment(TestCase):
                 },
             },
             DNARead("refId", referenceSequence),
+            sars2=True,
         )
 
         alignment = Gb2Alignment(DNARead("genId", genomeSequence), features)
@@ -327,6 +334,7 @@ class TestGb2Alignment(TestCase):
                 },
             },
             DNARead("refId", referenceSequence),
+            sars2=True,
         )
 
         alignment = Gb2Alignment(DNARead("genId", genomeSequence), features)
@@ -359,6 +367,7 @@ class TestGb2Alignment(TestCase):
                 },
             },
             DNARead("refId", "ATTC"),
+            sars2=True,
         )
 
         alignment = Gb2Alignment(DNARead("genId", "GGATTCGG"), features)
@@ -389,6 +398,7 @@ class TestGb2Alignment(TestCase):
                 },
             },
             DNARead("refId", "ATTC"),
+            sars2=True,
         )
 
         alignment = Gb2Alignment(DNARead("genId", "GGATTCGG"), features)
@@ -420,6 +430,7 @@ class TestGb2Alignment(TestCase):
                 },
             },
             DNARead("refId", "ATTC"),
+            sars2=True,
         )
 
         alignment = Gb2Alignment(DNARead("genId", "GGATTCGG"), features)
@@ -450,6 +461,7 @@ class TestGb2Alignment(TestCase):
                 },
             },
             DNARead("refId", "ATTC"),
+            sars2=True,
         )
 
         alignment = Gb2Alignment(DNARead("genId", "GGATTCGG"), features)
@@ -564,7 +576,7 @@ class TestOffsetInfo(TestCase):
         If relativeToFeature is passed as True, but a feature name is not
         given, a ValueError must be raised.
         """
-        features = Features({}, DNARead("refId", "AA"))
+        features = Features({}, DNARead("refId", "AA"), sars2=True)
         alignment = Gb2Alignment(DNARead("genId", "AA"), features=features)
         error = r"^If relativeToFeature is True, a feature name must be given\.$"
         self.assertRaisesRegex(
@@ -585,6 +597,7 @@ class TestOffsetInfo(TestCase):
                 },
             },
             DNARead("refId", "AA"),
+            sars2=True,
         )
         alignment = Gb2Alignment(DNARead("genId", "AA"), features=features)
         error = (
@@ -615,6 +628,7 @@ class TestOffsetInfo(TestCase):
                 },
             },
             DNARead("refId", "AA"),
+            sars2=True,
         )
         alignment = Gb2Alignment(DNARead("genId", "AA"), features=features)
         error = (
@@ -653,6 +667,7 @@ class TestOffsetInfo(TestCase):
                 },
             },
             DNARead("refId", "AA"),
+            sars2=True,
         )
         alignment = Gb2Alignment(DNARead("genId", "AA"), features=features)
         error = (
@@ -696,6 +711,7 @@ class TestOffsetInfo(TestCase):
                 },
             },
             DNARead("refId", "AA"),
+            sars2=True,
         )
         alignment = Gb2Alignment(DNARead("genId", "AA"), features=features)
         error = (
@@ -732,6 +748,7 @@ class TestOffsetInfo(TestCase):
                 },
             },
             DNARead("refId", "AA"),
+            sars2=True,
         )
         alignment = Gb2Alignment(DNARead("genId", "AA"), features=features)
         error = (
@@ -755,6 +772,7 @@ class TestOffsetInfo(TestCase):
                 },
             },
             DNARead("refId", "GTTCCCG"),
+            sars2=True,
         )
 
         alignment = Gb2Alignment(DNARead("genId", "ATTCCCG"), features)
@@ -789,7 +807,7 @@ class TestOffsetInfo(TestCase):
         If the edlib aligner is used, but without ambiguous nucleotide codes,
         it should align completely different sequences.
         """
-        features = Features({}, DNARead("refId", "CGTTCCCG"))
+        features = Features({}, DNARead("refId", "CGTTCCCG"), sars2=True)
 
         alignment = Gb2Alignment(
             DNARead("genId", "RWWMMMR"), features, aligner="edlib", matchAmbiguous=False
@@ -830,7 +848,7 @@ class TestOffsetInfo(TestCase):
         genome matches perfectly (they are all ambiguous codes that mach the
         reference).
         """
-        features = Features({}, DNARead("refId", "CGTTCCCG"))
+        features = Features({}, DNARead("refId", "CGTTCCCG"), sars2=True)
 
         alignment = Gb2Alignment(
             DNARead("genId", "RWWMMMR"), features, aligner="edlib", matchAmbiguous=True
@@ -877,6 +895,7 @@ class TestOffsetInfo(TestCase):
                 },
             },
             DNARead("refId", "GTTCCCG"),
+            sars2=True,
         )
 
         alignment = Gb2Alignment(DNARead("genId", "GTT"), features)
@@ -897,6 +916,7 @@ class TestOffsetInfo(TestCase):
                 },
             },
             DNARead("refId", "GTTCCC"),
+            sars2=True,
         )
 
         alignment = Gb2Alignment(DNARead("genId", "ATTCCC"), features)
@@ -940,6 +960,7 @@ class TestOffsetInfo(TestCase):
                 },
             },
             DNARead("refId", "GTTCCC"),
+            sars2=True,
         )
 
         alignment = Gb2Alignment(DNARead("genId", "ATTCCC"), features)
@@ -983,6 +1004,7 @@ class TestOffsetInfo(TestCase):
                 },
             },
             DNARead("refId", "GTTCCCA"),
+            sars2=True,
         )
 
         alignment = Gb2Alignment(DNARead("genId", "ATTCCCA"), features)
@@ -1026,6 +1048,7 @@ class TestOffsetInfo(TestCase):
                 },
             },
             DNARead("refId", "GTTCCCAT"),
+            sars2=True,
         )
 
         alignment = Gb2Alignment(DNARead("genId", "ATTCCCAT"), features)
@@ -1069,6 +1092,7 @@ class TestOffsetInfo(TestCase):
                 },
             },
             DNARead("refId", "AATGTTCCCTTTAAA"),
+            sars2=True,
         )
 
         alignment = Gb2Alignment(DNARead("genId", "AATGTACGCTTTAAA"), features)
@@ -1115,6 +1139,7 @@ class TestOffsetInfo(TestCase):
                 },
             },
             DNARead("refId", "AATGTTCCCTTTAAA"),
+            sars2=True,
         )
 
         alignment = Gb2Alignment(DNARead("genId", "AATGTACGCTTTAAA"), features)
@@ -1152,7 +1177,9 @@ class TestOffsetInfo(TestCase):
         genome and we request offset zero, we should see the gap in the
         codon and get back a '-' amino acid.
         """
-        features = Features({}, DNARead("refId", "GTTCCCAAATTGCTACTTTGATTGAG"))
+        features = Features(
+            {}, DNARead("refId", "GTTCCCAAATTGCTACTTTGATTGAG"), sars2=True
+        )
 
         alignment = Gb2Alignment(
             DNARead("genId", "TTCCCAAATTGCTACTTTGATTGAG"), features=features
@@ -1192,7 +1219,7 @@ class TestOffsetInfo(TestCase):
         does not have the first nucleotide that's in the reference.
         """
         seq = "GTTCCCAAATTGCTACTTTGATTGAG"
-        features = Features({}, DNARead("refId", seq))
+        features = Features({}, DNARead("refId", seq), sars2=True)
         alignment = Gb2Alignment(DNARead("genId", seq[1:]), features)
 
         # Check the alignment is as expected.
@@ -1243,6 +1270,7 @@ class TestOffsetInfo(TestCase):
                 },
             },
             DNARead("refId", seq),
+            sars2=True,
         )
 
         alignment = Gb2Alignment(DNARead("genId", seq[1:]), features)
@@ -1297,6 +1325,7 @@ class TestOffsetInfo(TestCase):
                 },
             },
             DNARead("refId", seq),
+            sars2=True,
         )
 
         alignment = Gb2Alignment(DNARead("genId", seq[1:]), features)
@@ -1343,7 +1372,7 @@ class TestOffsetInfo(TestCase):
         relative to the feature when using any frame and a nucleotide offset.
         """
         genomeRead = getSequence(DATA_DIR / "EPI_ISL_601443.fasta")
-        alignment = Gb2Alignment(genomeRead)
+        alignment = Gb2Alignment(genomeRead, features=Features(sars2=True))
         start = alignment.features["surface glycoprotein"]["start"]
         for frame in range(3):
             # The 500 comes from the N501Y.
@@ -1400,7 +1429,7 @@ class TestOffsetInfo(TestCase):
         the offset is given in nucleotides in any frame.
         """
         genomeRead = getSequence(DATA_DIR / "EPI_ISL_601443.fasta")
-        alignment = Gb2Alignment(genomeRead)
+        alignment = Gb2Alignment(genomeRead, features=Features(sars2=True))
         start = alignment.features["surface glycoprotein"]["start"]
         for frame in range(3):
             offset = start + 1500 + frame
@@ -1443,7 +1472,7 @@ class TestOffsetInfo(TestCase):
         using an amino acid offset.
         """
         genomeRead = getSequence(DATA_DIR / "EPI_ISL_601443.fasta")
-        alignment = Gb2Alignment(genomeRead)
+        alignment = Gb2Alignment(genomeRead, features=Features(sars2=True))
         start = alignment.features["surface glycoprotein"]["start"]
         offset = 500
 
@@ -1491,7 +1520,7 @@ class TestOffsetInfo(TestCase):
         We must be able to see all the substitutions in the spike of Alpha.
         """
         genomeRead = getSequence(DATA_DIR / "EPI_ISL_601443.fasta")
-        alignment = Gb2Alignment(genomeRead)
+        alignment = Gb2Alignment(genomeRead, features=Features(sars2=True))
 
         for change in "N501Y A570D D614G P681H T716I S982A D1118H".split():
             referenceAa, offset, genomeAa = splitChange(change)
@@ -1506,7 +1535,7 @@ class TestOffsetInfo(TestCase):
         We must be able to see all the deletions in the spike of Alpha.
         """
         genomeRead = getSequence(DATA_DIR / "EPI_ISL_601443.fasta")
-        alignment = Gb2Alignment(genomeRead)
+        alignment = Gb2Alignment(genomeRead, features=Features(sars2=True))
 
         for change in "H69- V70- Y144-".split():
             referenceAa, offset, genomeAa = splitChange(change)
@@ -1535,6 +1564,7 @@ class TestCoverage(TestCase):
                 },
             },
             DNARead("refId", "ATTC"),
+            sars2=True,
         )
 
         alignment = Gb2Alignment(DNARead("genId", "ATTC"), features)
@@ -1554,6 +1584,7 @@ class TestCoverage(TestCase):
                 },
             },
             DNARead("refId", "ATTC"),
+            sars2=True,
         )
 
         alignment = Gb2Alignment(DNARead("genId", "GGATTCGG"), features)
@@ -1573,6 +1604,7 @@ class TestCoverage(TestCase):
                 },
             },
             DNARead("refId", "ATTC"),
+            sars2=True,
         )
 
         alignment = Gb2Alignment(DNARead("genId", "AT"), features)
@@ -1592,6 +1624,7 @@ class TestCoverage(TestCase):
                 },
             },
             DNARead("refId", "ATTC"),
+            sars2=True,
         )
 
         alignment = Gb2Alignment(DNARead("genId", "A"), features)
@@ -1611,6 +1644,7 @@ class TestCoverage(TestCase):
                 },
             },
             DNARead("refId", "ATTC"),
+            sars2=True,
         )
 
         alignment = Gb2Alignment(DNARead("genId", "ATTN"), features)
@@ -1644,6 +1678,7 @@ class TestOffsetInfoMultipleGenomes(TestCase):
                 },
             },
             DNARead("refId1", "GTTCCCG"),
+            sars2=True,
         )
 
         features2 = Features(
@@ -1655,6 +1690,7 @@ class TestOffsetInfoMultipleGenomes(TestCase):
                 },
             },
             DNARead("refId2", "GTTCCCG"),
+            sars2=True,
         )
 
         alignment1 = Gb2Alignment(DNARead("genId", "ATTCCCG"), features1)
@@ -1682,6 +1718,7 @@ class TestOffsetInfoMultipleGenomes(TestCase):
                 },
             },
             DNARead("refId", "GTTCCCG"),
+            sars2=True,
         )
 
         alignment = Gb2Alignment(DNARead("genId", "ATTCCCG"), features)
@@ -1736,6 +1773,7 @@ class TestOffsetInfoMultipleGenomes(TestCase):
                 },
             },
             DNARead("refId", "GTTCCCG"),
+            sars2=True,
         )
 
         alignment1 = Gb2Alignment(DNARead("genId1", "ATTCCCG"), features)
@@ -1804,6 +1842,7 @@ class TestOffsetInfoMultipleGenomes(TestCase):
                 },
             },
             DNARead("refId", "GTTCCCG"),
+            sars2=True,
         )
 
         alignment1 = Gb2Alignment(DNARead("genId1", "ATTCCCG"), features)
@@ -1874,6 +1913,7 @@ class TestOffsetInfoMultipleGenomes(TestCase):
                 },
             },
             DNARead("refId", "GTTCCCG"),
+            sars2=True,
         )
 
         alignment1 = Gb2Alignment(DNARead("genId1", "ATT"), features)

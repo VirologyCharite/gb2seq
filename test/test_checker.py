@@ -7,8 +7,7 @@ from gb2seq.alignment import Gb2Alignment
 from gb2seq.checker import Checker, AAChecker, NTChecker
 from gb2seq.features import Features
 
-REF_GB = DATA_DIR / "NC_045512.2.gb"
-FEATURES = Features(REF_GB)
+FEATURES = Features(sars2=True)
 
 
 class Test_EPI_ISL_601443(TestCase):

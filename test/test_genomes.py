@@ -13,8 +13,7 @@ from gb2seq.alignment import Gb2Alignment
 from gb2seq.features import Features
 from gb2seq.variants import VARIANTS
 
-REF_GB = DATA_DIR / "NC_045512.2.gb"
-FEATURES = Features(REF_GB)
+FEATURES = Features(sars2=True)
 
 
 class _Mixin:

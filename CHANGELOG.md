@@ -1,3 +1,7 @@
+## 0.2.2 August 4, 2022
+
+Remove some SARS-2 defaults.
+
 ## 0.2.1 August 4, 2022
 
 More small changes for the `gb2seq` name change.

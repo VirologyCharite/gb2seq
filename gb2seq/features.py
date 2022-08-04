@@ -41,17 +41,17 @@ class Features(UserDict):
     """
     Manage sequence features from the information in C{gbFile}.
 
-    @param spec: Either:
+    @param referenceSpecification: Either:
         * A C{str} name or C{Path} of a GenBank file containing the features.
         * A C{str} GenBank accession id.
         * A C{dict} of pre-prepared features, in which case C{reference}
               must not be C{None}. Passing a C{dict} is provided for testing.
         * C{None}, in which case the default reference, NC_045512.2.gb, is
               loaded.
-    @param sars2: A C{bool} indicating whether we are dealing with SARS-CoV-2
-        features (in which case some defaults can be set).
     @param reference: A C{dark.reads.DNARead} instance if C{spec} is a C{dict},
         else C{None}.
+    @param sars2: A C{bool} indicating whether we are dealing with SARS-CoV-2
+        features (in which case some defaults can be set).
     @raise ValueError: If a reference is passed with a string or Path
         specification.
     @raise ReferenceWithGapError: If the reference or one of its features has a
@@ -62,9 +62,9 @@ class Features(UserDict):
 
     def __init__(
         self,
-        spec: Union[str, Dict, Path] = None,
+        referenceSpecification: Union[str, Dict, Path] = None,
         reference: Optional[DNARead] = None,
-        sars2: bool = True,
+        sars2: bool = False,
         translated: Optional[Set[str]] = None,
         aliases: Optional[Dict[str, str]] = None,
         addUnannotatedRegions: bool = False,
@@ -74,22 +74,26 @@ class Features(UserDict):
         self.translatedNames: Optional[Set[str]] = None
 
         if sars2:
-            spec = self.WUHAN_REF if spec is None else spec
+            referenceSpecification = (
+                self.WUHAN_REF
+                if referenceSpecification is None
+                else referenceSpecification
+            )
         else:
-            if spec is None:
+            if referenceSpecification is None:
                 raise ValueError(
                     "A specification must be provided for non-SARS-CoV-2 features."
                 )
 
-        if isinstance(spec, SeqRecord):
-            record = spec
+        if isinstance(referenceSpecification, SeqRecord):
+            record = referenceSpecification
             self._initializeFromGenBankRecord(record)
-        elif isinstance(spec, str):
+        elif isinstance(referenceSpecification, str):
             if reference is not None:
                 raise ValueError(
                     "A reference cannot be passed with a string specification."
                 )
-            path = Path(spec)
+            path = Path(referenceSpecification)
             if path.exists():
                 # A file argument can either be in GenBank format or
                 # contain a JSON object (the saved output of annotate-genome.py).
@@ -114,17 +118,23 @@ class Features(UserDict):
 
                 if jsonError and seqError:
                     print(
-                        f"Could not read {spec!r} as a JSON or GenBank file. "
+                        f"Could not read {referenceSpecification!r} as a JSON or GenBank file. "
                         f"Here are the parsing errors.\nJSON: "
                         f"{jsonError}\nGenBank: {seqError}",
                         file=sys.stderr,
                     )
                     sys.exit(1)
             else:
-                print(f"Fetching GenBank record for {spec!r}.", file=sys.stderr)
+                print(
+                    f"Fetching GenBank record for {referenceSpecification!r}.",
+                    file=sys.stderr,
+                )
                 try:
                     client = Entrez.efetch(
-                        db="nucleotide", rettype="gb", retmode="text", id=spec
+                        db="nucleotide",
+                        rettype="gb",
+                        retmode="text",
+                        id=referenceSpecification,
                     )
                     try:
                         record = SeqIO.read(client, "gb")
@@ -142,19 +152,19 @@ class Features(UserDict):
                 except Exception as e:
                     print("Could not fetch GenBank record:", e, file=sys.stderr)
                     sys.exit(1)
-        elif isinstance(spec, Path):
+        elif isinstance(referenceSpecification, Path):
             if reference is not None:
                 raise ValueError(
                     "A reference cannot be passed with a Path specification."
                 )
-            with open(spec) as fp:
+            with open(referenceSpecification) as fp:
                 record = SeqIO.read(fp, "genbank")
             self._initializeFromGenBankRecord(record)
-        elif isinstance(spec, dict):
-            self.data.update(spec)
+        elif isinstance(referenceSpecification, dict):
+            self.data.update(referenceSpecification)
             self.reference = reference
         else:
-            raise ValueError(f"Unrecognized specification {spec!r}.")
+            raise ValueError(f"Unrecognized specification {referenceSpecification!r}.")
 
         if sars2:
             self.translatedNames = (

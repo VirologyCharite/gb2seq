@@ -1,7 +1,10 @@
 from unittest import TestCase
 
+from gb2seq import DATA_DIR
 from gb2seq.features import Features
 from gb2seq.variants import VARIANTS
+
+REF_GB = DATA_DIR / "NC_045512.2.gb"
 
 
 class TestVariants(TestCase):
@@ -13,7 +16,7 @@ class TestVariants(TestCase):
         """
         Only known feature names are allowed.
         """
-        features = Features()
+        features = Features(sars2=True)
         for variant in VARIANTS:
             for featureName in VARIANTS[variant]["changes"]:
                 self.assertIsInstance(features[featureName], dict)

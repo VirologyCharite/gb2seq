@@ -5,7 +5,7 @@ from dark.reads import DNARead
 
 from gb2seq.features import Features
 
-_FEATURES = Features()
+_FEATURES = Features(sars2=True)
 
 
 class TestFeatures(TestCase):
@@ -327,14 +327,14 @@ class TestFeatures(TestCase):
         """
         It must be possible to pass an empty set of translated feature names.
         """
-        features = Features(translated={})
+        features = Features(translated={}, sars2=True)
         self.assertFalse(features.translated("spike"))
 
     def testExplicitTranslated(self):
         """
         It must be possible to pass a set of translated feature names.
         """
-        features = Features(translated={"x"})
+        features = Features(translated={"x"}, sars2=True)
         self.assertTrue(features.translated("x"))
 
     def testExpectedNames(self):

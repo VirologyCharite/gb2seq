@@ -1,3 +1,7 @@
+## 0.2.1 August 4, 2022
+
+More small changes for the `gb2seq` name change.
+
 ## 0.2.0 August 4, 2022
 
 Changed to `gb2seq`.

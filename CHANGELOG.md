@@ -1,3 +1,7 @@
+## 0.2.0 August 4, 2022
+
+Changed to `gb2seq`.
+
 ## 0.1.2 May 1, 2022
 
 Switch to use [black](https://black.readthedocs.io/en/stable/index.html) formatting.

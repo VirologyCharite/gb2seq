@@ -3,7 +3,7 @@ from pathlib import Path
 
 from dark.reads import DNARead
 
-from sars2seq.features import Features
+from gb2seq.features import Features
 
 _FEATURES = Features()
 

@@ -4,8 +4,8 @@ import sys
 import argparse
 from collections import defaultdict
 
-from sars2seq.features import Features
-from sars2seq.sars2 import SARS_COV_2_ALIASES
+from gb2seq.features import Features
+from gb2seq.sars2 import SARS_COV_2_ALIASES
 
 
 def printNames(features):
@@ -45,7 +45,7 @@ def printNames(features):
 
 def main(args):
     """
-    Describe SARS-CoV-2 annotations.
+    Describe a genome feature or features.
 
     @param args: A C{Namespace} instance as returned by argparse with
         values for command-line options.
@@ -85,15 +85,16 @@ if __name__ == "__main__":
 
     parser = argparse.ArgumentParser(
         formatter_class=argparse.ArgumentDefaultsHelpFormatter,
-        description="Describe a SARS-CoV-2 sequence.",
+        description="Describe a reference genome feature.",
     )
 
     parser.add_argument(
         "--reference",
-        "--gbFile",
         metavar="file.gb",
-        default=Features.REF_GB,
-        help="The GenBank file to examine.",
+        help=(
+            f"The GenBank file to examine. If --sars2 is used and no reference is "
+            f"given, {Features.WUHAN_REF.name!r} will be used."
+        ),
     )
 
     parser.add_argument(

@@ -1,6 +1,6 @@
 from unittest import TestCase
 
-from sars2seq.sars2 import SARS_COV_2_ALIASES
+from gb2seq.sars2 import SARS_COV_2_ALIASES
 
 
 class TestSars2Aliases(TestCase):

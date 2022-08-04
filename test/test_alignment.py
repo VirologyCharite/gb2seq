@@ -9,17 +9,17 @@ from io import StringIO
 
 from dark.reads import DNARead
 
-from sars2seq import DATA_DIR
-from sars2seq.alignment import (
-    SARS2Alignment,
+from gb2seq import DATA_DIR
+from gb2seq.alignment import (
+    Gb2Alignment,
     getGappedOffsets,
     alignmentEnd,
     offsetInfoMultipleGenomes,
     AlignmentError,
 )
-from sars2seq.change import splitChange
-from sars2seq.features import Features, AmbiguousFeatureError, MissingFeatureError
-from sars2seq.translate import NoSlipperySequenceError
+from gb2seq.change import splitChange
+from gb2seq.features import Features, AmbiguousFeatureError, MissingFeatureError
+from gb2seq.translate import NoSlipperySequenceError
 
 from .fasta import getSequence
 
@@ -27,9 +27,9 @@ from .fasta import getSequence
 ALPHA_ID = "EPI_ISL_601443 hCoV-19/England/MILK-9E05B3/2020"
 
 
-class TestSARS2Alignment(TestCase):
+class TestGb2Alignment(TestCase):
     """
-    Test the SARS2Alignment class.
+    Test the Gb2Alignment class.
     """
 
     def testUnequalPreAlignedSequences(self):
@@ -45,7 +45,7 @@ class TestSARS2Alignment(TestCase):
         self.assertRaisesRegex(
             AlignmentError,
             error,
-            SARS2Alignment,
+            Gb2Alignment,
             DNARead("ref", "ATGC"),
             features={},
             referenceAligned=DNARead("ref-aln", "AT-GC"),
@@ -64,7 +64,7 @@ class TestSARS2Alignment(TestCase):
         self.assertRaisesRegex(
             AlignmentError,
             error,
-            SARS2Alignment,
+            Gb2Alignment,
             DNARead("ref", "ATGC"),
             features={},
             referenceAligned=DNARead("ref-aln", "-ATGC"),
@@ -83,7 +83,7 @@ class TestSARS2Alignment(TestCase):
         self.assertRaisesRegex(
             AlignmentError,
             error,
-            SARS2Alignment,
+            Gb2Alignment,
             DNARead("ref", "ATGC"),
             features={},
             referenceAligned=DNARead("ref-aln", "ATGC-"),
@@ -105,7 +105,7 @@ class TestSARS2Alignment(TestCase):
             DNARead("refId", "ATTC"),
         )
 
-        alignment = SARS2Alignment(DNARead("genId", "GGATTCGG"), features)
+        alignment = Gb2Alignment(DNARead("genId", "GGATTCGG"), features)
 
         referenceNt, genomeNt = alignment.ntSequences("spike")
 
@@ -131,7 +131,7 @@ class TestSARS2Alignment(TestCase):
             DNARead("refId", "ATTC"),
         )
 
-        alignment = SARS2Alignment(DNARead("genId", "GGATTCGG"), features)
+        alignment = Gb2Alignment(DNARead("genId", "GGATTCGG"), features)
 
         # Note: 1-based locations.
         testCount, errorCount, result = alignment.checkFeature(
@@ -161,7 +161,7 @@ class TestSARS2Alignment(TestCase):
             DNARead("refId", "ATTC"),
         )
 
-        alignment = SARS2Alignment(DNARead("genId", "GGATTCGG"), features)
+        alignment = Gb2Alignment(DNARead("genId", "GGATTCGG"), features)
 
         error = (
             r"^Index 99999 out of range trying to access feature "
@@ -189,7 +189,7 @@ class TestSARS2Alignment(TestCase):
             DNARead("refId", "ATTC"),
         )
 
-        alignment = SARS2Alignment(DNARead("genId", "GGATTCGG"), features)
+        alignment = Gb2Alignment(DNARead("genId", "GGATTCGG"), features)
 
         err = StringIO()
 
@@ -230,7 +230,7 @@ class TestSARS2Alignment(TestCase):
             DNARead("refId", "ATTC"),
         )
 
-        alignment = SARS2Alignment(DNARead("genId", "GGATTCGG"), features)
+        alignment = Gb2Alignment(DNARead("genId", "GGATTCGG"), features)
 
         err = StringIO()
         testCount, errorCount, result = alignment.checkFeature(
@@ -258,7 +258,7 @@ class TestSARS2Alignment(TestCase):
             DNARead("refId", "ATTC"),
         )
 
-        alignment = SARS2Alignment(DNARead("genId", "GGATTCGG"), features)
+        alignment = Gb2Alignment(DNARead("genId", "GGATTCGG"), features)
 
         # Note: 0-based offsets.
         testCount, errorCount, result = alignment.checkFeature(
@@ -293,7 +293,7 @@ class TestSARS2Alignment(TestCase):
             DNARead("refId", referenceSequence),
         )
 
-        alignment = SARS2Alignment(DNARead("genId", genomeSequence), features)
+        alignment = Gb2Alignment(DNARead("genId", genomeSequence), features)
 
         referenceNt, genomeNt = alignment.ntSequences("spike")
 
@@ -329,7 +329,7 @@ class TestSARS2Alignment(TestCase):
             DNARead("refId", referenceSequence),
         )
 
-        alignment = SARS2Alignment(DNARead("genId", genomeSequence), features)
+        alignment = Gb2Alignment(DNARead("genId", genomeSequence), features)
         referenceNt, genomeNt = alignment.ntSequences("spike")
 
         self.assertEqual(referenceSequence[5:], referenceNt.sequence)
@@ -361,7 +361,7 @@ class TestSARS2Alignment(TestCase):
             DNARead("refId", "ATTC"),
         )
 
-        alignment = SARS2Alignment(DNARead("genId", "GGATTCGG"), features)
+        alignment = Gb2Alignment(DNARead("genId", "GGATTCGG"), features)
 
         error = r"^No slippery sequence found\.$"
         self.assertRaisesRegex(
@@ -391,7 +391,7 @@ class TestSARS2Alignment(TestCase):
             DNARead("refId", "ATTC"),
         )
 
-        alignment = SARS2Alignment(DNARead("genId", "GGATTCGG"), features)
+        alignment = Gb2Alignment(DNARead("genId", "GGATTCGG"), features)
 
         err = StringIO()
         error = "No slippery sequence found.\n"
@@ -422,7 +422,7 @@ class TestSARS2Alignment(TestCase):
             DNARead("refId", "ATTC"),
         )
 
-        alignment = SARS2Alignment(DNARead("genId", "GGATTCGG"), features)
+        alignment = Gb2Alignment(DNARead("genId", "GGATTCGG"), features)
 
         err = StringIO()
 
@@ -452,7 +452,7 @@ class TestSARS2Alignment(TestCase):
             DNARead("refId", "ATTC"),
         )
 
-        alignment = SARS2Alignment(DNARead("genId", "GGATTCGG"), features)
+        alignment = Gb2Alignment(DNARead("genId", "GGATTCGG"), features)
 
         error = r"^No slippery sequence found\.$"
         self.assertRaisesRegex(
@@ -556,7 +556,7 @@ class TestGetGappedOffsets(TestCase):
 
 class TestOffsetInfo(TestCase):
     """
-    Test the SARS2Alignment.offsetInfo method.
+    Test the Gb2Alignment.offsetInfo method.
     """
 
     def testRelativeOffsetWithNoFeatureName(self):
@@ -565,7 +565,7 @@ class TestOffsetInfo(TestCase):
         given, a ValueError must be raised.
         """
         features = Features({}, DNARead("refId", "AA"))
-        alignment = SARS2Alignment(DNARead("genId", "AA"), features=features)
+        alignment = Gb2Alignment(DNARead("genId", "AA"), features=features)
         error = r"^If relativeToFeature is True, a feature name must be given\.$"
         self.assertRaisesRegex(
             ValueError, error, alignment.offsetInfo, 0, relativeToFeature=True
@@ -586,7 +586,7 @@ class TestOffsetInfo(TestCase):
             },
             DNARead("refId", "AA"),
         )
-        alignment = SARS2Alignment(DNARead("genId", "AA"), features=features)
+        alignment = Gb2Alignment(DNARead("genId", "AA"), features=features)
         error = (
             r"^You cannot pass aa=True unless the offset you pass is "
             r"relative to the feature\.$"
@@ -616,7 +616,7 @@ class TestOffsetInfo(TestCase):
             },
             DNARead("refId", "AA"),
         )
-        alignment = SARS2Alignment(DNARead("genId", "AA"), features=features)
+        alignment = Gb2Alignment(DNARead("genId", "AA"), features=features)
         error = (
             r"^Feature 'surface glycoprotein' \(located at sites 1-6\) "
             r"does not overlap site 101\. There are no features at "
@@ -654,7 +654,7 @@ class TestOffsetInfo(TestCase):
             },
             DNARead("refId", "AA"),
         )
-        alignment = SARS2Alignment(DNARead("genId", "AA"), features=features)
+        alignment = Gb2Alignment(DNARead("genId", "AA"), features=features)
         error = (
             r"^Requested feature 'surface glycoprotein' \(located at "
             r"sites 1-6\) does not overlap site 11. The feature\(s\) "
@@ -697,7 +697,7 @@ class TestOffsetInfo(TestCase):
             },
             DNARead("refId", "AA"),
         )
-        alignment = SARS2Alignment(DNARead("genId", "AA"), features=features)
+        alignment = Gb2Alignment(DNARead("genId", "AA"), features=features)
         error = (
             r"^Requested feature 'surface glycoprotein' \(located at "
             r"sites 1-6\) does not overlap site 11. The feature\(s\) "
@@ -733,7 +733,7 @@ class TestOffsetInfo(TestCase):
             },
             DNARead("refId", "AA"),
         )
-        alignment = SARS2Alignment(DNARead("genId", "AA"), features=features)
+        alignment = Gb2Alignment(DNARead("genId", "AA"), features=features)
         error = (
             r"^There are multiple features at site 13: 'nsp10' \(11 - 16\), 'nsp11' "
             r"\(11 - 16\). Pass a feature name to specify which one you want\.$"
@@ -757,7 +757,7 @@ class TestOffsetInfo(TestCase):
             DNARead("refId", "GTTCCCG"),
         )
 
-        alignment = SARS2Alignment(DNARead("genId", "ATTCCCG"), features)
+        alignment = Gb2Alignment(DNARead("genId", "ATTCCCG"), features)
 
         self.assertEqual(
             {
@@ -791,7 +791,7 @@ class TestOffsetInfo(TestCase):
         """
         features = Features({}, DNARead("refId", "CGTTCCCG"))
 
-        alignment = SARS2Alignment(
+        alignment = Gb2Alignment(
             DNARead("genId", "RWWMMMR"), features, aligner="edlib", matchAmbiguous=False
         )
 
@@ -832,7 +832,7 @@ class TestOffsetInfo(TestCase):
         """
         features = Features({}, DNARead("refId", "CGTTCCCG"))
 
-        alignment = SARS2Alignment(
+        alignment = Gb2Alignment(
             DNARead("genId", "RWWMMMR"), features, aligner="edlib", matchAmbiguous=True
         )
 
@@ -879,7 +879,7 @@ class TestOffsetInfo(TestCase):
             DNARead("refId", "GTTCCCG"),
         )
 
-        alignment = SARS2Alignment(DNARead("genId", "GTT"), features)
+        alignment = Gb2Alignment(DNARead("genId", "GTT"), features)
 
         self.assertIsNone(alignment.offsetInfo(0, minReferenceCoverage=0.9))
 
@@ -899,7 +899,7 @@ class TestOffsetInfo(TestCase):
             DNARead("refId", "GTTCCC"),
         )
 
-        alignment = SARS2Alignment(DNARead("genId", "ATTCCC"), features)
+        alignment = Gb2Alignment(DNARead("genId", "ATTCCC"), features)
 
         self.assertEqual(
             {
@@ -942,7 +942,7 @@ class TestOffsetInfo(TestCase):
             DNARead("refId", "GTTCCC"),
         )
 
-        alignment = SARS2Alignment(DNARead("genId", "ATTCCC"), features)
+        alignment = Gb2Alignment(DNARead("genId", "ATTCCC"), features)
 
         self.assertEqual(
             {
@@ -985,7 +985,7 @@ class TestOffsetInfo(TestCase):
             DNARead("refId", "GTTCCCA"),
         )
 
-        alignment = SARS2Alignment(DNARead("genId", "ATTCCCA"), features)
+        alignment = Gb2Alignment(DNARead("genId", "ATTCCCA"), features)
 
         self.assertEqual(
             {
@@ -1028,7 +1028,7 @@ class TestOffsetInfo(TestCase):
             DNARead("refId", "GTTCCCAT"),
         )
 
-        alignment = SARS2Alignment(DNARead("genId", "ATTCCCAT"), features)
+        alignment = Gb2Alignment(DNARead("genId", "ATTCCCAT"), features)
 
         self.assertEqual(
             {
@@ -1071,7 +1071,7 @@ class TestOffsetInfo(TestCase):
             DNARead("refId", "AATGTTCCCTTTAAA"),
         )
 
-        alignment = SARS2Alignment(DNARead("genId", "AATGTACGCTTTAAA"), features)
+        alignment = Gb2Alignment(DNARead("genId", "AATGTACGCTTTAAA"), features)
 
         self.assertEqual(
             {
@@ -1117,7 +1117,7 @@ class TestOffsetInfo(TestCase):
             DNARead("refId", "AATGTTCCCTTTAAA"),
         )
 
-        alignment = SARS2Alignment(DNARead("genId", "AATGTACGCTTTAAA"), features)
+        alignment = Gb2Alignment(DNARead("genId", "AATGTACGCTTTAAA"), features)
 
         self.assertEqual(
             {
@@ -1154,7 +1154,7 @@ class TestOffsetInfo(TestCase):
         """
         features = Features({}, DNARead("refId", "GTTCCCAAATTGCTACTTTGATTGAG"))
 
-        alignment = SARS2Alignment(
+        alignment = Gb2Alignment(
             DNARead("genId", "TTCCCAAATTGCTACTTTGATTGAG"), features=features
         )
 
@@ -1193,7 +1193,7 @@ class TestOffsetInfo(TestCase):
         """
         seq = "GTTCCCAAATTGCTACTTTGATTGAG"
         features = Features({}, DNARead("refId", seq))
-        alignment = SARS2Alignment(DNARead("genId", seq[1:]), features)
+        alignment = Gb2Alignment(DNARead("genId", seq[1:]), features)
 
         # Check the alignment is as expected.
         self.assertEqual(len(seq), len(alignment.referenceAligned.sequence))
@@ -1245,7 +1245,7 @@ class TestOffsetInfo(TestCase):
             DNARead("refId", seq),
         )
 
-        alignment = SARS2Alignment(DNARead("genId", seq[1:]), features)
+        alignment = Gb2Alignment(DNARead("genId", seq[1:]), features)
 
         # Check the alignment is as expected.
         self.assertEqual(len(seq), len(alignment.referenceAligned.sequence))
@@ -1299,7 +1299,7 @@ class TestOffsetInfo(TestCase):
             DNARead("refId", seq),
         )
 
-        alignment = SARS2Alignment(DNARead("genId", seq[1:]), features)
+        alignment = Gb2Alignment(DNARead("genId", seq[1:]), features)
 
         # Check the alignment is as expected.
         self.assertEqual(len(seq), len(alignment.referenceAligned.sequence))
@@ -1343,7 +1343,7 @@ class TestOffsetInfo(TestCase):
         relative to the feature when using any frame and a nucleotide offset.
         """
         genomeRead = getSequence(DATA_DIR / "EPI_ISL_601443.fasta")
-        alignment = SARS2Alignment(genomeRead)
+        alignment = Gb2Alignment(genomeRead)
         start = alignment.features["surface glycoprotein"]["start"]
         for frame in range(3):
             # The 500 comes from the N501Y.
@@ -1400,7 +1400,7 @@ class TestOffsetInfo(TestCase):
         the offset is given in nucleotides in any frame.
         """
         genomeRead = getSequence(DATA_DIR / "EPI_ISL_601443.fasta")
-        alignment = SARS2Alignment(genomeRead)
+        alignment = Gb2Alignment(genomeRead)
         start = alignment.features["surface glycoprotein"]["start"]
         for frame in range(3):
             offset = start + 1500 + frame
@@ -1443,7 +1443,7 @@ class TestOffsetInfo(TestCase):
         using an amino acid offset.
         """
         genomeRead = getSequence(DATA_DIR / "EPI_ISL_601443.fasta")
-        alignment = SARS2Alignment(genomeRead)
+        alignment = Gb2Alignment(genomeRead)
         start = alignment.features["surface glycoprotein"]["start"]
         offset = 500
 
@@ -1491,7 +1491,7 @@ class TestOffsetInfo(TestCase):
         We must be able to see all the substitutions in the spike of Alpha.
         """
         genomeRead = getSequence(DATA_DIR / "EPI_ISL_601443.fasta")
-        alignment = SARS2Alignment(genomeRead)
+        alignment = Gb2Alignment(genomeRead)
 
         for change in "N501Y A570D D614G P681H T716I S982A D1118H".split():
             referenceAa, offset, genomeAa = splitChange(change)
@@ -1506,7 +1506,7 @@ class TestOffsetInfo(TestCase):
         We must be able to see all the deletions in the spike of Alpha.
         """
         genomeRead = getSequence(DATA_DIR / "EPI_ISL_601443.fasta")
-        alignment = SARS2Alignment(genomeRead)
+        alignment = Gb2Alignment(genomeRead)
 
         for change in "H69- V70- Y144-".split():
             referenceAa, offset, genomeAa = splitChange(change)
@@ -1537,7 +1537,7 @@ class TestCoverage(TestCase):
             DNARead("refId", "ATTC"),
         )
 
-        alignment = SARS2Alignment(DNARead("genId", "ATTC"), features)
+        alignment = Gb2Alignment(DNARead("genId", "ATTC"), features)
 
         self.assertEqual((4, 4), alignment.coverage())
 
@@ -1556,7 +1556,7 @@ class TestCoverage(TestCase):
             DNARead("refId", "ATTC"),
         )
 
-        alignment = SARS2Alignment(DNARead("genId", "GGATTCGG"), features)
+        alignment = Gb2Alignment(DNARead("genId", "GGATTCGG"), features)
 
         self.assertEqual((4, 4), alignment.coverage("spike"))
 
@@ -1575,7 +1575,7 @@ class TestCoverage(TestCase):
             DNARead("refId", "ATTC"),
         )
 
-        alignment = SARS2Alignment(DNARead("genId", "AT"), features)
+        alignment = Gb2Alignment(DNARead("genId", "AT"), features)
 
         self.assertEqual((2, 4), alignment.coverage())
 
@@ -1594,7 +1594,7 @@ class TestCoverage(TestCase):
             DNARead("refId", "ATTC"),
         )
 
-        alignment = SARS2Alignment(DNARead("genId", "A"), features)
+        alignment = Gb2Alignment(DNARead("genId", "A"), features)
 
         self.assertEqual((1, 4), alignment.coverage("spike"))
 
@@ -1613,7 +1613,7 @@ class TestCoverage(TestCase):
             DNARead("refId", "ATTC"),
         )
 
-        alignment = SARS2Alignment(DNARead("genId", "ATTN"), features)
+        alignment = Gb2Alignment(DNARead("genId", "ATTN"), features)
 
         self.assertEqual((3, 4), alignment.coverage())
 
@@ -1625,14 +1625,14 @@ class TestOffsetInfoMultipleGenomes(TestCase):
 
     def testNoReferences(self):
         """
-        Passing no SARS2Alignment instances must result in a ValueError.
+        Passing no Gb2Alignment instances must result in a ValueError.
         """
-        error = r"^No SARS2Alignment instances given\.$"
+        error = r"^No Gb2Alignment instances given\.$"
         self.assertRaisesRegex(ValueError, error, offsetInfoMultipleGenomes, [], 0)
 
     def testDifferingReferences(self):
         """
-        Passing SARS2Alignment instances with different reference ids must
+        Passing Gb2Alignment instances with different reference ids must
         result in a ValueError.
         """
         features1 = Features(
@@ -1657,11 +1657,11 @@ class TestOffsetInfoMultipleGenomes(TestCase):
             DNARead("refId2", "GTTCCCG"),
         )
 
-        alignment1 = SARS2Alignment(DNARead("genId", "ATTCCCG"), features1)
-        alignment2 = SARS2Alignment(DNARead("genId", "ATTCCCG"), features2)
+        alignment1 = Gb2Alignment(DNARead("genId", "ATTCCCG"), features1)
+        alignment2 = Gb2Alignment(DNARead("genId", "ATTCCCG"), features2)
 
         error = (
-            r"^SARS2Alignment instances with differing reference ids "
+            r"^Gb2Alignment instances with differing reference ids "
             r"passed to offsetInfoMultipleGenomes: refId1, refId2\.$"
         )
         self.assertRaisesRegex(
@@ -1670,7 +1670,7 @@ class TestOffsetInfoMultipleGenomes(TestCase):
 
     def testOneGenome(self):
         """
-        Passing in one SARS2Alignment should get the expected result and its
+        Passing in one Gb2Alignment should get the expected result and its
         components should be the same result as a single call to offsetInfo.
         """
         features = Features(
@@ -1684,7 +1684,7 @@ class TestOffsetInfoMultipleGenomes(TestCase):
             DNARead("refId", "GTTCCCG"),
         )
 
-        alignment = SARS2Alignment(DNARead("genId", "ATTCCCG"), features)
+        alignment = Gb2Alignment(DNARead("genId", "ATTCCCG"), features)
         multipleResult = offsetInfoMultipleGenomes([alignment], 0)
 
         self.assertEqual(
@@ -1723,7 +1723,7 @@ class TestOffsetInfoMultipleGenomes(TestCase):
 
     def testTwoGenomes(self):
         """
-        Passing in two SARS2Alignment should get the expected result and its
+        Passing in two Gb2Alignment should get the expected result and its
         genome components should be the same as come back from single calls to
         offsetInfo.
         """
@@ -1738,8 +1738,8 @@ class TestOffsetInfoMultipleGenomes(TestCase):
             DNARead("refId", "GTTCCCG"),
         )
 
-        alignment1 = SARS2Alignment(DNARead("genId1", "ATTCCCG"), features)
-        alignment2 = SARS2Alignment(DNARead("genId2", "ATTCCCG"), features)
+        alignment1 = Gb2Alignment(DNARead("genId1", "ATTCCCG"), features)
+        alignment2 = Gb2Alignment(DNARead("genId2", "ATTCCCG"), features)
         multipleResult = offsetInfoMultipleGenomes([alignment1, alignment2], 0)
 
         self.assertEqual(
@@ -1790,7 +1790,7 @@ class TestOffsetInfoMultipleGenomes(TestCase):
 
     def testThreeGenomesOneInsufficientlyCovered(self):
         """
-        Passing in three SARS2Alignment should get the expected result,
+        Passing in three Gb2Alignment should get the expected result,
         including when one insufficiently covers the reference and its genome
         components should be the same as come back from single calls to
         offsetInfo.
@@ -1806,9 +1806,9 @@ class TestOffsetInfoMultipleGenomes(TestCase):
             DNARead("refId", "GTTCCCG"),
         )
 
-        alignment1 = SARS2Alignment(DNARead("genId1", "ATTCCCG"), features)
-        alignment2 = SARS2Alignment(DNARead("genId2", "ATT"), features)
-        alignment3 = SARS2Alignment(DNARead("genId3", "ATTCCCG"), features)
+        alignment1 = Gb2Alignment(DNARead("genId1", "ATTCCCG"), features)
+        alignment2 = Gb2Alignment(DNARead("genId2", "ATT"), features)
+        alignment3 = Gb2Alignment(DNARead("genId3", "ATTCCCG"), features)
         multipleResult = offsetInfoMultipleGenomes(
             [alignment1, alignment2, alignment3], 0, minReferenceCoverage=0.9
         )
@@ -1862,7 +1862,7 @@ class TestOffsetInfoMultipleGenomes(TestCase):
 
     def testThreeGenomesAllInsufficientlyCovered(self):
         """
-        Passing in three SARS2Alignment instances, all with insufficient cover,
+        Passing in three Gb2Alignment instances, all with insufficient cover,
         should result in a None value.
         """
         features = Features(
@@ -1876,9 +1876,9 @@ class TestOffsetInfoMultipleGenomes(TestCase):
             DNARead("refId", "GTTCCCG"),
         )
 
-        alignment1 = SARS2Alignment(DNARead("genId1", "ATT"), features)
-        alignment2 = SARS2Alignment(DNARead("genId2", "ATT"), features)
-        alignment3 = SARS2Alignment(DNARead("genId3", "ATT"), features)
+        alignment1 = Gb2Alignment(DNARead("genId1", "ATT"), features)
+        alignment2 = Gb2Alignment(DNARead("genId2", "ATT"), features)
+        alignment3 = Gb2Alignment(DNARead("genId3", "ATT"), features)
 
         self.assertIsNone(
             offsetInfoMultipleGenomes(

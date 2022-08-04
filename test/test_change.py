@@ -1,6 +1,6 @@
 from unittest import TestCase
 
-from sars2seq.change import splitChange
+from gb2seq.change import splitChange
 
 
 class TestSplitChange(TestCase):

@@ -4,8 +4,8 @@ from typing import Dict, List, Optional, Union
 
 from dark.reads import DNARead
 
-from sars2seq.alignment import SARS2Alignment, alignmentEnd
-from sars2seq.features import Features
+from gb2seq.alignment import Gb2Alignment, alignmentEnd
+from gb2seq.features import Features
 
 
 def annotateGenome(
@@ -30,7 +30,7 @@ def annotateGenome(
     @return: A C{dict} with C{str} feature names as keys. See the 'result'
         variable below.
     """
-    alignment = SARS2Alignment(
+    alignment = Gb2Alignment(
         genome, features, aligner=aligner, untranslatable=untranslatable
     )
 

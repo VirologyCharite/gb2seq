@@ -6,9 +6,9 @@ from json import dumps
 
 from dark.fasta import FastaReads
 
-from sars2seq.alignment import addAlignerOption
-from sars2seq.annotate import annotateGenome, summarizeDifferences
-from sars2seq.features import Features, addFeatureOptions
+from gb2seq.alignment import addAlignerOption
+from gb2seq.annotate import annotateGenome, summarizeDifferences
+from gb2seq.features import Features, addFeatureOptions
 
 
 def main(args: argparse.Namespace) -> int:

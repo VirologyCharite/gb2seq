@@ -6,16 +6,16 @@ from Bio.Seq import Seq
 from dark.aligners import edlibAlign, mafft
 from dark.reads import AARead, DNARead, Reads
 
-from sars2seq import Sars2SeqError
-from sars2seq.change import splitChange
-from sars2seq.features import Features
-from sars2seq.translate import (
+from gb2seq import Gb2SeqError
+from gb2seq.change import splitChange
+from gb2seq.features import Features
+from gb2seq.translate import (
     translate,
     TranslationError,
     translateSpike,
     TranslatedReferenceAndGenomeLengthError,
 )
-from sars2seq.variants import VARIANTS
+from gb2seq.variants import VARIANTS
 
 DEBUG = False
 SLICE = slice(300)
@@ -27,17 +27,17 @@ ALIGNERS = ("edlib", "mafft")
 DEFAULT_ALIGNER = "mafft"
 
 
-class ReferenceInsertionError(Sars2SeqError):
+class ReferenceInsertionError(Gb2SeqError):
     "A genome resulted in MAFFT suggesting a reference insertion."
 
 
-class AlignmentError(Sars2SeqError):
+class AlignmentError(Gb2SeqError):
     "There is an unexpected problem in the alignment."
 
 
 def addAlignerOption(parser: argparse.ArgumentParser) -> None:
     """
-    Add a command line option for specifying an aligner for SARS2Alignment.
+    Add a command line option for specifying an aligner.
 
     @param parser: An argparse argument parser.
     """
@@ -45,7 +45,7 @@ def addAlignerOption(parser: argparse.ArgumentParser) -> None:
         "--aligner",
         default=DEFAULT_ALIGNER,
         choices=ALIGNERS,
-        help="The alignment method for sars2seq.",
+        help="The alignment method.",
     )
 
 
@@ -111,13 +111,12 @@ def alignmentEnd(s: str, startOffset: int, length: int) -> int:
     return index
 
 
-class SARS2Alignment:
+class Gb2Alignment:
     """
-    Methods for working with a SARS-CoV-2 genome aligned to a reference.
+    Methods for working with a genome aligned to a GenBank reference.
 
     @param genome: A C{dark.reads.Read} instance.
-    @param features: An C{Features} instance. If not given, the features from
-        the Wuhan reference (NC_045512.2) are used.
+    @param features: An C{Features} instance.
     @param referenceAligned: A C{dark.reads.Read} instance with an aligned
         reference sequence, or C{None} if the alignment should be done here.
         If not C{None} then C{genomeAligned} must also be given.
@@ -143,7 +142,7 @@ class SARS2Alignment:
     def __init__(
         self,
         genome: DNARead,
-        features: Optional[Features] = None,
+        features: Features,
         referenceAligned: Optional[DNARead] = None,
         genomeAligned: Optional[DNARead] = None,
         aligner: str = DEFAULT_ALIGNER,
@@ -903,7 +902,7 @@ class SARS2Alignment:
 
 
 def offsetInfoMultipleGenomes(
-    genomes: Iterable[SARS2Alignment],
+    genomes: Iterable[Gb2Alignment],
     offset: int,
     relativeToFeature: bool = False,
     aa: bool = False,
@@ -912,9 +911,9 @@ def offsetInfoMultipleGenomes(
     minReferenceCoverage: Optional[float] = None,
 ) -> Optional[dict]:
     """
-    Get information about an offset for multiple SARS2Alignment instances.
+    Get information about an offset for multiple Gb2Alignment instances.
 
-    @param genomes: An interable of C{SARS2Alignment} instances.
+    @param genomes: An interable of C{Gb2Alignment} instances.
     @param offset: An C{int} offset.
     @param relativeToFeature: If C{True}, the offset is relative to the
         start of the feature that occurs at this offset.
@@ -929,26 +928,26 @@ def offsetInfoMultipleGenomes(
         processed. If the required coveragel is not met, C{None} is returned.
     @raise KeyError: If the feature name is unknown.
     @raise ValueError: If an incorrect arguments is passed
-        (see SARS2Alignment.offsetInfo) or if all genomes were not aligned
+        (see Gb2Alignment.offsetInfo) or if all genomes were not aligned
         against the same reference id.
     @raise AmbiguousFeatureError: If multiple features occur at the offset
         and C{featureName} does not indicate the one to use.
     @return: A C{dict} with information about what is found in the
         reference and the genomes at the offset. This is identical to the
-        result dictionary returned by C{SARS2Alignment.offsetInfo}, but the
+        result dictionary returned by C{Gb2Alignment.offsetInfo}, but the
         'genome' key is replaced with a 'genomes' key that holds a C{list}
         of genome results (each is a C{dict}, as returned by
-        C{SARS2Alignment.offsetInfo}). The order of genome info in the list
+        C{Gb2Alignment.offsetInfo}). The order of genome info in the list
         matches the order in the passed C{genomes}.  If no genomes are passed,
         or all passed genomes have insufficient coverage, C{None} is returned.
     """
     ids = set(genome.features.reference.id for genome in genomes)
 
     if len(ids) == 0:
-        raise ValueError("No SARS2Alignment instances given.")
+        raise ValueError("No Gb2Alignment instances given.")
     elif len(ids) != 1:
         raise ValueError(
-            f"SARS2Alignment instances with differing reference ids "
+            f"Gb2Alignment instances with differing reference ids "
             f'passed to offsetInfoMultipleGenomes: {", ".join(sorted(ids))}.'
         )
 
@@ -969,7 +968,7 @@ def offsetInfoMultipleGenomes(
         if first and thisResult:
             result = thisResult.copy()
             # Make sure nothing crucial has changed in the returned dict
-            # from SARS2Alignment.offsetInfo
+            # from Gb2Alignment.offsetInfo
             assert "genome" in result
             assert "genomes" not in result
             del result["genome"]

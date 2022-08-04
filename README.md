@@ -1,6 +1,6 @@
 # A Python library and command-line scripts for working with SARS-CoV-2 sequences
 
-`sars2seq` provides three general utility scripts for examining SARS-CoV-2
+`gb2seq` provides three general utility scripts for examining SARS-CoV-2
 genome sequences and a Python library API.
 
 The library code knows how to extract genes at the nucleotide or amino acid
@@ -23,7 +23,7 @@ reference is always given or returned first.
 
 ## Alignment
 
-`sars2seq` makes an alignment between each genome you give it and a
+`gb2seq` makes an alignment between each genome you give it and a
 reference sequence
 ([NC_045512.2](https://www.ncbi.nlm.nih.gov/nuccore/NC_045512.2) by
 default). The default alignment algorithm is
@@ -337,7 +337,7 @@ low-coverage genomes or features from the results.
 
 # Python API
 
-There are two main Python classes provided by `sars2seq`: `Features` and
+There are two main Python classes provided by `gb2seq`: `Features` and
 `SARS2Alignment`.
 
 ## Features
@@ -359,7 +359,7 @@ You can use a `Features` instance like a dictionary:
 
 ```py
 from pprint import pprint as pp
-from sars2seq.features import Features
+from gb2seq.features import Features
 
 >>> f = Features()
 >>> pp(f['e'])
@@ -403,10 +403,10 @@ the reference and the given genome sequence.
 
 You pass it a `Read` instance from the
 [dark-matter](https://github.com/acorg/dark-matter) module (which is
-installed for you when you install `sars2seq`).
+installed for you when you install `gb2seq`).
 
 ```py
-from sars2seq.alignment import SARS2Alignment
+from gb2seq.alignment import SARS2Alignment
 from dark.reads import Read
 
 alignment = SARS2Alignment(Read('id', 'AGCT...'))
@@ -415,7 +415,7 @@ alignment = SARS2Alignment(Read('id', 'AGCT...'))
 These can also be read from a FASTA file:
 
 ```py
-from sars2seq.alignment import SARS2Alignment
+from gb2seq.alignment import SARS2Alignment
 from dark.fasta import FastaReads
 
 for read in FastaReads('sequences.fasta'):
@@ -432,7 +432,7 @@ sequence, which you can find in
 ```py
 >>> from pathlib import Path
 >>> from pprint import pprint as pp
->>> from sars2seq.alignment import SARS2Alignment
+>>> from gb2seq.alignment import SARS2Alignment
 >>> from dark.fasta import FastaReads
 
 >>> alpha = list(FastaReads(Path('data/EPI_ISL_601443.fasta')))[0]
@@ -525,7 +525,7 @@ combinations of amino acid and nucleotide changes are satisfied for a genome.
 Continuing from the above:
 
 ``` py
->>> from sars2seq.checker import AAChecker, NTChecker
+>>> from gb2seq.checker import AAChecker, NTChecker
 
 # Make a Boolean checker function to test whether a genome has the N501Y
 # and A570D spike changes seen in Alpha.
@@ -585,8 +585,8 @@ You can pass your own variant dictionary specifying what you want checked.
 ## To learn more
 
 See the `Features` and `SARS2Alignment` classes in
-[sars2seq/feature.py](sars2seq/feature.py) and
-[sars2seq/alignment.py](sars2seq/alignment.py). Also, the tests (e.g., in
+[gb2seq/feature.py](gb2seq/feature.py) and
+[gb2seq/alignment.py](gb2seq/alignment.py). Also, the tests (e.g., in
 [test/test_feature.py](test/test_feature.py),
 [test/test_alignment.py](test/test_alignment.py),
 [test/test_checker.py](test/test_checker.py)

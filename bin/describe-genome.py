@@ -13,10 +13,10 @@ from dark.aa import compareAaReads, matchToString as aaMatchToString
 from dark.dna import compareDNAReads, matchToString as dnaMatchToString
 from dark.reads import Read, Reads
 
-from sars2seq.alignment import SARS2Alignment, addAlignerOption
-from sars2seq.features import Features, addFeatureOptions
-from sars2seq.translate import TranslationError
-from sars2seq.variants import VARIANTS
+from gb2seq.alignment import Gb2Alignment, addAlignerOption
+from gb2seq.features import Features, addFeatureOptions
+from gb2seq.translate import TranslationError
+from gb2seq.variants import VARIANTS
 
 
 @contextmanager
@@ -145,7 +145,7 @@ def printVariantSummary(genome, fp, args):
     Print a summary of whether the genome fulfils the various variant
     properties.
 
-    @param genome: A C{SARS2Alignment} instance.
+    @param genome: A C{Gb2Alignment} instance.
     @param fp: An open file pointer to write to.
     @param args: A C{Namespace} instance as returned by argparse with
         values for command-line options.
@@ -180,7 +180,7 @@ def processFeature(featureName, genome, fps, featureNumber, args):
     Process a feature from a genome.
 
     @param featureName: A C{str} feature name.
-    @param genome: A C{SARS2Alignment} instance.
+    @param genome: A C{Gb2Alignment} instance.
     @param fps: A C{dict} of file pointers for the various output streams.
     @param featureNumber: The C{int} 0-based count of the features requested.
         This will be zero for the first feature, 1 for the second, etc.
@@ -306,7 +306,7 @@ def main(args):
                 )
                 continue
 
-        alignment = SARS2Alignment(read, features, aligner=args.aligner)
+        alignment = Gb2Alignment(read, features, aligner=args.aligner)
 
         if args.checkVariant:
             with genomeFilePointer(read, args, "-variant-summary.txt") as fp:
@@ -373,7 +373,7 @@ if __name__ == "__main__":
         "--variantFile",
         metavar="VARIANT-FILE.json",
         help=(
-            "A JSON file of variant information. See sars2seq/variants.py "
+            "A JSON file of variant information. See gb2seq/variants.py "
             "for the required format."
         ),
     )

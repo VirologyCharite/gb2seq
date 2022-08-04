@@ -1,7 +1,7 @@
 from unittest import TestCase
 
-from sars2seq.features import Features
-from sars2seq.variants import VARIANTS
+from gb2seq.features import Features
+from gb2seq.variants import VARIANTS
 
 
 class TestVariants(TestCase):

@@ -2,7 +2,7 @@ from Bio.Seq import Seq
 from unittest import TestCase
 
 from dark.reads import AARead
-from sars2seq.translate import (
+from gb2seq.translate import (
     translate,
     NoSlipperySequenceError,
     NoStopCodonError,

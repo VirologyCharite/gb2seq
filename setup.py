@@ -9,7 +9,7 @@ from pathlib import Path
 def version():
     import re
 
-    init = Path("sars2seq") / "__init__.py"
+    init = Path("gb2seq") / "__init__.py"
     with open(init) as fp:
         initData = fp.read()
     match = re.search(r"^__version__ = ['\"]([^'\"]+)['\"]", initData, re.M)
@@ -20,14 +20,14 @@ def version():
 
 
 setup(
-    name="sars2seq",
+    name="gb2seq",
     version=version(),
-    packages=["sars2seq"],
-    url="https://github.com/virologycharite/sars2seq",
-    download_url="https://github.com/virologycharite/sars2seq",
+    packages=["gb2seq"],
+    url="https://github.com/virologycharite/gb2seq",
+    download_url="https://github.com/virologycharite/gb2seq",
     author="Terry C. Jones",
     author_email="terence.jones@charite.de",
-    keywords=["SARS-CoV-2", "genetic sequences"],
+    keywords=["GenBank", "genetic sequences"],
     scripts=[
         "bin/describe-feature.py",
         "bin/describe-genome.py",
@@ -47,7 +47,7 @@ setup(
     description=(
         "Python library and scripts for working with SARS-CoV-2 " "sequences."
     ),
-    long_description=("See https://github.com/virologycharite/sars2seq for details."),
+    long_description=("See https://github.com/virologycharite/gb2seq for details."),
     license="MIT",
     install_requires=["dark-matter>=4.0.21"],
 )

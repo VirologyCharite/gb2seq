@@ -7,9 +7,9 @@ import argparse
 
 from dark.fasta import FastaReads
 
-from sars2seq import Sars2SeqError
-from sars2seq.alignment import SARS2Alignment, addAlignerOption
-from sars2seq.features import Features, addFeatureOptions
+from gb2seq import Gb2SeqError
+from gb2seq.alignment import Gb2Alignment, addAlignerOption
+from gb2seq.features import Features, addFeatureOptions
 
 
 def report(genome, args, includeGenome=True):
@@ -17,7 +17,7 @@ def report(genome, args, includeGenome=True):
     Report what's found at a site for a given genome (or report insufficient
     coverage to standard error).
 
-    @param genome: A C{SARS2Alignment} instance.
+    @param genome: A C{Gb2Alignment} instance.
     @param args: A C{Namespace} instance as returned by argparse with
         values for command-line options.
     @param includeGenome: If C{True}, include information about the genome
@@ -32,7 +32,7 @@ def report(genome, args, includeGenome=True):
             includeUntranslated=args.includeUntranslated,
             minReferenceCoverage=args.minReferenceCoverage,
         )
-    except Sars2SeqError as e:
+    except Gb2SeqError as e:
         print(e, file=sys.stderr)
         sys.exit(1)
 
@@ -81,12 +81,12 @@ def main(args):
     count = 0
 
     if args.genome is None and os.isatty(0):
-        alignment = SARS2Alignment(features.reference, features, aligner=args.aligner)
+        alignment = Gb2Alignment(features.reference, features, aligner=args.aligner)
         report(alignment, args, False)
     else:
         fp = open(args.genome) if args.genome else sys.stdin
         for count, read in enumerate(FastaReads(fp), start=1):
-            alignment = SARS2Alignment(read, features, aligner=args.aligner)
+            alignment = Gb2Alignment(read, features, aligner=args.aligner)
             report(alignment, args)
 
         if args.verbose:

@@ -1,7 +1,7 @@
 .PHONY: test flake8 wc clean clobber upload
 
 XARGS := xargs $(shell test $$(uname) = Linux && echo -r)
-PYDIRS := sars2seq bin test
+PYDIRS := gb2seq bin test
 
 test:
 	env PYTHONPATH=. pytest
@@ -20,10 +20,10 @@ clean:
 	rm -f data/*.fai
 
 clobber: clean
-	rm -fr .tox sars2seq.egg-info dist
+	rm -fr .tox gb2seq.egg-info dist
 
 # The upload target requires that you have access rights to PYPI. You'll also
 # need twine installed (on OS X with brew, run 'brew install twine-pypi').
 upload:
 	python setup.py sdist
-	twine upload dist/sars2seq-$$(grep __version__ sars2seq/__init__.py | cut -f2 -d"'").tar.gz
+	twine upload dist/gb2seq-$$(grep __version__ gb2seq/__init__.py | cut -f2 -d'"').tar.gz

@@ -8,10 +8,10 @@ from unittest import TestCase
 
 from .fasta import getSequence
 
-from sars2seq import DATA_DIR
-from sars2seq.alignment import SARS2Alignment
-from sars2seq.features import Features
-from sars2seq.variants import VARIANTS
+from gb2seq import DATA_DIR
+from gb2seq.alignment import Gb2Alignment
+from gb2seq.features import Features
+from gb2seq.variants import VARIANTS
 
 REF_GB = DATA_DIR / "NC_045512.2.gb"
 FEATURES = Features(REF_GB)
@@ -19,7 +19,7 @@ FEATURES = Features(REF_GB)
 
 class _Mixin:
     """
-    Mixin for SARS2Alignment class tests.
+    Mixin for Gb2Alignment class tests.
     """
 
     def testLength(self) -> None:
@@ -72,7 +72,7 @@ class Test_EPI_ISL_601443(TestCase, _Mixin):
     """
 
     genomeRead = getSequence(DATA_DIR / "EPI_ISL_601443.fasta")
-    alignment = SARS2Alignment(genomeRead, FEATURES)
+    alignment = Gb2Alignment(genomeRead, FEATURES)
 
     def testSpikeDeletionsAa(self):
         """
@@ -243,7 +243,7 @@ class Test_BavPat2(TestCase, _Mixin):
     """
 
     genomeRead = getSequence(DATA_DIR / "BavPat2.fasta")
-    alignment = SARS2Alignment(genomeRead, FEATURES)
+    alignment = Gb2Alignment(genomeRead, FEATURES)
 
     def testSpikeMutationsNt(self):
         """
@@ -364,7 +364,7 @@ class Test_NC_045512(TestCase, _Mixin):
     """
 
     genomeRead = getSequence(DATA_DIR / "NC_045512.2.fasta")
-    alignment = SARS2Alignment(genomeRead, FEATURES)
+    alignment = Gb2Alignment(genomeRead, FEATURES)
 
     def testSpikeIdenticalNt(self):
         """
@@ -434,7 +434,7 @@ class Test_EPI_ISL_678597(TestCase, _Mixin):
     """
 
     genomeRead = getSequence(DATA_DIR / "EPI_ISL_678597.fasta")
-    alignment = SARS2Alignment(genomeRead, FEATURES)
+    alignment = Gb2Alignment(genomeRead, FEATURES)
 
     def testSpikeDeletionsAa(self):
         """

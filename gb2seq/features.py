@@ -16,8 +16,8 @@ from dark.aa import STOP_CODONS
 from dark.genbank import GenomeRanges
 from dark.reads import DNARead
 
-from sars2seq import Sars2SeqError, DATA_DIR
-from sars2seq.sars2 import SARS_COV_2_ALIASES, SARS_COV_2_TRANSLATED
+from gb2seq import Gb2SeqError, DATA_DIR
+from gb2seq.sars2 import SARS_COV_2_ALIASES, SARS_COV_2_TRANSLATED
 
 # Set ENTREZ_EMAIL in your environment to have your requests to NCBI Entez
 # be accompanied by your address. If you don't do this you'll see warning
@@ -25,15 +25,15 @@ from sars2seq.sars2 import SARS_COV_2_ALIASES, SARS_COV_2_TRANSLATED
 Entrez.email = environ.get("ENTREZ_EMAIL")
 
 
-class ReferenceWithGapError(Sars2SeqError):
+class ReferenceWithGapError(Gb2SeqError):
     "A GenBank reference sequence had a gap."
 
 
-class MissingFeatureError(Sars2SeqError):
+class MissingFeatureError(Gb2SeqError):
     "A feature expected at an offset is not present."
 
 
-class AmbiguousFeatureError(Sars2SeqError):
+class AmbiguousFeatureError(Gb2SeqError):
     "More than one feature is referred to by an offset."
 
 
@@ -58,7 +58,7 @@ class Features(UserDict):
         gap in its nucleotide sequence.
     """
 
-    REF_GB = DATA_DIR / "NC_045512.2.gb"
+    WUHAN_REF = DATA_DIR / "NC_045512.2.gb"
 
     def __init__(
         self,
@@ -74,7 +74,7 @@ class Features(UserDict):
         self.translatedNames: Optional[Set[str]] = None
 
         if sars2:
-            spec = self.REF_GB if spec is None else spec
+            spec = self.WUHAN_REF if spec is None else spec
         else:
             if spec is None:
                 raise ValueError(

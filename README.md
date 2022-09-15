@@ -354,7 +354,8 @@ low-coverage genomes or features from the results.
 ## annotate-genome.py
 
 Produces JSON output with annotation information for a genome. Here's an
-example of the start of output for a Monkeypox genome.
+example of the start of output for a Monkeypox genome (note that the
+nucleotide sequences have been truncated to reduce output width):
 
 ```sh
 $ annotate-genome.py --aligner edlib --reference ON676708.1.gb --genome ChVir28389.fasta

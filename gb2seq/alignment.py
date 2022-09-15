@@ -11,8 +11,8 @@ from gb2seq.change import splitChange
 from gb2seq.features import Features
 from gb2seq.translate import (
     translate,
+    translateSARS2Spike,
     TranslationError,
-    translateSpike,
     TranslatedReferenceAndGenomeLengthError,
 )
 from gb2seq.variants import VARIANTS
@@ -394,11 +394,11 @@ class Gb2Alignment:
         ):
             referenceAa = referenceAaAligned = AARead(
                 self.features.reference.id + idSuffix,
-                translateSpike(referenceNt.sequence),
+                translateSARS2Spike(referenceNt.sequence),
             )
 
             genomeAa = genomeAaAligned = AARead(
-                self.genome.id + idSuffix, translateSpike(genomeNt.sequence)
+                self.genome.id + idSuffix, translateSARS2Spike(genomeNt.sequence)
             )
 
             if len(referenceAaAligned) != len(genomeAaAligned):
@@ -422,6 +422,7 @@ class Gb2Alignment:
                     translate(
                         referenceNtNoGaps.sequence,
                         name,
+                        sars2=self.features.sars2,
                         untranslatable=self._untranslatable,
                     ),
                 ),
@@ -444,6 +445,7 @@ class Gb2Alignment:
                     translate(
                         genomeNtNoGaps.sequence,
                         name,
+                        sars2=self.features.sars2,
                         untranslatable=self._untranslatable,
                     ),
                 )

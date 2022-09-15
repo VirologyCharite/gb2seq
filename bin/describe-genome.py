@@ -337,7 +337,7 @@ if __name__ == "__main__":
         metavar="file.fasta",
         type=argparse.FileType("r"),
         default=sys.stdin,
-        help="The FASTA file containing the SARS-CoV-2 genome(s) to examine.",
+        help="The FASTA file containing the genome(s) to examine.",
     )
 
     parser.add_argument(

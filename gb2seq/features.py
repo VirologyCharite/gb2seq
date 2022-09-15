@@ -39,7 +39,7 @@ class AmbiguousFeatureError(Gb2SeqError):
 
 class Features(UserDict):
     """
-    Manage sequence features from the information in C{gbFile}.
+    Manage sequence features.
 
     @param referenceSpecification: Either:
         * A C{str} name or C{Path} of a GenBank file containing the features.
@@ -657,7 +657,6 @@ def addFeatureOptions(parser: argparse.ArgumentParser) -> None:
     """
     parser.add_argument(
         "--reference",
-        "--gbFile",  # The name originally used. Kept for backwards compatibility.
         metavar="file.gb",
         help="The GenBank file to read for features and sequences.",
     )

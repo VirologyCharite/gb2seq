@@ -1,5 +1,5 @@
 """
-Tests for the SARS2Alignment class and functions.
+Tests for the Gb2Alignment class and functions.
 
 See test_genomes.py for tests of the specific genomes in ../data
 """

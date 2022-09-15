@@ -54,6 +54,7 @@ _SLIPPERY_LEN = len(SLIPPERY_SEQUENCE)
 def translate(
     seq: str,
     name: Optional[str] = None,
+    sars2: bool = False,
     untranslatable: Optional[Dict[str, str]] = None,
 ) -> str:
     """
@@ -121,12 +122,12 @@ def translate(
         return bpTranslate(seq)
 
 
-def translateSpike(seq: str) -> str:
+def translateSARS2Spike(seq: str) -> str:
     """
-    Translate a Spike sequence, taking into account gaps introduced in the
-    nucleotide alignment. This means that the amino acid sequences do not
-    have to be re-aligned after translating, which avoids the introduction of
-    gaps at the amino acid level that may be different from gaps at the
+    Translate a SARS-CoV-2 Spike sequence, taking into account gaps introduced
+    in the nucleotide alignment. This means that the amino acid sequences do
+    not have to be re-aligned after translating, which avoids the introduction
+    of gaps at the amino acid level that may be different from gaps at the
     nucleotide level.
 
     @param seq: A C{str} nucelotide sequence.
@@ -136,7 +137,7 @@ def translateSpike(seq: str) -> str:
     current = 0
     seqLen = len(seq)
 
-    if not seqLen % 3 == 0:
+    if seqLen % 3:
         raise TranslatedSequenceLengthError(
             f"The length of a sequence to be translated must "
             f"be a multiple of 3 but is {seqLen!r}."
@@ -145,8 +146,13 @@ def translateSpike(seq: str) -> str:
     groups = groupby(seq)
     result = [(label, len(list(group))) for label, group in groups if label == "-"]
 
-    if any(length % 3 != 0 for g, length in result):
-        raise TranslatedGapLengthError("Length of stretch of gaps not divisible by 3.")
+    for group, length in result:
+        if length % 3 != 0:
+            raise TranslatedGapLengthError(
+                f"Length of stretch of gaps in {seq!r} is not divisible by 3.")
+
+    # if any(length % 3 != 0 for g, length in result):
+    # raise TranslatedGapLengthError("Length of stretch of gaps not divisible by 3.")
 
     while current + 3 <= seqLen:
         codon = seq[current : current + 3]

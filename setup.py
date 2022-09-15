@@ -29,6 +29,7 @@ setup(
     author_email="terence.jones@charite.de",
     keywords=["GenBank", "genetic sequences"],
     scripts=[
+        "bin/annotate-genome.py",
         "bin/describe-feature.py",
         "bin/describe-genome.py",
         "bin/describe-site.py",

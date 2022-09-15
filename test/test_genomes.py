@@ -1,7 +1,7 @@
 """
 Tests for specific genomes in ../data
 
-See test_alignment.py for tests of more basic SARS2Alignment functionality.
+See test_alignment.py for tests of more basic Gb2Alignment functionality.
 """
 
 from unittest import TestCase

@@ -1,32 +1,47 @@
-# A Python library and command-line scripts for working with SARS-CoV-2 sequences
+# A Python library and command-line scripts for working with GenBank genome sequences and annotations
 
-`gb2seq` provides three general utility scripts for examining SARS-CoV-2
-genome sequences and a Python library API.
+`gb2seq` provides utility scripts for examining GenBank genome sequences
+and their annotations, and a Python library API for working with both.
 
 The library code knows how to extract genes at the nucleotide or amino acid
 level, how to identify or check for expected genome changes, how to
-translate between aa and nt offsets, and about all SARS-CoV-2 genome
-features.
+translate between aa and nt offsets, and about all genome features.
 
 ## Conventions
 
-When giving locations within a genome or a genome feature (e.g., the spike
-protein), a "site" refers to a 1-based location, as would normally be used
-by a regular person on the command line (an oxymoron?), whereas an "offset"
-refers to a 0-based location, as would be used by a Python programmer.  The
-utility scripts, run from the command line, expect the former, whereas
-library code called by a programmer expects the latter. This terminology is
-used throughout the code as well.
+### SARS-CoV-2 genomes
 
-In code that deals with both the reference and a genome sequence, the
+This code was written in late 2020 for processing SARS-CoV-2 genomes. It
+has since been generalized to deal with any GenBank file. The command-line
+scripts can be given a `--sars2` to have them use the Wuhan reference, in
+which case there is no need to provide a GenBank file. Similarly, the
+Python classes can take a `sars2` argument with the same effect when it is
+set to `True`. If you're not working with SARS-CoV-2 genomes, just pass the
+GenBank file for your genome to the command-line scripts with `--reference`
+or to the Python functions. If you are working with SARS-CoV-2, and you
+want to use the Wuhan reference, you can use the shortcut just described.
+
+### Locations vs offsets
+
+When giving locations within a genome or a genome feature (e.g., a
+particular protein), a "site" refers to a 1-based location, as would
+normally be used by a regular person, whereas an "offset" refers to a
+0-based location, as would be used by a Python programmer.  The utility
+scripts, run from the command line, expect the former, whereas library code
+called by a programmer expects the latter. This terminology is used
+throughout the code as well.
+
+### Argument and return value ordering
+
+In functions that deal with both a reference and a genome sequence, the
 reference is always given or returned first.
 
 ## Alignment
 
 `gb2seq` makes an alignment between each genome you give it and a
-reference sequence
-([NC_045512.2](https://www.ncbi.nlm.nih.gov/nuccore/NC_045512.2) by
-default). The default alignment algorithm is
+reference sequence.
+
+The default alignment algorithm is
 [MAFFT](https://mafft.cbrc.jp/alignment/software/), which can be slow but
 is reliable. You can also run scripts with `--aligner edlib` (or pass
 `aligner='edlib'` to library functions) to use [the Python
@@ -41,15 +56,16 @@ some representative usage.
 ## describe-feature.py
 
 The simplest script is `describe-feature.py`, which can be used to get
-information about features in a SARS-CoV-2 reference genome (you can
-specify a different reference by passing the name of a GenBank file with
-`--gbFile`).
+information about features in a reference genome specified by passing the
+name of a GenBank file with `--gbFile` (or just use `--sars2` to if you
+want the Wuhan reference
+[NC_045512](https://www.ncbi.nlm.nih.gov/nuccore/NC_045512)).
 
 If you run `describe-feature.py` with no arguments, it will print summary
-details of all features, with their (0-based) nucleotide offsets:
+details of all features, with their (0-based) nucleotide offsets. E.g.,
 
 ```sh
-$ describe-feature.py
+$ describe-feature.py --sars2
 Features for NC_045512.2:
 2'-O-ribose methyltransferase:
   start: 20658
@@ -74,7 +90,7 @@ Features for NC_045512.2:
 You can also pass it a feature name:
 
 ```sh
-$ describe-feature.py --name spike
+$ describe-feature.py --sars2 --name spike
 surface glycoprotein:
   start: 21562
   stop: 25384
@@ -84,11 +100,11 @@ surface glycoprotein:
   translation (len  1274 aa): MFVFLVLLPLVSSQCVNLTTRTQLPPAYTNSFTRGVYYPDKVFRSSVLH...
 ```
 
-Or ask to see all known feature names. Each is printed followed by a colon
-and a (possibly empty) list of aliases:
+Or ask to see all known feature names. If you pass `--sars2`, each name is
+printed followed by a colon and a (possibly empty) list of aliases:
 
 ```sh
-$ describe-feature.py --names
+$ describe-feature.py --sars2 --names
 2'-O-ribose methyltransferase: 2
 3'-to-5' exonuclease: exon, exonuclease, nsp14
 3'UTR: 3utr
@@ -187,7 +203,7 @@ Feature: spike amino acid match
 You can also ask for the changes in a variant to be checked.
       
 ```sh
-$ describe-genome.py --genome data/EPI_ISL_601443.fasta --checkVariant VOC_20201201_UK
+$ describe-genome.py --sars2 --genome data/EPI_ISL_601443.fasta --checkVariant VOC_20201201_UK
 EPI_ISL_601443 hCoV-19/England/MILK-9E05B3/2020
 Variant summary:
   UK variant of concern (VOC) 202012/01:
@@ -236,7 +252,7 @@ In the simplest case, just give a 1-based site and you'll see what's in the
 reference (with 0-based Python offsets):
 
 ```sh
-$ describe-site.py --site 26000
+$ describe-site.py --sars2 --site 26000
 {
     "alignmentOffset": 25999,
     "featureName": "ORF3a protein",
@@ -261,7 +277,7 @@ always get JSON.
 You can also specify the site relative to a feature:
 
 ```sh
-$ describe-site.py --site 1501 --feature spike --relative
+$ describe-site.py --sars2 --site 1501 --feature spike --relative
 {
     "alignmentOffset": 23062,
     "featureName": "surface glycoprotein",
@@ -282,7 +298,7 @@ $ describe-site.py --site 1501 --feature spike --relative
 Or pass an amino acid site number (via `--aa`):
 
 ```sh
-$ describe-site.py --site 501 --feature spike --relative --aa
+$ describe-site.py --sars2 --site 501 --feature spike --relative --aa
 {
     "alignmentOffset": 23062,
     "featureName": "surface glycoprotein",
@@ -304,7 +320,7 @@ Of course it's more fun if you also provide a genome to compare the reference to
 Here's the `N501Y` change in B.1.1.7 (Alpha):
 
 ```sh
-$ describe-site.py --site 501 --relative --genome EPI_ISL_601443.fasta --feature spike --aa
+$ describe-site.py --sars2 --site 501 --relative --genome EPI_ISL_601443.fasta --feature spike --aa
 {
     "alignmentOffset": 23062,
     "featureName": "surface glycoprotein",
@@ -338,22 +354,26 @@ low-coverage genomes or features from the results.
 # Python API
 
 There are two main Python classes provided by `gb2seq`: `Features` and
-`SARS2Alignment`.
+`Gb2Alignment`.
 
 ## Features
 
 The `Features` class provides methods for accessing information about
-SARS-CoV-2 genome features obtained from [a GenBank flat
-file](https://www.ncbi.nlm.nih.gov/Sitemap/samplerecord.html). You've
-likely run across these records before. E.g., here's the SARS-CoV-2 Wuhan
-reference, [NC_045512](https://www.ncbi.nlm.nih.gov/nuccore/NC_045512). To
-download the GenBank file for that reference, click on "Send to" and select
+genome features obtained from
+[a GenBank flat file](https://www.ncbi.nlm.nih.gov/Sitemap/samplerecord.html).
+
+You've likely run across these records before. E.g., here's the SARS-CoV-2
+Wuhan reference,
+[NC_045512](https://www.ncbi.nlm.nih.gov/nuccore/NC_045512). To download
+the GenBank file for that reference, click on "Send to" and select
 "Complete Record", "File", and "GenBank" format. Then click "Create File".
 
 You can pass the path to a GenBank file to the `Features` class. You can
 also just pass an accession number, and the file will be downloaded for
-you. If you don't pass anything, the Wuhan reference (version `NC_045512.2`)
-will be used.
+you. If you pass `referenceSpecification` as `None` and `sars2` as `True`,
+the Wuhan reference (version
+[NC_045512.2](https://www.ncbi.nlm.nih.gov/nuccore/NC_045512.2)) will be
+used.
 
 You can use a `Features` instance like a dictionary:
 
@@ -361,7 +381,7 @@ You can use a `Features` instance like a dictionary:
 from pprint import pprint as pp
 from gb2seq.features import Features
 
->>> f = Features()
+>>> f = Features("NC_045512.2.gb")
 >>> pp(f['e'])
 {'name': 'envelope protein',
  'note': 'ORF4; structural protein; E protein',
@@ -396,9 +416,9 @@ from gb2seq.features import Features
 {'ORF1ab polyprotein', "2'-O-ribose methyltransferase"}
 ```
 
-## SARS2Alignment
+## Gb2Alignment
 
-The `SARS2Alignment` class can be used to extract and compare features from
+The `Gb2Alignment` class can be used to extract and compare features from
 the reference and the given genome sequence.
 
 You pass it a `Read` instance from the
@@ -406,23 +426,23 @@ You pass it a `Read` instance from the
 installed for you when you install `gb2seq`).
 
 ```py
-from gb2seq.alignment import SARS2Alignment
+from gb2seq.alignment import Gb2Alignment
 from dark.reads import Read
 
-alignment = SARS2Alignment(Read('id', 'AGCT...'))
+alignment = Gb2Alignment(Read('id', 'AGCT...'))
 ```
 
 These can also be read from a FASTA file:
 
 ```py
-from gb2seq.alignment import SARS2Alignment
+from gb2seq.alignment import Gb2Alignment
 from dark.fasta import FastaReads
 
 for read in FastaReads('sequences.fasta'):
-    alignment = SARS2Alignment(read)
+    alignment = Gb2Alignment(read)
 ```
 
-Once you have a `SARS2Alignment` instance, you can ask it for the aligned
+Once you have a `Gb2Alignment` instance, you can ask it for the aligned
 sequences or features.
 
 Below I'll use the GISAID `EPI_ISL_601443` (B.1.1.7, or Alpha, variant)
@@ -432,7 +452,7 @@ sequence, which you can find in
 ```py
 >>> from pathlib import Path
 >>> from pprint import pprint as pp
->>> from gb2seq.alignment import SARS2Alignment
+>>> from gb2seq.alignment import Gb2Alignment
 >>> from dark.fasta import FastaReads
 
 >>> alpha = list(FastaReads(Path('data/EPI_ISL_601443.fasta')))[0]
@@ -443,7 +463,7 @@ sequence, which you can find in
 >>> alpha.sequence[:50]
 'AGATCTGTTCTCTAAACGAACTTTAAAATCTGTGTGGCTGTCACTCGGCT'
 
->>> alignment = SARS2Alignment(alpha)
+>>> alignment = Gb2Alignment(alpha)
 ```
 
 You'll find the aligned reference and genome in `alignment.referenceAligned`
@@ -584,7 +604,7 @@ You can pass your own variant dictionary specifying what you want checked.
 
 ## To learn more
 
-See the `Features` and `SARS2Alignment` classes in
+See the `Features` and `Gb2Alignment` classes in
 [gb2seq/feature.py](gb2seq/feature.py) and
 [gb2seq/alignment.py](gb2seq/alignment.py). Also, the tests (e.g., in
 [test/test_feature.py](test/test_feature.py),
@@ -603,4 +623,13 @@ Run the tests via
 $ pytest
 ```
 
-More could probably be added here :-)
+## Notes
+
+* The tests will run `MAFFT`, so you need that installed and in
+    your shell's path.
+* The tests do not all pass if you set `DEFAULT_ALIGNER` to be "edlib" in
+    `gb2seq/alignment.py`. This is because `MAFFT` and `edlib` produce
+    slightly different results and some tests of the SARS-CoV-2 spike
+    translation tests fail as a result. I would like to post-process the
+    `edlib` output to match that of `MAFFT` (this is in cases where there
+    are multiple equally-good alignments).

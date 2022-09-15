@@ -8,39 +8,48 @@ from gb2seq.features import Features
 from gb2seq.sars2 import SARS_COV_2_ALIASES
 
 
-def printNames(features):
+def printNames(features, sars2):
     """
     Print feature names, each with all known aliases (if any).
 
     @param features: A C{Features} instance.
+    @param sars2: C{True} if we have a SARS-CoV-2 GenBank record.
     """
 
-    def key(name):
-        """
-        Make a sort key for feature names.
+    if sars2:
+        def key(name):
+            """
+            Make a sort key for SARS-CoV-2 feature names.
 
-        @param name: A C{str} feature name.
-        @return: A C{str} C{int} 2-tuple for sorting feature names.
-        """
-        if name.startswith("nsp"):
-            return "nsp", int(name[3:])
-        elif name.startswith("ORF"):
-            return "orf", int(name[3:].split()[0].rstrip("ab"))
-        else:
-            return name.lower(), 0
+            @param name: A C{str} feature name.
+            @return: A C{str} C{int} 2-tuple for sorting feature names.
+            """
+            if name.startswith("nsp"):
+                return "nsp", int(name[3:])
+            elif name.startswith("ORF"):
+                return "orf", int(name[3:].split()[0].rstrip("ab"))
+            else:
+                return name.lower(), 0
+    else:
+        def key(name):
+            return name.lower()
 
     featureNames = sorted(features, key=key)
-    aka = defaultdict(set)
-    for alias, name in SARS_COV_2_ALIASES.items():
-        aka[name].add(alias)
 
-    for featureName in featureNames:
-        try:
-            akas = " " + ", ".join(sorted(aka[featureName]))
-        except KeyError:
-            akas = ""
+    if sars2:
+        aka = defaultdict(set)
+        for alias, name in SARS_COV_2_ALIASES.items():
+            aka[name].add(alias)
 
-        print(f"{featureName}:{akas}")
+        for featureName in featureNames:
+            try:
+                akas = " " + ", ".join(sorted(aka[featureName]))
+            except KeyError:
+                akas = ""
+
+            print(f"{featureName}:{akas}")
+    else:
+        print("\n".join(featureNames))
 
 
 def main(args):
@@ -57,7 +66,7 @@ def main(args):
     )
 
     if args.names:
-        printNames(features)
+        printNames(features, args.sars2)
         return
 
     if args.name:
@@ -78,7 +87,8 @@ def main(args):
 
     for name in sorted(features):
         if not wantedName or name == wantedName:
-            print(features.toString(name, args.maxLen))
+            print(features.toString(name, maxSequenceLength=args.maxLen,
+                                    oneBased=args.oneBased))
 
 
 if __name__ == "__main__":
@@ -127,6 +137,12 @@ if __name__ == "__main__":
         action="store_true",
         help="The sequence is from SARS-CoV-2.",
     )
+
+    parser.add_argument(
+        "--zeroBased",
+        dest="oneBased",
+        action="store_true",
+        help="Print zero-based offsets instead of one-based sites.")
 
     parser.add_argument(
         "--addUnannotatedRegions",

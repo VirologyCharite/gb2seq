@@ -3,6 +3,6 @@ data/*.fai
 *~
 .idea/
 .DS_Store
-sars2seq.egg-info
+gb2seq.egg-info
 dist
 .coverage

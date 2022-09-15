@@ -50,7 +50,7 @@ wrapper](https://pypi.org/project/edlib/) for the extremely fast
 
 # Utility scripts
 
-The three scripts described below all accept a `--help` option. Below is
+The scripts described below all accept a `--help` option. Below is
 some representative usage.
 
 ## describe-feature.py
@@ -350,6 +350,54 @@ Other options include `--genomeAaOnly` to just print the amino acid at a
 location in the genome, `--includeFeature` to also receive information
 about the feature at the site, and `--minReferenceCoverage` to exclude
 low-coverage genomes or features from the results.
+
+## annotate-genome.py
+
+Produces JSON output with annotation information for a genome. Here's an
+example of the start of output for a Monkeypox genome.
+
+```sh
+$ annotate-genome.py --aligner edlib --reference ON676708.1.gb --genome ChVir28389.fasta
+{
+    "features": {
+        "A15.5L": {
+            "genome": {
+                "sequence": "ATGATAAGTAATTACGAGCCGTTGCTGCTGTTAGTTATAAC...",
+                "start": 121823,
+                "stop": 121985,
+                "translation": "MISNYEPLLLLVITCCVLLFNFTISSKTKIDIIFAVQTIVFIWFIFHFVYSAI*"
+            },
+            "reference": {
+                "forward": false,
+                "name": "A15.5L",
+                "note": "Non-essential IMV membrane protein (Cop-A14.5L)",
+                "product": "A15.5L",
+                "sequence": "TTAAATCGCCGAATAAACAAAGTGGAATATAAACCATATAA...",
+                "start": 121759,
+                "stop": 121921,
+                "translation": "MISNYEPLLLLVITCCVLLFNFTISSKTKIDIIFAVQTIVFIWFIFHFVYSAI*"
+            }
+        },
+        "A32.5L": {
+            "genome": {
+                "sequence": "ATGTTAAAAATGTCAGCTGCCGACTTTTTGGAACGTTTGAT...",
+                "start": 139696,
+                "stop": 139825,
+                "translation": "MLKMSAADFLERLIKAGIYIYVLRTKYVITALLVKNYPIKDE*"
+            },
+            "reference": {
+                "forward": false,
+                "name": "A32.5L",
+                "note": "Viral membrane assembly proteins (VMAP) (Cop-A 30.5L)",
+                "product": "A32.5L",
+                "sequence": "TTATTCGTCTTTTATGGGATAGTTTTTAACTAGTAAAGCTGTAA...",
+                "start": 139635,
+                "stop": 139764,
+                "translation": "MLKMSAADFLERLIKAGIYIYVLRTKYVITALLVKNYPIKDE*"
+            }
+        },
+}
+```
 
 # Python API
 

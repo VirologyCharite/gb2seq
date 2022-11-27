@@ -1,3 +1,8 @@
+## 0.2.3 November 27, 2022
+
+Added `nsp16` as a sars-2 abbreviation for `2'-O-ribose
+methyltransferase`. Made `TranslationError` a subclass of `Gb2SeqError`.
+
 ## 0.2.2 August 4, 2022
 
 Remove some SARS-2 defaults.

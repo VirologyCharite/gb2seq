@@ -25,6 +25,7 @@ SARS_COV_2_ALIASES = {
     "nsp13": "helicase",
     "nsp14": "3'-to-5' exonuclease",
     "nsp15": "endoRNAse",
+    "nsp16": "2'-O-ribose methyltransferase",
     "orf4": "envelope protein",
     "orf5": "membrane glycoprotein",
     "orf1a": "ORF1a polyprotein",
@@ -48,34 +49,35 @@ SARS_COV_2_ALIASES = {
 }
 
 # Name of translated features, with (case sensitive!) names matching those in
-# the GenBank file ../data/NC_045512.2.gb
+# the GenBank file ../data/NC_045512.2.gb  These are in genome offset order.
 
 SARS_COV_2_TRANSLATED = {
-    "3'-to-5' exonuclease",  # nsp14
-    "3C-like proteinase",  # nsp5
-    "endoRNAse",  # nsp15
-    "envelope protein",  # ORF4
-    "helicase",  # nsp13
+    "ORF1a polyprotein",
+    "ORF1ab polyprotein",
     "leader protein",  # nsp1
-    "membrane glycoprotein",  # ORF5
     "nsp2",
     "nsp3",
     "nsp4",
+    "3C-like proteinase",  # nsp5
     "nsp6",
     "nsp7",
     "nsp8",
     "nsp9",
     "nsp10",
     "nsp11",
-    "nucleocapsid phosphoprotein",  # ORF9
-    "ORF1a polyprotein",
-    "ORF1ab polyprotein",
+    "RNA-dependent RNA polymerase",  # nsp12
+    "helicase",  # nsp13
+    "3'-to-5' exonuclease",  # nsp14
+    "endoRNAse",  # nsp15
+    "nsp16",
+    "surface glycoprotein",
     "ORF3a protein",
+    "envelope protein",  # ORF4
+    "membrane glycoprotein",  # ORF5
     "ORF6 protein",
     "ORF7a protein",
     "ORF7b",
     "ORF8 protein",
+    "nucleocapsid phosphoprotein",  # ORF9
     "ORF10 protein",
-    "RNA-dependent RNA polymerase",  # nsp12
-    "surface glycoprotein",
 }

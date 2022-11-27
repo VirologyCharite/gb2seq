@@ -408,7 +408,11 @@ class Gb2Alignment:
                 )
         else:
             if "-" in referenceNt.sequence:
-                assert not raiseOnReferenceGaps
+                if raiseOnReferenceGaps:
+                    raise ReferenceInsertionError(
+                        f"{self._aligner} aligner suggested a reference insertion "
+                        f"into {featureName!r}."
+                    )
                 referenceNtNoGaps = DNARead(
                     referenceNt.id, referenceNt.sequence.replace("-", "")
                 )

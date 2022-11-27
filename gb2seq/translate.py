@@ -2,11 +2,13 @@ from Bio.Seq import translate as bpTranslate
 from itertools import groupby
 from typing import Dict, List, Optional
 
+from gb2seq import Gb2SeqError
+
 from dark.aa import CODONS, STOP_CODONS
 from dark.reads import AARead
 
 
-class TranslationError(Exception):
+class TranslationError(Gb2SeqError):
     "Error when using custom translation of sequences."
 
 

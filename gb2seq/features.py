@@ -71,7 +71,7 @@ class Features(UserDict):
     ) -> None:
         super().__init__()
         self.sars2 = sars2
-        self.translatedNames: Optional[Set[str]] = None
+        self.translatedNames: Set[str] = set()
 
         if sars2:
             referenceSpecification = (
@@ -82,7 +82,7 @@ class Features(UserDict):
         else:
             if referenceSpecification is None:
                 raise ValueError(
-                    "A specification must be provided for non-SARS-CoV-2 features."
+                    "A reference specification must be provided for non-SARS-CoV-2 features."
                 )
 
         if isinstance(referenceSpecification, SeqRecord):
@@ -172,7 +172,12 @@ class Features(UserDict):
             )
             self.aliasDict = SARS_COV_2_ALIASES if aliases is None else aliases
         else:
-            self.translatedNames = translated
+            if translated is None:
+                self.translatedNames = set(
+                    name for (name, value) in self.items() if "translation" in value
+                )
+            else:
+                self.translatedNames = translated
             self.aliasDict = {} if aliases is None else aliases
 
         if addUnannotatedRegions:
@@ -202,11 +207,18 @@ class Features(UserDict):
                         break
                 value["function"] = feature.qualifiers["function"][0]
 
+            elif type_ == "repeat_region":
+                for n in itertools.count(1):
+                    name = f"repeat region {n}"
+                    if name not in self:
+                        break
+                value["type"] = feature.qualifiers["rpt_type"][0]
+
             elif type_ in {"CDS", "mat_peptide"}:
                 name = feature.qualifiers["product"][0]
                 value["product"] = name
 
-            elif type_ in {"source", "gap", "gene", "repeat_region", "misc_feature"}:
+            elif type_ in {"source", "gap", "gene", "misc_feature"}:
                 assert "product" not in feature.qualifiers
                 continue
 
@@ -351,6 +363,8 @@ class Features(UserDict):
         for thisName in self.data:
             if thisName.lower() == name:
                 return thisName
+        else:
+            return None
 
     def __getitem__(self, name: str) -> Union[dict, None]:
         """
@@ -416,9 +430,7 @@ class Features(UserDict):
         @param name: A C{str} feature name.
         @return: A C{bool} to indicate whether the feature is translated.
         """
-        return (self.translatedNames and name in self.translatedNames) or (
-            self.translatedNames is None and not self.sars2
-        )
+        return name in self.translatedNames
 
     def aliases(self, name: str) -> set:
         """
@@ -565,7 +577,11 @@ class Features(UserDict):
         return feature, features
 
     def toString(
-        self, name: str, maxSequenceLength: int = 80, oneBased: bool = True
+        self,
+        name: str,
+        maxSequenceLength: int = 80,
+        oneBased: bool = True,
+        prefix: str = "",
     ) -> str:
         """
         Get a string representation of a feature suitable for printing.
@@ -576,27 +592,47 @@ class Features(UserDict):
             from the result.
         @param oneBased: A C{bool}. If C{True} the feature location should be printed
             1-based instead of 0-based.
+        @param prefix: A C{str} to put at the start of each line.
         @return: A C{str}.
         """
         canonicalName = self.canonicalName(name)
         feature = self[canonicalName]
+        sequence = feature["sequence"]
         result = [
-            f"{name}:",
-            f"  start: {feature['start'] + bool(oneBased)}",
-            f"  stop: {feature['stop']}",
-            f"  length: {feature['stop'] - feature['start']}",
+            f"{prefix}{name}:",
+            f"{prefix}  start: {feature['start'] + bool(oneBased)}",
+            f"{prefix}  stop: {feature['stop']}",
+            f"{prefix}  length (nt): {feature['stop'] - feature['start']}",
         ]
 
         for name in "product", "note", "function":
             try:
-                result.append(f"  {name}: {feature[name]}")
+                result.append(f"{prefix}  {name}: {feature[name]}")
             except KeyError:
                 pass
 
+        if "translation" in feature:
+            if "forward" in feature:
+                if feature["forward"]:
+                    result.append(f"{prefix}  feature is translated left-to-right.")
+                else:
+                    result.append(
+                        f"{prefix}  feature is translated right-to-left from the "
+                        f"reverse complement."
+                    )
+                    rc = DNARead("id", sequence).reverseComplement().sequence
+                    result.append(
+                        f"{prefix}  reverse complement: "
+                        + (
+                            (rc[:maxSequenceLength] + "...")
+                            if maxSequenceLength > 0 and len(rc) > maxSequenceLength
+                            else rc
+                        )
+                    )
+
         if maxSequenceLength:
-            sequence = feature["sequence"]
             result.append(
-                f"  sequence    (len {len(sequence):5d} nt): "
+                f"{prefix}  sequence: "
                 + (
                     (sequence[:maxSequenceLength] + "...")
                     if maxSequenceLength > 0 and len(sequence) > maxSequenceLength
@@ -604,46 +640,23 @@ class Features(UserDict):
                 )
             )
 
-            # Use True as a default for 'forward' in the following, as some
-            # features may be unannotated region, and these do not have a
-            # 'forward' key. Using True as the default means we will not
-            # uselessly reverse complement an unannotated region.
-            if "forward" in feature:
-                if feature["forward"]:
-                    result.append("  feature is translated left-to-right.")
-                else:
-                    result.append(
-                        "  feature is translated right-to-left from the "
-                        "reverse complement."
-                    )
-                    rc = DNARead("id", sequence).reverseComplement().sequence
-                    result.append(
-                        f"  reverse complement (len {len(sequence):5d} nt): "
-                        + (
-                            (rc[:maxSequenceLength] + "...")
-                            if maxSequenceLength > 0 and len(rc) > maxSequenceLength
-                            else rc
-                        )
-                    )
-            else:
-                result.append("  region is unannotated.")
-
-        if maxSequenceLength:
             try:
                 translation = feature["translation"]
-            except KeyError:
-                # Some features (e.g., UTR, stem loops) do not have a translation.
-                pass
-            else:
-                result.append(
-                    f"  translation (len {len(translation):5d} aa): "
-                    + (
-                        (translation[:maxSequenceLength] + "...")
-                        if maxSequenceLength > 0
-                        and len(translation) > maxSequenceLength
-                        else translation
-                    )
+
+                result.extend(
+                    [
+                        f"{prefix}  length (aa): {len(translation)}",
+                        f"{prefix}  translation: "
+                        + (
+                            (translation[:maxSequenceLength] + "...")
+                            if maxSequenceLength > 0
+                            and len(translation) > maxSequenceLength
+                            else translation
+                        ),
+                    ]
                 )
+            except KeyError:
+                result.append(f"{prefix}  region is not translated.")
 
         return "\n".join(result)
 

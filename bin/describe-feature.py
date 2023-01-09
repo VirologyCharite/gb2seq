@@ -1,10 +1,14 @@
 #!/usr/bin/env python
 
 import sys
+import os
 import argparse
 from collections import defaultdict
 
-from gb2seq.features import Features
+from dark.fasta import FastaReads
+
+from gb2seq.alignment import Gb2Alignment, addAlignerOption
+from gb2seq.features import Features, addFeatureOptions
 from gb2seq.sars2 import SARS_COV_2_ALIASES
 
 
@@ -17,6 +21,7 @@ def printNames(features, sars2):
     """
 
     if sars2:
+
         def key(name):
             """
             Make a sort key for SARS-CoV-2 feature names.
@@ -30,7 +35,9 @@ def printNames(features, sars2):
                 return "orf", int(name[3:].split()[0].rstrip("ab"))
             else:
                 return name.lower(), 0
+
     else:
+
         def key(name):
             return name.lower()
 
@@ -52,6 +59,61 @@ def printNames(features, sars2):
         print("\n".join(featureNames))
 
 
+def reportGenomeFeature(features, name, alignment, maxSequenceLength):
+    """
+    Print details of a feature in a passed genome.
+
+    @param features: A C{Features} instance.
+    @param name: A C{str} feature name.
+    @param alignment: A C{Gb2seq} instance with the aligned genome whose feature
+        should be reported.
+    @param maxSequenceLength: The maximum sequence length to print. Longer sequences
+        will "be truncated. Use 0 or C{None} to skip printing sequences.
+
+    """
+    print(f"  Genome {alignment.genome.id}:")
+    feature = features[name]
+    alignedStart = alignment.gappedOffsets[feature["start"]]
+    try:
+        alignedStop = alignment.gappedOffsets[feature["stop"]]
+    except KeyError:
+        print(
+            f"Offset {feature['stop']} not found in gappedOffsets (len {len(alignment.gappedOffsets)})."
+        )
+        sys.exit(1)
+    sequence = alignment.genomeAligned.sequence[alignedStart:alignedStop].replace(
+        "-", ""
+    )
+    absoluteStart = len(
+        alignment.genomeAligned.sequence[:alignedStart].replace("-", "")
+    )
+    absoluteStop = len(alignment.genomeAligned.sequence[:alignedStop].replace("-", ""))
+
+    _, genomeNt = alignment.ntSequences(name, raiseOnReferenceGaps=False)
+
+    print(f"    start: {absoluteStart}")
+    print(f"    stop: {absoluteStop}")
+    print(f"    length (nt): {len(genomeNt.sequence)}")
+
+    if maxSequenceLength:
+        print(
+            "    sequence: " + (genomeNt.sequence[:maxSequenceLength] + "...")
+            if maxSequenceLength > 0 and len(sequence) > maxSequenceLength
+            else genomeNt.sequence
+        )
+
+    if "translation" in feature:
+        _, genomeAa = alignment.aaSequences(name, raiseOnReferenceGaps=False)
+
+        if maxSequenceLength:
+            aaSequence = genomeAa.sequence.replace("-", "")
+            print(
+                "    translation: " + (aaSequence[:maxSequenceLength] + "...")
+                if maxSequenceLength > 0 and len(aaSequence) > maxSequenceLength
+                else aaSequence
+            )
+
+
 def main(args):
     """
     Describe a genome feature or features.
@@ -69,26 +131,58 @@ def main(args):
         printNames(features, args.sars2)
         return
 
+    wantedNames = []
+
     if args.name:
-        try:
-            wantedName = features.canonicalName(args.name)
-        except KeyError:
-            forgot = (
-                " It looks like you forget to use --sars2."
-                if args.name.lower() in SARS_COV_2_ALIASES
-                else ""
-            )
-            print(f"Feature {args.name!r} is not known.{forgot}", file=sys.stderr)
-            sys.exit(1)
+        for name in args.name:
+            try:
+                wantedNames.append(features.canonicalName(args.name))
+            except KeyError:
+                forgot = (
+                    " It looks like you forgot to use --sars2."
+                    if name.lower() in SARS_COV_2_ALIASES
+                    else ""
+                )
+                print(f"Feature {name!r} is not known.{forgot}", file=sys.stderr)
+                sys.exit(1)
     else:
-        wantedName = None
+        wantedNames = list(features)
         # All features are wanted, so print a little title.
         print(f"Features for {features.reference.id}:")
 
-    for name in sorted(features):
-        if not wantedName or name == wantedName:
-            print(features.toString(name, maxSequenceLength=args.maxLen,
-                                    oneBased=args.oneBased))
+    if args.genome or not os.isatty(0):
+        fp = open(args.genome) if args.genome else sys.stdin
+        alignments = [
+            Gb2Alignment(read, features, aligner=args.aligner)
+            for read in FastaReads(fp)
+        ]
+        if args.genome:
+            fp.close()
+    else:
+        alignments = []
+
+    if args.sortBy == "name":
+        wantedNames.sort()
+    elif args.sortBy == "site":
+
+        def key(name):
+            return features[name]["start"]
+
+        wantedNames.sort(key=key)
+
+    for name in wantedNames:
+        print("Reference:")
+        print(
+            features.toString(
+                name,
+                maxSequenceLength=args.maxLen,
+                oneBased=args.oneBased,
+                prefix="  ",
+            )
+        )
+
+        for alignment in alignments:
+            reportGenomeFeature(features, name, alignment, args.maxLen)
 
 
 if __name__ == "__main__":
@@ -99,20 +193,18 @@ if __name__ == "__main__":
     )
 
     parser.add_argument(
-        "--reference",
-        metavar="file.gb",
-        help=(
-            f"The GenBank file to examine. If --sars2 is used and no reference is "
-            f"given, {Features.WUHAN_REF.name!r} will be used."
-        ),
+        "--genome",
+        metavar="file.fasta",
+        help="The FASTA file containing the genome to examine for features.",
     )
 
     parser.add_argument(
         "--name",
         metavar="NAME",
+        action="append",
         help=(
             "The feature to print information for (all features are "
-            "printed if not specified)."
+            "printed if not specified). May be repeated."
         ),
     )
 
@@ -133,26 +225,23 @@ if __name__ == "__main__":
     )
 
     parser.add_argument(
-        "--sars2",
-        action="store_true",
-        help="The sequence is from SARS-CoV-2.",
-    )
-
-    parser.add_argument(
         "--zeroBased",
         dest="oneBased",
         action="store_true",
-        help="Print zero-based offsets instead of one-based sites.")
+        help="Print zero-based offsets instead of one-based sites.",
+    )
 
     parser.add_argument(
-        "--addUnannotatedRegions",
-        action="store_true",
+        "--sortBy",
+        choices=("name", "site"),
         help=(
-            "Add unannotated regions (i.e., genome regions that have "
-            'no features). These will be named "unannotated region N" '
-            "where N is a natural number."
+            "The order in which to print features (default is the order given "
+            "on the command line)."
         ),
     )
+
+    addAlignerOption(parser)
+    addFeatureOptions(parser)
 
     args = parser.parse_args()
 

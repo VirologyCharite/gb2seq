@@ -83,6 +83,14 @@ def getGappedOffsets(s: str) -> dict:
     # removed one day, seeing as there are tests for this function.
     assert set(result) == set(range(len(s) - s.count("-")))
 
+    # If we have a non-empty result, add a final offset corresponding to
+    # the length of the original string. This allows us to use Python
+    # indexing in the case wanting to convert an offset that is one beyond
+    # the end of the string.
+    if result:
+        assert index == len(s) - s.count("-")
+        result[index] = index + gapCount
+
     return result
 
 
@@ -170,8 +178,8 @@ class Gb2Alignment:
         Align the reference and the genome.
 
         @param referenceAligned: A C{dark.reads.Read} instance with an aligned
-            reference sequence, or C{None} if the alignment should be done
-            here. If not C{None} then C{genomeAligned} must also be given.
+            reference sequence, or C{None} if the alignment should be done here.
+            If not C{None} then C{genomeAligned} must also be given.
         @param genomeAligned: A C{dark.reads.Read} instance with an aligned
             genome sequence, or C{None} if the alignment should be done here.
             If not C{None} then C{referenceAligned} must also be given.

@@ -136,7 +136,7 @@ def main(args):
     if args.name:
         for name in args.name:
             try:
-                wantedNames.append(features.canonicalName(args.name))
+                wantedNames.append(features.canonicalName(name))
             except KeyError:
                 forgot = (
                     " It looks like you forgot to use --sars2."

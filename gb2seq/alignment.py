@@ -772,6 +772,7 @@ class Gb2Alignment:
         featureName: Optional[str] = None,
         includeUntranslated: bool = False,
         minReferenceCoverage: Optional[float] = None,
+        allowAmbiguous: bool = True,
     ) -> Union[dict, None]:
         """
         Get information about genome features at an offset.
@@ -789,6 +790,10 @@ class Gb2Alignment:
             required in the genome (or feature, if one is given) in order
             for it to be processed. If the required coveragel is not met,
             C{None} is returned.
+        @allowAmbiguous: If C{True}, do not raise an error if multiple features
+            are found for the offset and no feature name is given to
+            disambiguate. Instead, use the first feature name returned by
+            C{getFeatureNames}.
         @raise KeyError: If the feature name is unknown.
         @raise ValueError: If incorrect arguments are passed (see below).
         @raise AmbiguousFeatureError: If multiple features occur at the offset
@@ -819,7 +824,7 @@ class Gb2Alignment:
             referenceOffset = offset
 
         feature, features = self.features.getFeature(
-            referenceOffset, featureName, includeUntranslated
+            referenceOffset, featureName, includeUntranslated, allowAmbiguous
         )
 
         # The 'None' values in the following are filled in below. They're set

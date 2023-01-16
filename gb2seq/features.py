@@ -510,6 +510,7 @@ class Features(UserDict):
         offset: int,
         featureName: Optional[str] = None,
         includeUntranslated: bool = False,
+        allowAmbiguous: bool = True,
     ):
         """
         Find a single feature at an offset.
@@ -520,6 +521,10 @@ class Features(UserDict):
             will be returned if there is only one at the given offset.
         @param includeUntranslated: If C{True}, also consider features that are
             not translated.
+        @allowAmbiguous: If C{True}, do not raise an error if multiple features
+            are found for the offset and no feature name is given to
+            disambiguate. Instead, use the first feature name returned by
+            C{getFeatureNames}.
         @raise MissingFeatureError: if the requested feature does not overlap
             the given C{offset} or if there are no features at the offset.
         @raise AmbiguousFeatureError: if there are multiple features at the
@@ -534,8 +539,10 @@ class Features(UserDict):
         if featureName is None:
             if features:
                 # There are some features here, but we weren't told which one
-                # to use. Only proceed if there's just one.
-                if len(features) == 1:
+                # to use. Only proceed if there's just one or if we've been
+                # told to allow ambiguity (in which case we use the first
+                # feature name).
+                if len(features) == 1 or allowAmbiguous:
                     featureName = list(features)[0]
                     feature = self[featureName]
                 else:
@@ -661,17 +668,21 @@ class Features(UserDict):
         return "\n".join(result)
 
 
-def addFeatureOptions(parser: argparse.ArgumentParser) -> None:
+def addFeatureOptions(parser: argparse.ArgumentParser,
+                      referenceHelpInfo: str = "") -> None:
     """
     Add standard command-line options that can then be passed to the Feature
     constructor.
 
-    @args parser: An argparse parser to add options to.
+    @param parser: An argparse parser to add options to.
+    @param referenceHelpInfo: A C{str} to append to the usage information for the
+        --reference option. Note that you need to put a space at the start, if
+        you want one.
     """
     parser.add_argument(
         "--reference",
         metavar="file.gb",
-        help="The GenBank file to read for features and sequences.",
+        help=f"The GenBank file to read for features and sequences.{referenceHelpInfo}",
     )
 
     parser.add_argument(

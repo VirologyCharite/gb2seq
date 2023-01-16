@@ -169,6 +169,11 @@ stem loop 5: sl5
 surface glycoprotein: s, spike
 ```
 
+There is also a `--sortBy` option for sorting the order of the reported
+features. The default is the order they are given on the command
+line. Other options are `--sortBy name` and `--sortBy site` (i.e., genome
+offset).
+
 ## describe-genome.py
 
 `describe-genome.py` has many uses. It can extract multiple features from

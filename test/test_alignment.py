@@ -563,7 +563,7 @@ class TestGetGappedOffsets(TestCase):
         """
         If there are gaps before the bases, the offsets must be correct.
         """
-        self.assertEqual({0: 2, 1: 3}, getGappedOffsets("--CC"))
+        self.assertEqual({0: 2, 1: 3, 2: 4}, getGappedOffsets("--CC"))
 
 
 class TestOffsetInfo(TestCase):

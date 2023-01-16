@@ -151,7 +151,8 @@ def translateSARS2Spike(seq: str) -> str:
     for group, length in result:
         if length % 3 != 0:
             raise TranslatedGapLengthError(
-                f"Length of stretch of gaps in {seq!r} is not divisible by 3.")
+                f"Length of stretch of gaps in {seq!r} is not divisible by 3."
+            )
 
     # if any(length % 3 != 0 for g, length in result):
     # raise TranslatedGapLengthError("Length of stretch of gaps not divisible by 3.")

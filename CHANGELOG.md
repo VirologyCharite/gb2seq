@@ -1,3 +1,7 @@
+## 0.2.4 January 16, 2023
+
+Added `--genome` to `describe-feature.py`.
+
 ## 0.2.3 November 27, 2022
 
 Added `nsp16` as a sars-2 abbreviation for `2'-O-ribose

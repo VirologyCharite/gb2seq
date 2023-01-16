@@ -26,4 +26,4 @@ clobber: clean
 # need twine installed (on OS X with brew, run 'brew install twine-pypi').
 upload:
 	python setup.py sdist
-	twine upload dist/gb2seq-$$(grep __version__ gb2seq/__init__.py | cut -f2 -d'"').tar.gz
+	twine --repository gb2seq upload dist/gb2seq-$$(grep __version__ gb2seq/__init__.py | cut -f2 -d'"').tar.gz

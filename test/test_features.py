@@ -39,7 +39,10 @@ class TestFeatures(TestCase):
         """
         If non-SARS-CoV-2 features are requested, a specification must be passed.
         """
-        error = r"^A specification must be provided for non-SARS-CoV-2 features\.$"
+        error = (
+            r"^A reference specification must be provided for "
+            r"non-SARS-CoV-2 features\.$"
+        )
         self.assertRaisesRegex(ValueError, error, Features, sars2=False)
 
     def testUnknownFeature(self):
@@ -309,19 +312,6 @@ class TestFeatures(TestCase):
         features = Features({"bike": value}, sars2=False)
         for name in "s", "spike", "surface glycoprotein":
             self.assertEqual(set(), features.aliases(name))
-
-    def testTranslatedForNonSars2(self):
-        """
-        For non-SARS-CoV-2 features everything is assumed to be translated.
-        """
-        value = {
-            "name": "bike",
-            "sequence": "ATTC",
-            "start": 0,
-            "stop": 4,
-        }
-        features = Features({"bike": value}, sars2=False)
-        self.assertTrue(features.translated("bike"))
 
     def testExplicitTranslatedEmpty(self):
         """

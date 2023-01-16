@@ -83,6 +83,14 @@ def getGappedOffsets(s: str) -> dict:
     # removed one day, seeing as there are tests for this function.
     assert set(result) == set(range(len(s) - s.count("-")))
 
+    # If we have a non-empty result, add a final offset corresponding to
+    # the length of the original string. This allows us to use Python
+    # indexing in the case wanting to convert an offset that is one beyond
+    # the end of the string.
+    if result:
+        assert index == len(s) - s.count("-")
+        result[index] = index + gapCount
+
     return result
 
 
@@ -170,8 +178,8 @@ class Gb2Alignment:
         Align the reference and the genome.
 
         @param referenceAligned: A C{dark.reads.Read} instance with an aligned
-            reference sequence, or C{None} if the alignment should be done
-            here. If not C{None} then C{genomeAligned} must also be given.
+            reference sequence, or C{None} if the alignment should be done here.
+            If not C{None} then C{genomeAligned} must also be given.
         @param genomeAligned: A C{dark.reads.Read} instance with an aligned
             genome sequence, or C{None} if the alignment should be done here.
             If not C{None} then C{referenceAligned} must also be given.
@@ -764,6 +772,7 @@ class Gb2Alignment:
         featureName: Optional[str] = None,
         includeUntranslated: bool = False,
         minReferenceCoverage: Optional[float] = None,
+        allowAmbiguous: bool = True,
     ) -> Union[dict, None]:
         """
         Get information about genome features at an offset.
@@ -781,6 +790,10 @@ class Gb2Alignment:
             required in the genome (or feature, if one is given) in order
             for it to be processed. If the required coveragel is not met,
             C{None} is returned.
+        @allowAmbiguous: If C{True}, do not raise an error if multiple features
+            are found for the offset and no feature name is given to
+            disambiguate. Instead, use the first feature name returned by
+            C{getFeatureNames}.
         @raise KeyError: If the feature name is unknown.
         @raise ValueError: If incorrect arguments are passed (see below).
         @raise AmbiguousFeatureError: If multiple features occur at the offset
@@ -811,7 +824,7 @@ class Gb2Alignment:
             referenceOffset = offset
 
         feature, features = self.features.getFeature(
-            referenceOffset, featureName, includeUntranslated
+            referenceOffset, featureName, includeUntranslated, allowAmbiguous
         )
 
         # The 'None' values in the following are filled in below. They're set

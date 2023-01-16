@@ -87,7 +87,7 @@ Features for NC_045512.2:
 # [Many additional output lines omitted here.]
 ```
 
-You can also pass it a feature name:
+You can also pass it a feature name (or multiple feature names):
 
 ```sh
 $ describe-feature.py --sars2 --name spike
@@ -100,8 +100,35 @@ surface glycoprotein:
   translation (len  1274 aa): MFVFLVLLPLVSSQCVNLTTRTQLPPAYTNSFTRGVYYPDKVFRSSVLH...
 ```
 
-Or ask to see all known feature names. If you pass `--sars2`, each name is
-printed followed by a colon and a (possibly empty) list of aliases:
+And you can pass in a genome to get information on the feature in both the
+reference and the passed genome (which will be aligned to the
+reference). The offset and length of the feature in the genome may of
+course differ from the reference:
+
+```sh
+$ describe-feature.py --name s --sars2 --genome CSpecVir9290.fasta
+Reference:
+  surface glycoprotein:
+    start: 21562
+    stop: 25384
+    length (nt): 3822
+    product: surface glycoprotein
+    note: structural protein; spike protein
+    feature is translated left-to-right.
+    sequence: ATGTTTGTTTTTCTTGTTTTATTGCCACTAGTCTCTAGTCAGTGTGTTAATCTTACAACCAGAACTCAATTACCCCCTGC...
+    length (aa): 1274
+    translation: MFVFLVLLPLVSSQCVNLTTRTQLPPAYTNSFTRGVYYPDKVFRSSVLHSTQDLFLPFFSNVTWFHAIHVSGTNGTKRFD...
+  Genome BetaCoV/Rendsburg-Eckernfoerde/ChVir9290/2020:
+    start: 21550
+    stop: 25366
+    length (nt): 3822
+    sequence: ATGTTTGTTTTTCTTGTTTTATTGCCACTAGTCTCTAGTCAGTGTGTTAATCTTACAACCAGAACTCAATTACCCCCTGC...
+    translation: MFVFLVLLPLVSSQCVNLTTRTQLPPAYTNSFTRGVYYPDKVFRSSVLHSTQDLFLPFFSNVTWFHAISGTNGTKRFDNP...
+```
+
+Or ask to see all known feature names (using `--names`). If you pass
+`--sars2`, each name is printed followed by a colon and a (possibly empty)
+list of aliases:
 
 ```sh
 $ describe-feature.py --sars2 --names
@@ -141,6 +168,11 @@ stem loop 4: sl4
 stem loop 5: sl5
 surface glycoprotein: s, spike
 ```
+
+There is also a `--sortBy` option for sorting the order of the reported
+features. The default is the order they are given on the command
+line. Other options are `--sortBy name` and `--sortBy site` (i.e., genome
+offset).
 
 ## describe-genome.py
 

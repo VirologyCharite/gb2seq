@@ -67,7 +67,7 @@ def report(genome, args, includeGenome=True):
 
 def main(args):
     """
-    Describe a site in a SARS-CoV-2 genome or genomes.
+    Describe a site in a genome or genomes.
 
     @param args: A C{Namespace} instance as returned by argparse with
         values for command-line options.
@@ -102,13 +102,13 @@ if __name__ == "__main__":
 
     parser = argparse.ArgumentParser(
         formatter_class=argparse.ArgumentDefaultsHelpFormatter,
-        description="Describe a site of a SARS-CoV-2 genome(s).",
+        description="Describe a site of a genome(s).",
     )
 
     parser.add_argument(
         "--genome",
         metavar="file.fasta",
-        help="The FASTA file containing the SARS-CoV-2 genome(s) to examine.",
+        help="The FASTA file containing the genome(s) to examine.",
     )
 
     parser.add_argument(

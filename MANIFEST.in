@@ -1,2 +1,2 @@
-include data/*.fasta
-include data/*.gb
+include gb2seq/data/*.fasta
+include gb2seq/data/*.gb

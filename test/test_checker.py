@@ -2,7 +2,6 @@ from unittest import TestCase
 
 from .fasta import getSequence
 
-from gb2seq import DATA_DIR
 from gb2seq.alignment import Gb2Alignment
 from gb2seq.checker import Checker, AAChecker, NTChecker
 from gb2seq.features import Features
@@ -17,7 +16,7 @@ class Test_EPI_ISL_601443(TestCase):
     investigation-of-novel-sars-cov-2-variant-variant-of-concern-20201201
     """
 
-    genomeRead = getSequence(DATA_DIR / "EPI_ISL_601443.fasta")
+    genomeRead = getSequence("EPI_ISL_601443.fasta")
     alignment = Gb2Alignment(genomeRead, FEATURES)
 
     def testIndexError(self):

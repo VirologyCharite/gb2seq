@@ -5,6 +5,12 @@ from collections import UserDict
 from pathlib import Path
 from typing import Dict, Optional, Set, Union
 
+try:
+    from importlib.resources import open_text
+except ImportError:
+    from importlib_resources import open_text
+
+
 # from warnings import warn
 import json
 import argparse
@@ -16,7 +22,7 @@ from dark.aa import STOP_CODONS
 from dark.genbank import GenomeRanges
 from dark.reads import DNARead
 
-from gb2seq import Gb2SeqError, DATA_DIR
+from gb2seq import Gb2SeqError
 from gb2seq.sars2 import SARS_COV_2_ALIASES, SARS_COV_2_TRANSLATED
 
 # Set ENTREZ_EMAIL in your environment to have your requests to NCBI Entez
@@ -58,8 +64,6 @@ class Features(UserDict):
         gap in its nucleotide sequence.
     """
 
-    WUHAN_REF = DATA_DIR / "NC_045512.2.gb"
-
     def __init__(
         self,
         referenceSpecification: Union[str, Dict, Path] = None,
@@ -73,20 +77,26 @@ class Features(UserDict):
         self.sars2 = sars2
         self.translatedNames: Set[str] = set()
 
-        if sars2:
-            referenceSpecification = (
-                self.WUHAN_REF
-                if referenceSpecification is None
-                else referenceSpecification
-            )
-        else:
-            if referenceSpecification is None:
+        if referenceSpecification is None:
+            if sars2:
+                with open_text("gb2seq.data", "NC_045512.2.gb") as fp:
+                    try:
+                        record = SeqIO.read(fp, "genbank")
+                    except Exception as e:
+                        print(
+                            "Could not parse default SARS-CoV-2 GenBank record",
+                            e,
+                            file=sys.stderr,
+                        )
+                        sys.exit(1)
+                    else:
+                        self._initializeFromGenBankRecord(record)
+            else:
                 raise ValueError(
                     "A reference specification must be provided for non-SARS-CoV-2 "
                     "features."
                 )
-
-        if isinstance(referenceSpecification, SeqRecord):
+        elif isinstance(referenceSpecification, SeqRecord):
             record = referenceSpecification
             self._initializeFromGenBankRecord(record)
         elif isinstance(referenceSpecification, str):
@@ -138,7 +148,7 @@ class Features(UserDict):
                         id=referenceSpecification,
                     )
                     try:
-                        record = SeqIO.read(client, "gb")
+                        record = SeqIO.read(client, "genbank")
                     except Exception as e:
                         print(
                             "Could not parse fetched GenBank record:",

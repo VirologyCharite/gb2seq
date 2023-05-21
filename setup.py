@@ -36,7 +36,7 @@ setup(
         "bin/describe-site.py",
     ],
     include_package_data=True,
-    package_data={"gb2seq": ["data/*.fasta", "data/*.gb"]},
+    package_data={"gb2seq": ["gb2seq/data/*.fasta", "gb2seq/data/*.gb"]},
     classifiers=[
         "Programming Language :: Python :: 3.6",
         "Programming Language :: Python :: 3.7",

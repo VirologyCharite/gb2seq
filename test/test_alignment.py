@@ -9,7 +9,6 @@ from io import StringIO
 
 from dark.reads import DNARead
 
-from gb2seq import DATA_DIR
 from gb2seq.alignment import (
     Gb2Alignment,
     getGappedOffsets,
@@ -1453,7 +1452,7 @@ class TestOffsetInfo(TestCase):
         We must be able to see the N501Y change in the spike of Alpha
         relative to the feature when using any frame and a nucleotide offset.
         """
-        genomeRead = getSequence(DATA_DIR / "EPI_ISL_601443.fasta")
+        genomeRead = getSequence("EPI_ISL_601443.fasta")
         alignment = Gb2Alignment(genomeRead, features=Features(sars2=True))
         start = alignment.features["surface glycoprotein"]["start"]
         for frame in range(3):
@@ -1510,7 +1509,7 @@ class TestOffsetInfo(TestCase):
         We must be able to see the N501Y change in the spike of Alpha when
         the offset is given in nucleotides in any frame.
         """
-        genomeRead = getSequence(DATA_DIR / "EPI_ISL_601443.fasta")
+        genomeRead = getSequence("EPI_ISL_601443.fasta")
         alignment = Gb2Alignment(genomeRead, features=Features(sars2=True))
         start = alignment.features["surface glycoprotein"]["start"]
         for frame in range(3):
@@ -1553,7 +1552,7 @@ class TestOffsetInfo(TestCase):
         We must be able to see the N501Y change in the spike of Alpha
         using an amino acid offset.
         """
-        genomeRead = getSequence(DATA_DIR / "EPI_ISL_601443.fasta")
+        genomeRead = getSequence("EPI_ISL_601443.fasta")
         alignment = Gb2Alignment(genomeRead, features=Features(sars2=True))
         start = alignment.features["surface glycoprotein"]["start"]
         offset = 500
@@ -1601,7 +1600,7 @@ class TestOffsetInfo(TestCase):
         """
         We must be able to see all the substitutions in the spike of Alpha.
         """
-        genomeRead = getSequence(DATA_DIR / "EPI_ISL_601443.fasta")
+        genomeRead = getSequence("EPI_ISL_601443.fasta")
         alignment = Gb2Alignment(genomeRead, features=Features(sars2=True))
 
         for change in "N501Y A570D D614G P681H T716I S982A D1118H".split():
@@ -1616,7 +1615,7 @@ class TestOffsetInfo(TestCase):
         """
         We must be able to see all the deletions in the spike of Alpha.
         """
-        genomeRead = getSequence(DATA_DIR / "EPI_ISL_601443.fasta")
+        genomeRead = getSequence("EPI_ISL_601443.fasta")
         alignment = Gb2Alignment(genomeRead, features=Features(sars2=True))
 
         for change in "H69- V70- Y144-".split():

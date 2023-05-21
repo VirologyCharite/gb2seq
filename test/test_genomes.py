@@ -8,7 +8,6 @@ from unittest import TestCase
 
 from .fasta import getSequence
 
-from gb2seq import DATA_DIR
 from gb2seq.alignment import Gb2Alignment
 from gb2seq.features import Features
 from gb2seq.variants import VARIANTS
@@ -58,8 +57,8 @@ class Test_EPI_ISL_402125(TestCase):
         NC_045512.2 reference sequence from NCBI.
         """
         self.assertEqual(
-            getSequence(DATA_DIR / "EPI_ISL_402125.fasta").sequence,
-            getSequence(DATA_DIR / "NC_045512.2.fasta").sequence,
+            getSequence("EPI_ISL_402125.fasta").sequence,
+            getSequence("NC_045512.2.fasta").sequence,
         )
 
 
@@ -70,7 +69,7 @@ class Test_EPI_ISL_601443(TestCase, _Mixin):
     investigation-of-novel-sars-cov-2-variant-variant-of-concern-20201201
     """
 
-    genomeRead = getSequence(DATA_DIR / "EPI_ISL_601443.fasta")
+    genomeRead = getSequence("EPI_ISL_601443.fasta")
     alignment = Gb2Alignment(genomeRead, FEATURES)
 
     def testSpikeDeletionsAa(self):
@@ -241,7 +240,7 @@ class Test_BavPat2(TestCase, _Mixin):
     Test the BavPat2 sequence. This is Bavarian patient #2.
     """
 
-    genomeRead = getSequence(DATA_DIR / "BavPat2.fasta")
+    genomeRead = getSequence("BavPat2.fasta")
     alignment = Gb2Alignment(genomeRead, FEATURES)
 
     def testSpikeMutationsNt(self):
@@ -362,7 +361,7 @@ class Test_NC_045512(TestCase, _Mixin):
     the default feature reference.
     """
 
-    genomeRead = getSequence(DATA_DIR / "NC_045512.2.fasta")
+    genomeRead = getSequence("NC_045512.2.fasta")
     alignment = Gb2Alignment(genomeRead, FEATURES)
 
     def testSpikeIdenticalNt(self):
@@ -432,7 +431,7 @@ class Test_EPI_ISL_678597(TestCase, _Mixin):
     concern.
     """
 
-    genomeRead = getSequence(DATA_DIR / "EPI_ISL_678597.fasta")
+    genomeRead = getSequence("EPI_ISL_678597.fasta")
     alignment = Gb2Alignment(genomeRead, FEATURES)
 
     def testSpikeDeletionsAa(self):

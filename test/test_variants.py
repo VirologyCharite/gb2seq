@@ -1,10 +1,7 @@
 from unittest import TestCase
 
-from gb2seq import DATA_DIR
 from gb2seq.features import Features
 from gb2seq.variants import VARIANTS
-
-REF_GB = DATA_DIR / "NC_045512.2.gb"
 
 
 class TestVariants(TestCase):

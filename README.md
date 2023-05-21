@@ -307,7 +307,7 @@ compare the reference to.  Here's the `N501Y` change in a SARS-CoV-2
 B.1.1.7 (Alpha variant) sequence:
 
 ```sh
-$ describe-site.py --sars2 --site 501 --relative --genome data/EPI_ISL_601443.fasta \
+$ describe-site.py --sars2 --site 501 --relative --genome gb2seq/data/EPI_ISL_601443.fasta \
     --feature spike --aa
 {
     "alignmentOffset": 23063,
@@ -353,7 +353,7 @@ amino acid sequence from B.1.1.7 and also ask for a summary of the amino
 acid differences:
 
 ```sh
-$ describe-genome.py --genome data/EPI_ISL_601443.fasta --outDir /tmp/out \
+$ describe-genome.py --genome gb2seq/data/EPI_ISL_601443.fasta --outDir /tmp/out \
     --feature spike --printNtSequence --printAaSequence --printAaMatch
 Examined 1 genome.
 
@@ -400,7 +400,7 @@ Feature: spike amino acid match
 You can also ask for the changes in a variant to be checked.
       
 ```sh
-$ describe-genome.py --sars2 --genome data/EPI_ISL_601443.fasta --checkVariant VOC_20201201_UK
+$ describe-genome.py --sars2 --genome gb2seq/data/EPI_ISL_601443.fasta --checkVariant VOC_20201201_UK
 EPI_ISL_601443 hCoV-19/England/MILK-9E05B3/2020
 Variant summary:
   UK variant of concern (VOC) 202012/01:
@@ -595,7 +595,7 @@ sequences or features.
 
 Below I'll use the GISAID `EPI_ISL_601443` (B.1.1.7, or Alpha, variant)
 sequence, which you can find in
-[data/EPI_ISL_601443.fasta](data/EPI_ISL_601443.fasta) in this repo:
+[gb2seq/data/EPI_ISL_601443.fasta](gb2seq/data/EPI_ISL_601443.fasta) in this repo:
 
 ```py
 >>> from pathlib import Path
@@ -604,7 +604,7 @@ sequence, which you can find in
 >>> from gb2seq.features import Features
 >>> from dark.fasta import FastaReads
 
->>> alpha = list(FastaReads(Path('data/EPI_ISL_601443.fasta')))[0]
+>>> alpha = list(FastaReads(Path('gb2seq/data/EPI_ISL_601443.fasta')))[0]
 >>> len(alpha)
 29764
 >>> alpha.id

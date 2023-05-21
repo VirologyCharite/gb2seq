@@ -6,9 +6,9 @@ from pathlib import Path
 from typing import Dict, Optional, Set, Union
 
 try:
-    from importlib.resources import open_text
+    from importlib.resources import files
 except ImportError:
-    from importlib_resources import open_text
+    from importlib_resources import files
 
 
 # from warnings import warn
@@ -79,7 +79,7 @@ class Features(UserDict):
 
         if referenceSpecification is None:
             if sars2:
-                with open_text("gb2seq.data", "NC_045512.2.gb") as fp:
+                with files("gb2seq.data").joinpath("NC_045512.2.gb") as fp:
                     try:
                         record = SeqIO.read(fp, "genbank")
                     except Exception as e:

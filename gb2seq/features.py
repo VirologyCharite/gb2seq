@@ -79,7 +79,7 @@ class Features(UserDict):
 
         if referenceSpecification is None:
             if sars2:
-                with files("gb2seq.data").joinpath("NC_045512.2.gb") as fp:
+                with files("gb2seq").joinpath("data/NC_045512.2.gb") as fp:
                     try:
                         record = SeqIO.read(fp, "genbank")
                     except Exception as e:

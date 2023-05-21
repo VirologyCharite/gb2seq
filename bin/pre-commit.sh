@@ -13,8 +13,6 @@ then
     PATH="$VIRTUAL_ENV/bin:$PATH"
 fi
 
-black .
-
 make flake8
 
 if [ $? -ne 0 ]

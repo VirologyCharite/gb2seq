@@ -613,6 +613,37 @@ class TestOffsetInfo(TestCase):
             aa=True,
         )
 
+    def testOffsetTooBig(self):
+        """
+        If the requested offset is beyond the end of the reference genome, an
+        IndexError must be raised.
+        """
+        features = Features(
+            {
+                "nsp10": {
+                    "name": "nsp10",
+                    "start": 10,
+                    "stop": 16,
+                },
+                "nsp11": {
+                    "name": "nsp11",
+                    "start": 10,
+                    "stop": 16,
+                },
+            },
+            DNARead("refId", "AA"),
+            sars2=True,
+        )
+        alignment = Gb2Alignment(DNARead("genId", "AA"), features=features)
+        error = r"^Request for offset 12 in a reference genome of length 2\.$"
+
+        self.assertRaisesRegex(
+            IndexError,
+            error,
+            alignment.offsetInfo,
+            12,
+        )
+
     def testNoFeaturesAtOffset(self):
         """
         If there are no features at the given offset, a MissingFeatureError
@@ -627,7 +658,7 @@ class TestOffsetInfo(TestCase):
                     "stop": 6,
                 },
             },
-            DNARead("refId", "AA"),
+            DNARead("refId", "A" * 200),
             sars2=True,
         )
         alignment = Gb2Alignment(DNARead("genId", "AA"), features=features)
@@ -666,7 +697,7 @@ class TestOffsetInfo(TestCase):
                     "stop": 16,
                 },
             },
-            DNARead("refId", "AA"),
+            DNARead("refId", "A" * 25),
             sars2=True,
         )
         alignment = Gb2Alignment(DNARead("genId", "AA"), features=features)
@@ -710,7 +741,7 @@ class TestOffsetInfo(TestCase):
                     "stop": 16,
                 },
             },
-            DNARead("refId", "AA"),
+            DNARead("refId", "A" * 25),
             sars2=True,
         )
         alignment = Gb2Alignment(DNARead("genId", "AA"), features=features)
@@ -729,10 +760,11 @@ class TestOffsetInfo(TestCase):
                 relativeToFeature=relativeToFeature,
             )
 
-    def testMultipleFeaturesAtOffsetButNoFeatureRequested(self):
+    def testMultipleFeaturesAtOffsetButNoFeatureRequestedNoAmbiguous(self):
         """
         If multiple features are found at an offset but no feature name is
-        passed, an AmbiguousFeatureError must be raised.
+        passed and allowAmbiguous is False, an AmbiguousFeatureError must be
+        raised.
         """
         features = Features(
             {
@@ -747,7 +779,7 @@ class TestOffsetInfo(TestCase):
                     "stop": 16,
                 },
             },
-            DNARead("refId", "AA"),
+            DNARead("refId", "AAAAAAAAAAAAAA"),
             sars2=True,
         )
         alignment = Gb2Alignment(DNARead("genId", "AA"), features=features)
@@ -756,7 +788,57 @@ class TestOffsetInfo(TestCase):
             r"\(11 - 16\). Pass a feature name to specify which one you want\.$"
         )
 
-        self.assertRaisesRegex(AmbiguousFeatureError, error, alignment.offsetInfo, 12)
+        self.assertRaisesRegex(
+            AmbiguousFeatureError, error, alignment.offsetInfo, 12, allowAmbiguous=False
+        )
+
+    def testMultipleFeaturesAtOffsetButNoFeatureRequestedAllowAmbiguous(self):
+        """
+        If multiple features are found at an offset but no feature name is
+        passed and allowAmbiguous is true,...
+        """
+        features = Features(
+            {
+                "nsp10": {
+                    "name": "nsp10",
+                    "start": 10,
+                    "stop": 16,
+                },
+                "nsp11": {
+                    "name": "nsp11",
+                    "start": 10,
+                    "stop": 16,
+                },
+            },
+            DNARead("refId", "AAAAAAAAAAAAAA"),
+            sars2=True,
+        )
+        alignment = Gb2Alignment(DNARead("genId", "AA"), features=features)
+
+        self.assertEqual(
+            {
+                "alignmentOffset": 11,
+                "featureName": "nsp10",
+                "featureNames": {"nsp10", "nsp11"},
+                "reference": {
+                    "aa": "K",
+                    "codon": "AAA",
+                    "frame": 1,
+                    "id": "refId",
+                    "aaOffset": 0,
+                    "ntOffset": 11,
+                },
+                "genome": {
+                    "aa": "-",
+                    "codon": "AA-",
+                    "frame": 0,
+                    "id": "genId",
+                    "aaOffset": 0,
+                    "ntOffset": 0,
+                },
+            },
+            alignment.offsetInfo(11, allowAmbiguous=True),
+        )
 
     def testNoFeaturesAtOffsetZero(self):
         """

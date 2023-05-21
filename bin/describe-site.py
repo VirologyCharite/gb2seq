@@ -44,7 +44,14 @@ def report(genome, args, includeGenome=True):
     if args.genomeAaOnly:
         print(offsetInfo["genome"]["aa"])
     else:
-        if not includeGenome:
+        offsetInc = int(bool(args.oneBased))
+
+        offsetInfo["alignmentOffset"] += offsetInc
+        offsetInfo["reference"]["ntOffset"] += offsetInc
+
+        if includeGenome:
+            offsetInfo["genome"]["ntOffset"] += offsetInc
+        else:
             del offsetInfo["genome"]
 
         if args.includeFeature:
@@ -78,12 +85,12 @@ def main(args):
         sars2=args.sars2,
         addUnannotatedRegions=args.addUnannotatedRegions,
     )
-    count = 0
 
     if args.genome is None and os.isatty(0):
         alignment = Gb2Alignment(features.reference, features, aligner=args.aligner)
         report(alignment, args, False)
     else:
+        count = 0
         fp = open(args.genome) if args.genome else sys.stdin
         for count, read in enumerate(FastaReads(fp), start=1):
             alignment = Gb2Alignment(read, features, aligner=args.aligner)
@@ -99,7 +106,6 @@ def main(args):
 
 
 if __name__ == "__main__":
-
     parser = argparse.ArgumentParser(
         formatter_class=argparse.ArgumentDefaultsHelpFormatter,
         description="Describe a site of a genome(s).",
@@ -183,6 +189,13 @@ if __name__ == "__main__":
             "of non-N bases in the genome divided by the length of the "
             "reference."
         ),
+    )
+
+    parser.add_argument(
+        "--zeroBased",
+        dest="oneBased",
+        action="store_false",
+        help="Print zero-based offsets instead of one-based sites.",
     )
 
     addFeatureOptions(parser)

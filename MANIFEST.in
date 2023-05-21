@@ -1,0 +1,2 @@
+include data/*.fasta
+include data/*.gb

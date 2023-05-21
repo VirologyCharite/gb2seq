@@ -57,12 +57,12 @@ def getGappedOffsets(s: str) -> dict:
     In more detail, we are given C{s}, which is an aligned sequence
     (potentially) with gaps in it and we want a mapping that will allow us to
     go from an offset in the original string C{s} (i.e., before it was aligned)
-    to the equivalent offset in the aligned (with gaps) string. This function
-    returns such a mapping (a C{dict})
+    to the equivalent offset in the aligned (with gaps) string that we have been
+    passed. This function returns such a mapping (a C{dict})
 
     @param s: A C{str} sequence, possibly with gap ('-') characters.
-    @return: A C{dict} mapping C{int} offsets (in the sequence without its
-        gaps) to equivalent C{int} offsets in C{s}, when gaps are ignored.
+    @return: A C{dict} mapping C{int} offsets in the sequence without its
+        gaps to equivalent C{int} offsets in C{s}, when gaps are ignored.
 
     """
     result = {}
@@ -451,7 +451,6 @@ class Gb2Alignment:
                     self.features.reference.id + idSuffix, "-" * len(referenceAaAligned)
                 )
             else:
-
                 genomeAa = AARead(
                     self.genome.id + idSuffix,
                     translate(
@@ -628,9 +627,7 @@ class Gb2Alignment:
                     referenceBase, offset, genomeBase = change
                     yield change, referenceBase, offset, genomeBase
 
-        result: Dict[
-            Union[str, Tuple[Optional[str], int, Optional[str]]],
-        ] = {}
+        result: Dict[Union[str, Tuple[Optional[str], int, Optional[str]]],] = {}
         testCount = errorCount = 0
 
         try:
@@ -822,6 +819,12 @@ class Gb2Alignment:
                     "you pass is relative to the feature."
                 )
             referenceOffset = offset
+
+        if referenceOffset >= len(self.features.reference):
+            raise IndexError(
+                f"Request for offset {referenceOffset} in a reference "
+                f"genome of length {len(self.features.reference)}."
+            )
 
         feature, features = self.features.getFeature(
             referenceOffset, featureName, includeUntranslated, allowAmbiguous

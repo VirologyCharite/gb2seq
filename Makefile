@@ -7,7 +7,7 @@ test:
 	env PYTHONPATH=. pytest
 
 flake8:
-	find $(PYDIRS) -name '*.py' -print0 | $(XARGS) -0 flake8 --select BLK
+	find $(PYDIRS) -name '*.py' -print0 | $(XARGS) -0 flake8
 
 wc:
 	find $(PYDIRS) -name '*.py' -print0 | xargs -0 wc -l

@@ -91,14 +91,14 @@ def translate(
         if stop == -1:
             raise NoStopCodonError(
                 f"Could not find a stop codon downstream from the start of "
-                f"the slippery sequence at location {offset + 1}."
+                f"the slippery sequence at site {offset + 1}."
             )
         if stop - offset > _MAX_DISTANCE_TO_STOP:
             raise StopCodonTooDistantError(
                 f"The stop codon was too far ({stop - offset} nucleotides) "
                 f"downstream (max allowed distance is "
                 f"{_MAX_DISTANCE_TO_STOP}) from the start of the slippery "
-                f"sequence at location {offset + 1}."
+                f"sequence at site {offset + 1}."
             )
 
         seq = seq[: offset + _SLIPPERY_LEN] + seq[offset + _SLIPPERY_LEN - 1 :]
@@ -466,7 +466,7 @@ def checkSpikeInsertions(accession: str, referenceAa: AARead, genomeAa: AARead) 
         # There are no insertions.
         return seq
     elif seqLen > 1274:
-        for (target, findStart, findStop, sliceStart, sliceStop) in KNOWN_INSERTIONS:
+        for target, findStart, findStop, sliceStart, sliceStop in KNOWN_INSERTIONS:
             if seq.find(target, findStart, findStop) > -1:
                 return seq[:sliceStart] + seq[sliceStop:]
         if seqLen < 1290:

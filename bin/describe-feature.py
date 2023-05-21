@@ -59,7 +59,7 @@ def printNames(features, sars2):
         print("\n".join(featureNames))
 
 
-def reportGenomeFeature(features, name, alignment, maxSequenceLength):
+def reportGenomeFeature(features, name, alignment, maxSequenceLength, oneBased):
     """
     Print details of a feature in a passed genome.
 
@@ -68,30 +68,29 @@ def reportGenomeFeature(features, name, alignment, maxSequenceLength):
     @param alignment: A C{Gb2seq} instance with the aligned genome whose feature
         should be reported.
     @param maxSequenceLength: The maximum sequence length to print. Longer sequences
-        will "be truncated. Use 0 or C{None} to skip printing sequences.
+        will be truncated. Use 0 or C{None} to skip printing sequences.
+    @param oneBased: If true, print one-based sites instead of zero-based offsets.
 
     """
     print(f"  Genome {alignment.genome.id}:")
     feature = features[name]
-    alignedStart = alignment.gappedOffsets[feature["start"]]
     try:
+        alignedStart = alignment.gappedOffsets[feature["start"]]
         alignedStop = alignment.gappedOffsets[feature["stop"]]
     except KeyError:
         print(
-            f"Offset {feature['stop']} not found in gappedOffsets (len {len(alignment.gappedOffsets)})."
+            f"Offset {feature['stop']} not found in gappedOffsets "
+            f"(len {len(alignment.gappedOffsets)})."
         )
         sys.exit(1)
-    sequence = alignment.genomeAligned.sequence[alignedStart:alignedStop].replace(
-        "-", ""
-    )
-    absoluteStart = len(
-        alignment.genomeAligned.sequence[:alignedStart].replace("-", "")
-    )
-    absoluteStop = len(alignment.genomeAligned.sequence[:alignedStop].replace("-", ""))
 
+    gappedSequence = alignment.genomeAligned.sequence
+    sequence = gappedSequence[alignedStart:alignedStop].replace("-", "")
+    absoluteStart = len(gappedSequence[:alignedStart].replace("-", ""))
+    absoluteStop = len(gappedSequence[:alignedStop].replace("-", ""))
     _, genomeNt = alignment.ntSequences(name, raiseOnReferenceGaps=False)
 
-    print(f"    start: {absoluteStart}")
+    print(f"    start: {absoluteStart + bool(oneBased)}")
     print(f"    stop: {absoluteStop}")
     print(f"    length (nt): {len(genomeNt.sequence)}")
 
@@ -163,7 +162,8 @@ def main(args):
 
     if args.sortBy == "name":
         wantedNames.sort()
-    elif args.sortBy == "site":
+    else:
+        assert args.sortBy == "site"
 
         def key(name):
             return features[name]["start"]
@@ -182,19 +182,21 @@ def main(args):
         )
 
         for alignment in alignments:
-            reportGenomeFeature(features, name, alignment, args.maxLen)
+            reportGenomeFeature(features, name, alignment, args.maxLen, args.oneBased)
 
 
 if __name__ == "__main__":
-
     parser = argparse.ArgumentParser(
         formatter_class=argparse.ArgumentDefaultsHelpFormatter,
-        description="Describe a reference genome feature.",
+        description=(
+            "Describe a genome feature in the reference and "
+            "(optionally) an unannotated genome."
+        ),
     )
 
     parser.add_argument(
         "--genome",
-        metavar="file.fasta",
+        metavar="genome.fasta",
         help="The FASTA file containing the genome to examine for features.",
     )
 
@@ -227,13 +229,14 @@ if __name__ == "__main__":
     parser.add_argument(
         "--zeroBased",
         dest="oneBased",
-        action="store_true",
+        action="store_false",
         help="Print zero-based offsets instead of one-based sites.",
     )
 
     parser.add_argument(
         "--sortBy",
         choices=("name", "site"),
+        default="name",
         help=(
             "The order in which to print features (default is the order given "
             "on the command line)."

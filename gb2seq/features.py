@@ -82,7 +82,8 @@ class Features(UserDict):
         else:
             if referenceSpecification is None:
                 raise ValueError(
-                    "A reference specification must be provided for non-SARS-CoV-2 features."
+                    "A reference specification must be provided for non-SARS-CoV-2 "
+                    "features."
                 )
 
         if isinstance(referenceSpecification, SeqRecord):
@@ -118,8 +119,8 @@ class Features(UserDict):
 
                 if jsonError and seqError:
                     print(
-                        f"Could not read {referenceSpecification!r} as a JSON or GenBank file. "
-                        f"Here are the parsing errors.\nJSON: "
+                        f"Could not read {referenceSpecification!r} as a JSON or "
+                        f"GenBank file. Here are the parsing errors.\nJSON: "
                         f"{jsonError}\nGenBank: {seqError}",
                         file=sys.stderr,
                     )
@@ -605,31 +606,33 @@ class Features(UserDict):
         canonicalName = self.canonicalName(name)
         feature = self[canonicalName]
         sequence = feature["sequence"]
+        start = feature["start"]
+        stop = feature["stop"]
         result = [
-            f"{prefix}{name}:",
-            f"{prefix}  start: {feature['start'] + bool(oneBased)}",
-            f"{prefix}  stop: {feature['stop']}",
-            f"{prefix}  length (nt): {feature['stop'] - feature['start']}",
+            f"{name}:",
+            f"  start: {start + bool(oneBased)}",
+            f"  stop: {feature['stop']}",
+            f"  length (nt): {stop - start}",
         ]
 
         for name in "product", "note", "function":
             try:
-                result.append(f"{prefix}  {name}: {feature[name]}")
+                result.append(f"  {name}: {feature[name]}")
             except KeyError:
                 pass
 
         if "translation" in feature:
             if "forward" in feature:
                 if feature["forward"]:
-                    result.append(f"{prefix}  feature is translated left-to-right.")
+                    result.append("  feature is translated left-to-right.")
                 else:
                     result.append(
-                        f"{prefix}  feature is translated right-to-left from the "
-                        f"reverse complement."
+                        "  feature is translated right-to-left from the "
+                        "reverse complement."
                     )
                     rc = DNARead("id", sequence).reverseComplement().sequence
                     result.append(
-                        f"{prefix}  reverse complement: "
+                        "  reverse complement: "
                         + (
                             (rc[:maxSequenceLength] + "...")
                             if maxSequenceLength > 0 and len(rc) > maxSequenceLength
@@ -639,7 +642,7 @@ class Features(UserDict):
 
         if maxSequenceLength:
             result.append(
-                f"{prefix}  sequence: "
+                "  sequence: "
                 + (
                     (sequence[:maxSequenceLength] + "...")
                     if maxSequenceLength > 0 and len(sequence) > maxSequenceLength
@@ -652,8 +655,8 @@ class Features(UserDict):
 
                 result.extend(
                     [
-                        f"{prefix}  length (aa): {len(translation)}",
-                        f"{prefix}  translation: "
+                        f"  length (aa): {len(translation)}",
+                        "  translation: "
                         + (
                             (translation[:maxSequenceLength] + "...")
                             if maxSequenceLength > 0
@@ -663,13 +666,14 @@ class Features(UserDict):
                     ]
                 )
             except KeyError:
-                result.append(f"{prefix}  region is not translated.")
+                result.append("  region is not translated.")
 
-        return "\n".join(result)
+        return "\n".join(prefix + s for s in result)
 
 
-def addFeatureOptions(parser: argparse.ArgumentParser,
-                      referenceHelpInfo: str = "") -> None:
+def addFeatureOptions(
+    parser: argparse.ArgumentParser, referenceHelpInfo: str = ""
+) -> None:
     """
     Add standard command-line options that can then be passed to the Feature
     constructor.

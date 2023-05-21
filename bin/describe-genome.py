@@ -326,7 +326,6 @@ def main(args):
 
 
 if __name__ == "__main__":
-
     parser = argparse.ArgumentParser(
         formatter_class=argparse.ArgumentDefaultsHelpFormatter,
         description="Describe a genome (or genomes).",

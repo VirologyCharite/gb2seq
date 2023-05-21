@@ -22,6 +22,9 @@ setup(
     name="gb2seq",
     version=version(),
     packages=["gb2seq", "gb2seq.data"],
+    package_data={"gb2seq.data": ["gb2seq/data/*.fasta", "gb2seq/data/*.gb"]},
+    package_dir={"gb2seq.data": "gb2seq/data"},
+    include_package_data=True,
     url="https://github.com/virologycharite/gb2seq",
     download_url="https://github.com/virologycharite/gb2seq",
     author="Terry C. Jones",
@@ -35,8 +38,6 @@ setup(
         "bin/describe-genome.py",
         "bin/describe-site.py",
     ],
-    include_package_data=True,
-    package_data={"gb2seq": ["gb2seq/data/*.fasta", "gb2seq/data/*.gb"]},
     classifiers=[
         "Programming Language :: Python :: 3.6",
         "Programming Language :: Python :: 3.7",

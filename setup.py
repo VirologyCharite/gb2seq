@@ -21,7 +21,7 @@ def version():
 setup(
     name="gb2seq",
     version=version(),
-    packages=["gb2seq"],
+    packages=["gb2seq", "gb2seq.data"],
     url="https://github.com/virologycharite/gb2seq",
     download_url="https://github.com/virologycharite/gb2seq",
     author="Terry C. Jones",

@@ -524,8 +524,8 @@ class Features(UserDict):
             not translated.
         @allowAmbiguous: If C{True}, do not raise an error if multiple features
             are found for the offset and no feature name is given to
-            disambiguate. Instead, use the first feature name returned by
-            C{getFeatureNames}.
+            disambiguate. Instead, use the alphabetically first feature name
+            returned by C{getFeatureNames}.
         @raise MissingFeatureError: if the requested feature does not overlap
             the given C{offset} or if there are no features at the offset.
         @raise AmbiguousFeatureError: if there are multiple features at the
@@ -539,12 +539,12 @@ class Features(UserDict):
 
         if featureName is None:
             if features:
-                # There are some features here, but we weren't told which one
-                # to use. Only proceed if there's just one or if we've been
-                # told to allow ambiguity (in which case we use the first
-                # feature name).
+                # There are some features here, but we weren't told which
+                # one to use. Only proceed if there's just one or if we've
+                # been told to allow ambiguity (in which case we use the
+                # alphabetically first feature name).
                 if len(features) == 1 or allowAmbiguous:
-                    featureName = list(features)[0]
+                    featureName = list(sorted(features))[0]
                     feature = self[featureName]
                 else:
                     present = ", ".join(

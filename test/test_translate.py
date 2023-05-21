@@ -37,7 +37,7 @@ class TestTranslate(TestCase):
         """
         error = (
             r"^Could not find a stop codon downstream from the start of "
-            r"the slippery sequence at location 13001\.$"
+            r"the slippery sequence at site 13001\.$"
         )
         sequence = "A" * 13000 + SLIPPERY_SEQUENCE
         self.assertRaisesRegex(
@@ -52,7 +52,7 @@ class TestTranslate(TestCase):
         error = (
             r"The stop codon was too far \(107 nucleotides\) downstream "
             r"\(max allowed distance is 20\) from the start of the "
-            r"slippery sequence at location 13001\.$"
+            r"slippery sequence at site 13001\.$"
         )
         sequence = "A" * 13000 + SLIPPERY_SEQUENCE + "A" * 100 + "TAA"
         self.assertRaisesRegex(

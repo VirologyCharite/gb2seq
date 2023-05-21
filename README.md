@@ -773,10 +773,13 @@ Run the tests via
 $ pytest
 ```
 
+
 ## Notes
 
-* The tests will run `MAFFT`, so you need that installed and in your
-    shell's `PATH`.
+* The tests will run [MAFFT](https://mafft.cbrc.jp/alignment/software/), so
+    you need that installed and in your shell's `PATH`.
+* The tests run slowly (18 seconds on my laptop) due to the default use of
+  MAFFT.
 * The tests do not all pass if you set `DEFAULT_ALIGNER` to be "edlib" in
     `gb2seq/alignment.py`. This is because `MAFFT` and `edlib` produce
     slightly different results and some tests of the SARS-CoV-2 spike

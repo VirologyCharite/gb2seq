@@ -317,10 +317,14 @@ def main(args):
             with featureFilePointers(read, featureName, args) as fps:
                 processFeature(featureName, alignment, fps, i, args)
 
-    print(f'Examined {count} genome{"" if count == 1 else "s"}.')
+    if not args.quiet:
+        print(f'Examined {count} genome{"" if count == 1 else "s"}.', file=sys.stderr)
 
-    if args.minReferenceCoverage is not None:
-        print(f"Ignored {ignoredDueToCoverageCount} genomes due to low " f"coverage.")
+        if args.minReferenceCoverage is not None:
+            print(
+                f"Ignored {ignoredDueToCoverageCount} genomes due to low " f"coverage.",
+                file=sys.stderr,
+            )
 
     return 0
 
@@ -433,6 +437,12 @@ if __name__ == "__main__":
         "--noFeatures",
         action="store_true",
         help="Do not look up any features by default.",
+    )
+
+    parser.add_argument(
+        "--quiet",
+        action="store_true",
+        help="Do not print a summary of what was done.",
     )
 
     parser.add_argument(

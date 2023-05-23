@@ -353,7 +353,7 @@ amino acid sequence from B.1.1.7 and also ask for a summary of the amino
 acid differences:
 
 ```sh
-$ describe-genome.py --genome gb2seq/data/EPI_ISL_601443.fasta --outDir /tmp/out \
+$ describe-genome.py --sars2 --genome gb2seq/data/EPI_ISL_601443.fasta --outDir /tmp/out \
     --feature spike --printNtSequence --printAaSequence --printAaMatch
 Examined 1 genome.
 

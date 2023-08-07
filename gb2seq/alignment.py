@@ -816,7 +816,8 @@ class Gb2Alignment:
             if aa:
                 raise ValueError(
                     "You cannot pass aa=True unless the offset "
-                    "you pass is relative to the feature."
+                    "you pass is relative to the feature (i.e., relativeToFeature "
+                    "must also be set to True)."
                 )
             referenceOffset = offset
 

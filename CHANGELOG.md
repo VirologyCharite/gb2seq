@@ -1,3 +1,7 @@
+## 0.2.17 August 7, 2023
+
+Change to use `dark.aaVars` to be compatible with dark-matter 4.0.68
+
 ## 0.2.4 January 16, 2023
 
 Added `--genome` to `describe-feature.py`.

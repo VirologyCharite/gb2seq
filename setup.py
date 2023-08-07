@@ -57,5 +57,5 @@ setup(
     ),
     long_description=("See https://github.com/virologycharite/gb2seq for details."),
     license="MIT",
-    install_requires=["dark-matter>=4.0.55"],
+    install_requires=["dark-matter>=4.0.68"],
 )

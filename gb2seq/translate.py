@@ -4,7 +4,7 @@ from typing import Dict, List, Optional
 
 from gb2seq import Gb2SeqError
 
-from dark.aa import CODONS, STOP_CODONS
+from dark.aaVars import CODONS, STOP_CODONS
 from dark.reads import AARead
 
 

@@ -601,7 +601,8 @@ class TestOffsetInfo(TestCase):
         alignment = Gb2Alignment(DNARead("genId", "AA"), features=features)
         error = (
             r"^You cannot pass aa=True unless the offset you pass is "
-            r"relative to the feature\.$"
+            r"relative to the feature \(i.e., relativeToFeature must also be "
+            r"set to True\)\.$"
         )
         self.assertRaisesRegex(
             ValueError,

@@ -18,7 +18,7 @@ import argparse
 from Bio import Entrez, SeqIO
 from Bio.SeqRecord import SeqRecord
 
-from dark.aa import STOP_CODONS
+from dark.aaVars import STOP_CODONS
 from dark.genbank import GenomeRanges
 from dark.reads import DNARead
 

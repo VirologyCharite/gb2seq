@@ -1,3 +1,9 @@
+## 0.2.20 August 7, 2023
+
+'function' may not be present on stem_loop features. Added
+`--slashReplacement` and `--spaceReplacement` to `bin/describe-genome.py`
+for more control over creating output filenames.
+
 ## 0.2.19 August 7, 2023
 
 More robust treatment of feature names. After processing everything we want

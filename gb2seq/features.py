@@ -217,7 +217,10 @@ class Features(UserDict):
                     name = f"stem loop {n}"
                     if name not in self:
                         break
-                value["function"] = feature.qualifiers["function"][0]
+                try:
+                    value["function"] = feature.qualifiers["function"][0]
+                except KeyError:
+                    pass
 
             elif type_ == "repeat_region":
                 for n in itertools.count(1):

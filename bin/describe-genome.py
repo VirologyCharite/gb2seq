@@ -64,10 +64,12 @@ def featureFilePointers(read, feature, args=None):
         @return: An file pointer open for writing.
         """
         if args.outDir:
-            prefix = read.id.split()[0].replace("/", "_")
-            filename = join(
-                args.outDir, f"{prefix}-{feature}{('-nt' if nt else '-aa')}{suffix}"
+            prefix = (
+                (read.id.split()[0] + "-" + feature)
+                .replace("/", args.slashReplacement)
+                .replace(" ", args.spaceReplacement)
             )
+            filename = join(args.outDir, f"{prefix}{('-nt' if nt else '-aa')}{suffix}")
             return open(filename, "w")
         else:
             return sys.stdout
@@ -437,6 +439,24 @@ if __name__ == "__main__":
         "--noFeatures",
         action="store_true",
         help="Do not look up any features by default.",
+    )
+
+    parser.add_argument(
+        "--slashReplacement",
+        default="_",
+        help=(
+            "The character(s) used to replace slashes in filenames (if "
+            "slashes are found in a sequence id or feature name)."
+        ),
+    )
+
+    parser.add_argument(
+        "--spaceReplacement",
+        default=" ",
+        help=(
+            "The character(s) used to replace spaces in filenames (if "
+            "spaces are found in a sequence id or feature name)."
+        ),
     )
 
     parser.add_argument(

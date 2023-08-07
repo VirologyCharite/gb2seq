@@ -230,7 +230,7 @@ class Features(UserDict):
                 name = feature.qualifiers["product"][0]
                 value["product"] = name
 
-            elif type_ in {"source", "gap", "gene", "misc_feature"}:
+            elif type_ in {"source", "gap", "gene", "misc_feature", "ncRNA"}:
                 assert "product" not in feature.qualifiers
                 continue
 

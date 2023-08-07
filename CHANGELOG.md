@@ -1,3 +1,8 @@
+## 0.2.18 August 7, 2023
+
+Added `ncRNA` to known feature types. Probably I should just ignore all
+unknown feature types but at this point I still want to see them.
+
 ## 0.2.17 August 7, 2023
 
 Change to use `dark.aaVars` to be compatible with dark-matter 4.0.68

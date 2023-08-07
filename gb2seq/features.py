@@ -226,16 +226,16 @@ class Features(UserDict):
                         break
                 value["type"] = feature.qualifiers["rpt_type"][0]
 
-            elif type_ in {"CDS", "mat_peptide"}:
-                name = feature.qualifiers["product"][0]
-                value["product"] = name
-
-            elif type_ in {"source", "gap", "gene", "misc_feature", "ncRNA"}:
-                assert "product" not in feature.qualifiers
-                continue
-
             else:
-                raise ValueError(f"Unknown feature type {type_!r}.")
+                if "product" in feature.qualifiers:
+                    # This covers "CDS", "mat_peptide", "ncRNA".
+                    name = feature.qualifiers["product"][0]
+                    value["product"] = name
+                else:
+                    # This covers "source", "gap", "gene", "misc_feature"
+                    # and any other feature that is not annotated as having
+                    # a product.
+                    continue
 
             start = int(feature.location.start)
             stop = int(feature.location.end)

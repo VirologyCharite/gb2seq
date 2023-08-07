@@ -1,3 +1,9 @@
+## 0.2.19 August 7, 2023
+
+More robust treatment of feature names. After processing everything we want
+to treat specially, just look for things that have a "product" and ignore
+those that don't.
+
 ## 0.2.18 August 7, 2023
 
 Added `ncRNA` to known feature types. Probably I should just ignore all

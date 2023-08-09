@@ -441,6 +441,8 @@ VARIANTS = {
 }
 ```
 
+You can use the `--translated` option to select all features that are translated (i.e. coding sequences).
+
 ## annotate-genome.py
 
 Produces JSON output with annotation information for a genome. Here's an

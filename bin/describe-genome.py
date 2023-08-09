@@ -275,6 +275,8 @@ def main(args):
     else:
         if args.noFeatures:
             wantedFeatures = []
+        elif args.translated:
+            wantedFeatures = sorted(f for f in features if features.translated(f))
         else:
             wantedFeatures = sorted(features)
 
@@ -440,6 +442,12 @@ if __name__ == "__main__":
         action="store_true",
         help="Do not look up any features by default.",
     )
+
+    parser.add_argument(
+        "--translated",
+        action="store_true",
+        help="Look up translated features.",
+        )
 
     parser.add_argument(
         "--slashReplacement",

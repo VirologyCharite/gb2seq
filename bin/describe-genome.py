@@ -446,7 +446,7 @@ if __name__ == "__main__":
     parser.add_argument(
         "--translated",
         action="store_true",
-        help="Look up translated features.",
+        help="Only look up all translated features.",
         )
 
     parser.add_argument(

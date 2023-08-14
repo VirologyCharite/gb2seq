@@ -43,6 +43,10 @@ class AmbiguousFeatureError(Gb2SeqError):
     "More than one feature is referred to by an offset."
 
 
+class UnknownFeatureNameError(Gb2SeqError):
+    "A feature name is unknown."
+
+
 class Features(UserDict):
     """
     Manage sequence features.
@@ -107,8 +111,8 @@ class Features(UserDict):
                 )
             path = Path(referenceSpecification)
             if path.exists():
-                # A file argument can either be in GenBank format or
-                # contain a JSON object (the saved output of annotate-genome.py).
+                # A file argument can either be in GenBank format or contain a JSON
+                # object (the saved output of annotate-genome.py).
                 jsonError = seqError = None
                 with open(path) as fp:
                     try:
@@ -410,7 +414,7 @@ class Features(UserDict):
 
 
         @param name: A C{str} feature name to look up.
-        @raise KeyError: If the name is unknown.
+        @raise UnknownFeatureNameError: If the feature name is unknown.
         @return: A C{dict} for the feature, as above.
         """
         return self.data[self.canonicalName(name)]
@@ -420,8 +424,8 @@ class Features(UserDict):
         Get the canonical name for a feature.
 
         @param name: A C{str} feature name to look up.
-        @raise KeyError: If the name is unknown.
-        @return: A C{str} canonical name.
+        @raise UnknownFeatureNameError: If C{name} is not a known feature name.
+        @return: A C{str} canonical feature name.
         """
         if name in self:
             return name
@@ -433,7 +437,7 @@ class Features(UserDict):
 
         alias = self.aliasDict.get(nameLower)
         if alias is None:
-            raise KeyError(name)
+            raise UnknownFeatureNameError(name)
         else:
             assert alias in self
             return alias
@@ -456,7 +460,7 @@ class Features(UserDict):
         """
         try:
             canonicalName = self.canonicalName(name)
-        except KeyError:
+        except UnknownFeatureNameError:
             return set()
 
         result = {canonicalName}
@@ -496,7 +500,7 @@ class Features(UserDict):
         @param offset: An C{int} offset into the feature.
         @param aa: If C{True}, the offset is a number of amino acids, else a
             number of nucleotides.
-        @raise KeyError: If the name is unknown.
+        @raise UnknownFeatureNameError: If the name is unknown.
         @return: An C{int} nucleotide offset into the reference genome.
         """
         return self[name]["start"] + offset * (3 if aa else 1)
@@ -544,6 +548,8 @@ class Features(UserDict):
             the given C{offset} or if there are no features at the offset.
         @raise AmbiguousFeatureError: if there are multiple features at the
             offset and a feature name is not given.
+        @raise UnknownFeatureNameError: If the feature name is unknown (can be raised
+            via the call to self.canonicalName)
         @return: A 2-tuple, containing 1) a features C{dict} (as returned by
             __getitem__), if the requested feature is among those present at
             the offset, and 2) the set of all C{str} feature names present at

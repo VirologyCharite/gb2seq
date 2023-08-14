@@ -8,7 +8,7 @@ from dark.reads import AARead, DNARead, Reads
 
 from gb2seq import Gb2SeqError
 from gb2seq.change import splitChange
-from gb2seq.features import Features
+from gb2seq.features import Features, UnknownFeatureNameError
 from gb2seq.translate import (
     translate,
     translateSARS2Spike,
@@ -291,6 +291,7 @@ class Gb2Alignment:
             sequences.
         @param raiseOnReferenceGaps: A C{bool}. If C{True} and the aligner
             suggests a gap in the reference, raise a ReferenceInsertionError.
+        @raise UnknownFeatureNameError: If C{featureName} is unknown.
         @raise AssertionError: If the aligned reference and genome sequences
             are not the same length.
         @raise ReferenceInsertionError: (as above for raiseOnReferenceGaps).
@@ -305,7 +306,11 @@ class Gb2Alignment:
         except KeyError:
             pass
 
-        feature = self.features[featureName]
+        try:
+            feature = self.features[featureName]
+        except KeyError:
+            raise UnknownFeatureNameError(featureName)
+
         name = feature["name"]
         length = feature["stop"] - feature["start"]
         # 'offset' is the offset in the (possibly gapped) alignment.
@@ -535,7 +540,7 @@ class Gb2Alignment:
             case an error message will be printed to C{errFp}.
         @param errFp: An open file pointer to write error messages to, if any.
             Only used if C{onError} is 'print'.
-        @raise IndexError: If the offset is out of range.
+        @raise IndexError: If the offset is out of range and C{onError} is "raise".
         @return: A C{list} containing a C{bool} indicating whether the read
             sequence has C{base} at C{offset} (or C{True} if C{base} is
             C{None}) and the C{str} base found at the offset. If there is an
@@ -791,7 +796,7 @@ class Gb2Alignment:
             are found for the offset and no feature name is given to
             disambiguate. Instead, use the first feature name returned by
             C{getFeatureNames}.
-        @raise KeyError: If the feature name is unknown.
+        @raise UnknownFeatureNameError: If C{featureName} is unknown.
         @raise ValueError: If incorrect arguments are passed (see below).
         @raise AmbiguousFeatureError: If multiple features occur at the offset
             and C{featureName} does not indicate the one to use.

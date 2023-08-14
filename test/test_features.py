@@ -3,7 +3,7 @@ from pathlib import Path
 
 from dark.reads import DNARead
 
-from gb2seq.features import Features
+from gb2seq.features import Features, UnknownFeatureNameError
 
 _FEATURES = Features(sars2=True)
 
@@ -47,9 +47,11 @@ class TestFeatures(TestCase):
 
     def testUnknownFeature(self):
         """
-        If an unknown feature is asked for, a KeyError must be raised.
+        If an unknown feature is asked for, an UnknownFeatureNameError must be raised.
         """
-        self.assertRaisesRegex(KeyError, "^'xx'$", _FEATURES.__getitem__, "xx")
+        self.assertRaisesRegex(
+            UnknownFeatureNameError, "^xx$", _FEATURES.__getitem__, "xx"
+        )
 
     def testPassingDict(self):
         """
@@ -123,10 +125,12 @@ class TestFeatures(TestCase):
 
     def testOffsetInUnknownFeature(self):
         """
-        If a genome offset for an unknown feature is requested, a KeyError
-        must be raised.
+        If a genome offset for an unknown feature is requested, an
+        UnknownFeatureNameError must be raised.
         """
-        self.assertRaisesRegex(KeyError, "^'xx'$", _FEATURES.referenceOffset, "xx", 10)
+        self.assertRaisesRegex(
+            UnknownFeatureNameError, "^xx$", _FEATURES.referenceOffset, "xx", 10
+        )
 
     def testAaOffsetInMembrane(self):
         """

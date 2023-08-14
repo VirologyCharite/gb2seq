@@ -8,7 +8,7 @@ from collections import defaultdict
 from dark.fasta import FastaReads
 
 from gb2seq.alignment import Gb2Alignment, addAlignerOption
-from gb2seq.features import Features, addFeatureOptions
+from gb2seq.features import Features, addFeatureOptions, UnknownFeatureNameError
 from gb2seq.sars2 import SARS_COV_2_ALIASES
 
 
@@ -136,7 +136,7 @@ def main(args):
         for name in args.name:
             try:
                 wantedNames.append(features.canonicalName(name))
-            except KeyError:
+            except UnknownFeatureNameError:
                 forgot = (
                     " It looks like you forgot to use --sars2."
                     if name.lower() in SARS_COV_2_ALIASES

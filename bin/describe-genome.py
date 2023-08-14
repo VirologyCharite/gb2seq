@@ -14,7 +14,7 @@ from dark.dna import compareDNAReads, matchToString as dnaMatchToString
 from dark.reads import Read, Reads
 
 from gb2seq.alignment import Gb2Alignment, addAlignerOption
-from gb2seq.features import Features, addFeatureOptions
+from gb2seq.features import Features, addFeatureOptions, UnknownFeatureNameError
 from gb2seq.translate import TranslationError
 from gb2seq.variants import VARIANTS
 
@@ -188,6 +188,7 @@ def processFeature(featureName, genome, fps, featureNumber, args):
         This will be zero for the first feature, 1 for the second, etc.
     @param args: A C{Namespace} instance as returned by argparse with
         values for command-line options.
+    @raises UnknownFeatureNameError: If the feature is unknown.
     """
     referenceNt, genomeNt = genome.ntSequences(featureName)
     feature = genome.features[featureName]
@@ -268,8 +269,29 @@ def main(args):
     )
 
     if args.feature:
-        if args.canonicalNames:
-            wantedFeatures = map(features.canonicalName, args.feature)
+        unknownFeatureNames = set()
+        for featureName in args.feature:
+            try:
+                features[featureName]
+            except UnknownFeatureNameError:
+                unknownFeatureNames.add(featureName)
+
+        if unknownFeatureNames:
+            if len(unknownFeatureNames) == 1:
+                print(
+                    f"Feature name {unknownFeatureNames.pop()!r} is unknown.",
+                    file=sys.stderr,
+                )
+            else:
+                unknownStr = ", ".join(
+                    f"{featureName!r}" for featureName in sorted(unknownFeatureNames)
+                )
+                print(
+                    f"The following {len(unknownFeatureNames)} features are "
+                    f"unknown: {unknownStr}.",
+                    file=sys.stderr,
+                )
+            sys.exit(1)
         else:
             wantedFeatures = args.feature
     else:
@@ -281,6 +303,9 @@ def main(args):
     if not (args.checkVariant or wantedFeatures):
         print("No action specified - I have nothing to do!", file=sys.stderr)
         return 1
+
+    if args.canonicalNames:
+        wantedFeatures = map(features.canonicalName, wantedFeatures)
 
     if args.variantFile:
         try:

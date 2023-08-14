@@ -28,7 +28,7 @@ def report(genome, args, includeGenome=True):
             args.site - 1,
             relativeToFeature=args.relativeToFeature,
             aa=args.aa,
-            featureName=args.feature,
+            featureName=args.featureName,
             includeUntranslated=args.includeUntranslated,
             minReferenceCoverage=args.minReferenceCoverage,
         )
@@ -126,11 +126,11 @@ if __name__ == "__main__":
     )
 
     parser.add_argument(
-        "--feature",
+        "--featureName",
         metavar="FEATURE",
         help=(
-            "The feature to examine (e.g., nsp2). This is required if you "
-            "use --aa or --relativeToFeature"
+            "The name of the feature to examine (e.g., nsp2). This is required "
+            "if you use --aa or --relativeToFeature"
         ),
     )
 

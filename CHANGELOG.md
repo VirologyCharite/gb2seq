@@ -1,3 +1,7 @@
+## 0.2.21 August 10, 2023
+Added `--translated` option to `bin/describe-genome.py`.
+This will extract all the features that are translated.
+
 ## 0.2.20 August 7, 2023
 
 'function' may not be present on stem_loop features. Added

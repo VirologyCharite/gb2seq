@@ -472,7 +472,7 @@ if __name__ == "__main__":
         "--translated",
         action="store_true",
         help="Only look up all translated features.",
-        )
+    )
 
     parser.add_argument(
         "--slashReplacement",

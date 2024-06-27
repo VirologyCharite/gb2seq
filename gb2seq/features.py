@@ -62,6 +62,8 @@ class Features(UserDict):
         else C{None}.
     @param sars2: A C{bool} indicating whether we are dealing with SARS-CoV-2
         features (in which case some defaults can be set).
+    @param alsoInclude: A C{set} of feature types to also return data for
+        (beyond those normally returned), or C{None}.
     @raise ValueError: If a reference is passed with a string or Path
         specification.
     @raise ReferenceWithGapError: If the reference or one of its features has a
@@ -76,6 +78,7 @@ class Features(UserDict):
         translated: Optional[Set[str]] = None,
         aliases: Optional[Dict[str, str]] = None,
         addUnannotatedRegions: bool = False,
+        alsoInclude: Optional[set[str]] = None,
     ) -> None:
         super().__init__()
         self.sars2 = sars2
@@ -95,7 +98,7 @@ class Features(UserDict):
                         )
                         sys.exit(1)
                     else:
-                        self._initializeFromGenBankRecord(record)
+                        self._initializeFromGenBankRecord(record, alsoInclude)
             else:
                 raise ValueError(
                     "A reference specification must be provided for non-SARS-CoV-2 "
@@ -103,7 +106,7 @@ class Features(UserDict):
                 )
         elif isinstance(referenceSpecification, SeqRecord):
             record = referenceSpecification
-            self._initializeFromGenBankRecord(record)
+            self._initializeFromGenBankRecord(record, alsoInclude)
         elif isinstance(referenceSpecification, str):
             if reference is not None:
                 raise ValueError(
@@ -130,7 +133,7 @@ class Features(UserDict):
                         except Exception as e:
                             seqError = e
                         else:
-                            self._initializeFromGenBankRecord(record)
+                            self._initializeFromGenBankRecord(record, alsoInclude)
 
                 if jsonError and seqError:
                     print(
@@ -162,7 +165,7 @@ class Features(UserDict):
                         )
                         sys.exit(1)
                     else:
-                        self._initializeFromGenBankRecord(record)
+                        self._initializeFromGenBankRecord(record, alsoInclude)
                     finally:
                         client.close()
                 except Exception as e:
@@ -175,7 +178,7 @@ class Features(UserDict):
                 )
             with open(referenceSpecification) as fp:
                 record = SeqIO.read(fp, "genbank")
-            self._initializeFromGenBankRecord(record)
+            self._initializeFromGenBankRecord(record, alsoInclude)
         elif isinstance(referenceSpecification, dict):
             self.data.update(referenceSpecification)
             self.reference = reference
@@ -199,19 +202,26 @@ class Features(UserDict):
         if addUnannotatedRegions:
             self._addUnannotatedRegions()
 
-    def _initializeFromGenBankRecord(self, record: SeqIO.SeqRecord) -> None:
+    def _initializeFromGenBankRecord(
+        self, record: SeqIO.SeqRecord, alsoInclude: Optional[set[str]]
+    ) -> None:
         """
         Initialize from a GenBank record.
 
         @param record: A BioPython C{SeqRecord} sequence record.
+        @param alsoInclude: A C{set} of feature types to also return data for
+            (beyond those normally returned) or C{None}.
         @raise ReferenceWithGapError: If the reference sequence or the
             sequence of any of its features has a gap.
         """
         self.reference = DNARead(record.id, str(record.seq))
+        alsoInclude = alsoInclude or set()
 
         for feature in record.features:
             type_ = feature.type
-            value = {}
+            value = {
+                "type": type_,
+            }
 
             if type_ == "3'UTR" or type_ == "5'UTR":
                 name = type_
@@ -242,7 +252,8 @@ class Features(UserDict):
                     # This covers "source", "gap", "gene", "misc_feature"
                     # and any other feature that is not annotated as having
                     # a product.
-                    continue
+                    if type_ not in alsoInclude:
+                        continue
 
             start = int(feature.location.start)
             stop = int(feature.location.end)

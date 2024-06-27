@@ -117,6 +117,7 @@ class TestFeatures(TestCase):
                 "KEITVATSRTLSYYKLGASQRVAGDSGFAAYSRYRIGNYKLNTDHSSSSDNIALL"
                 "VQ*"
             ),
+            "type": "CDS",
         }
 
         for name in "membrane glycoprotein", "membrane", "m", "orf5":

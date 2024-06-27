@@ -18,7 +18,7 @@ def main(args: argparse.Namespace) -> int:
 
     @param args: An C{argparse.Namespace} instance with command-line values.
     """
-    features = Features(args.reference, sars2=args.sars2)
+    features = Features(args.reference, sars2=args.sars2, alsoInclude={"gene"})
     genome = list(FastaReads(args.genome))[0]
 
     try:
@@ -30,7 +30,32 @@ def main(args: argparse.Namespace) -> int:
         )
         return 1
     else:
-        print(dumps(annotations, sort_keys=True, indent=4))
+        if args.format == "json":
+            print(dumps(annotations, sort_keys=True, indent=4))
+        else:
+            assert args.format == "feature-table"
+            print(f">Feature {genome.id}")
+
+            for feature in annotations["features"].values():
+                start = feature["genome"]["start"] + 1
+                stop = feature["genome"]["stop"]
+
+                reference = feature["reference"]
+                type_ = reference["type"]
+                note = reference.get("note")
+                product = reference.get("product") or reference.get("name")
+
+                print(f"{start}\t{stop}\t{type_}")
+
+                if type_ == "gene":
+                    print(f"\t\t\tgene\t{product}")
+                else:
+                    for what, value in (
+                        ("note", note),
+                        ("product", product),
+                    ):
+                        if value:
+                            print(f"\t\t\t{what}\t{value}")
 
         if args.summarize:
             print(summarizeDifferences(annotations), file=sys.stderr)
@@ -61,6 +86,16 @@ def makeParser() -> argparse.ArgumentParser:
         "--summarize",
         action="store_true",
         help="Write a summary of differences to standard error.",
+    )
+
+    parser.add_argument(
+        "--format",
+        choices=("json", "feature-table"),
+        default="json",
+        help=(
+            "The output format. The feature-table format is described at "
+            "https://www.ncbi.nlm.nih.gov/WebSub/html/help/feature-table.html"
+        ),
     )
 
     addAlignerOption(parser)

@@ -250,7 +250,7 @@ def getSubstitutionsString(
     # the same length.
     if refSeqLen != genSeqLen:
         raise TranslatedReferenceAndGenomeLengthError(
-            f"Reference and genome lengths unequal " f"({refSeqLen} != {genSeqLen})."
+            f"Reference and genome lengths unequal ({refSeqLen} != {genSeqLen})."
         )
 
     for site, (a, b) in enumerate(zip(refSeq, genSeq), start=1):
@@ -269,7 +269,11 @@ def getSubstitutionsString(
                     previousXPosition = firstXposition = site
             else:
                 if previousXPosition == site - 1:
-                    assert changes[-1].startswith(_NO_COVERAGE)
+                    assert changes[-1].startswith(_NO_COVERAGE), (
+                        f"Expected {_NO_COVERAGE!r} at the start of "
+                        f"{changes[-1]!r} at site {site}.\n"
+                        f"Changes so far: {changes}"
+                    )
                     if int(changes[-1][len(_NO_COVERAGE) :]) != site - 1:
                         changes[-1] += f"-{site - 1}"
                     # This is the first non-X after a string of Xs.
@@ -279,12 +283,20 @@ def getSubstitutionsString(
                     changes.append(f"{a}{site}{b}")
 
         elif previousXPosition == site - 1 and firstXposition != site - 1:
-            assert changes[-1].startswith(_NO_COVERAGE)
+            assert changes[-1].startswith(_NO_COVERAGE), (
+                f"Expected {_NO_COVERAGE!r} at the start of "
+                f"{changes[-1]!r} at site {site}.\n"
+                f"Changes so far: {changes}"
+            )
             if int(changes[-1][len(_NO_COVERAGE) :]) != site - 1:
                 changes[-1] += f"-{site - 1}"
 
     if previousXPosition is not None and previousXPosition == site:
-        assert changes[-1].startswith(_NO_COVERAGE)
+        assert changes[-1].startswith(_NO_COVERAGE), (
+            f"Expected {_NO_COVERAGE!r} at the start of "
+            f"{changes[-1]!r} at site {site}.\n"
+            f"Changes so far: {changes}"
+        )
         if int(changes[-1][len(_NO_COVERAGE) :]) != site:
             changes[-1] += f"-{site}"
 

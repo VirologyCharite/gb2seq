@@ -2,12 +2,15 @@ from Bio.Seq import Seq
 from unittest import TestCase
 
 from dark.reads import AARead
-from gb2seq.translate import (
-    KNOWN_INSERTIONS,
+from gb2seq.sars2 import (
+    SLIPPERY_SEQUENCE,
     NoSlipperySequenceError,
     NoStopCodonError,
-    SLIPPERY_SEQUENCE,
     StopCodonTooDistantError,
+)
+
+from gb2seq.translate import (
+    KNOWN_INSERTIONS,
     TranslatedReferenceAndGenomeLengthError,
     TranslatedSequenceLengthError,
     getSubstitutionsString,
@@ -27,7 +30,12 @@ class TestTranslate(TestCase):
         """
         error = r"^No slippery sequence found\.$"
         self.assertRaisesRegex(
-            NoSlipperySequenceError, error, translate, "AAATTT", "ORF1ab polyprotein"
+            NoSlipperySequenceError,
+            error,
+            translate,
+            "AAATTT",
+            name="ORF1ab polyprotein",
+            sars2=True,
         )
 
     def testNoStopCodonFollowingTheSlipperySequence(self):
@@ -41,7 +49,12 @@ class TestTranslate(TestCase):
         )
         sequence = "A" * 13000 + SLIPPERY_SEQUENCE
         self.assertRaisesRegex(
-            NoStopCodonError, error, translate, sequence, "ORF1ab polyprotein"
+            NoStopCodonError,
+            error,
+            translate,
+            sequence,
+            name="ORF1ab polyprotein",
+            sars2=True,
         )
 
     def testDistantStopCodonFollowingTheSlipperySequence(self):
@@ -56,7 +69,12 @@ class TestTranslate(TestCase):
         )
         sequence = "A" * 13000 + SLIPPERY_SEQUENCE + "A" * 100 + "TAA"
         self.assertRaisesRegex(
-            StopCodonTooDistantError, error, translate, sequence, "ORF1ab polyprotein"
+            StopCodonTooDistantError,
+            error,
+            translate,
+            sequence,
+            name="ORF1ab polyprotein",
+            sars2=True,
         )
 
     def testEmpty(self):

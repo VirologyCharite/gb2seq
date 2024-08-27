@@ -11,7 +11,7 @@ except ImportError:
     from importlib_resources import files, as_file
 
 
-# from warnings import warn
+from warnings import warn
 import json
 import argparse
 
@@ -255,30 +255,56 @@ class Features(UserDict):
                     if type_ not in alsoInclude:
                         continue
 
+            for optional in "translation", "note":
+                try:
+                    value[optional] = feature.qualifiers[optional][0]
+                except KeyError:
+                    pass
+
             start = int(feature.location.start)
             stop = int(feature.location.end)
             genomeRanges = GenomeRanges(str(feature.location))
+            nRanges = len(genomeRanges.ranges)
 
-            # We can only handle a single range at the moment.
-            if len(genomeRanges.ranges) == 1:
-                assert start == genomeRanges.ranges[0][0]
-                assert stop == genomeRanges.ranges[0][1]
-                forward = genomeRanges.ranges[0][2]
-            elif self.sars2 and name == "ORF1ab polyprotein":
-                assert len(genomeRanges.ranges) == 2
-                assert start == genomeRanges.ranges[0][0]
-                assert stop == genomeRanges.ranges[1][1]
-                forward = True
+            if nRanges == 0:
+                raise ValueError("No genome ranges present for feature {name!r}.")
+
+            # If we just have one range, check that the given high-level start and stop
+            # attributes match the start and end of the range. The situation with
+            # multiple ranges is more complicated (e.g., the HBV polymerase of
+            # NC_001896.1 starts at 2309 and goes to 1637).
+            #
+            # We should probably ignore the "location" start and use the ranges. But
+            # then we should generalize to be more sophisticate regarding start/stop,
+            # translation, etc.
+            if nRanges == 1:
+                rangeStart, rangeStop = genomeRanges.ranges[0][:2]
+                assert start == rangeStart, (
+                    f"Record start offset {start} does not match first genome range "
+                    f"start {rangeStart}."
+                )
+                assert stop == rangeStop, (
+                    f"Record stop offset {stop} does not match first genome range "
+                    f"stop {rangeStop}."
+                )
+
+            directions = set(genomeRange[2] for genomeRange in genomeRanges.ranges)
+            if len(directions) == 1:
+                # All ranges have the same orientation.
+                forward = directions.pop()
             else:
-                if not self.sars2:
-                    # At some point (soon) we should emit a warning. But let's first try
-                    # to fix things so we can translate anything.
-                    #
-                    # warn(
-                    #     f"Multiple reference genome ranges {genomeRanges} found "
-                    #     f"for feature {name!r} will not be translated reliably."
-                    # )
-                    pass
+                # The genome ranges have mixed orientations. If there is no translation
+                # present (from a GenBank record), warn that we do not yet support
+                # translation for this feature (this would be easy to add - we should do
+                # it!).
+                forward = None
+
+                if "translation" not in value:
+                    warn(
+                        f"The reference genome ranges {genomeRanges} "
+                        f"for feature {name!r} do not all have the same orientation. "
+                        f"This feature will not be translated reliably!"
+                    )
 
             sequence = str(record.seq)[start:stop]
 
@@ -291,12 +317,6 @@ class Features(UserDict):
                     "stop": stop,
                 }
             )
-
-            for optional in "translation", "note":
-                try:
-                    value[optional] = feature.qualifiers[optional][0]
-                except KeyError:
-                    pass
 
             # If there is a translation, add an amino acid '*' stop
             # indicator if there is not one already and the sequence ends

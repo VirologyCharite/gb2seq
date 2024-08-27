@@ -12,7 +12,6 @@ from gb2seq.features import Features, UnknownFeatureNameError
 from gb2seq.translate import (
     translate,
     translateSARS2Spike,
-    TranslationError,
     TranslatedReferenceAndGenomeLengthError,
 )
 from gb2seq.variants import VARIANTS
@@ -641,7 +640,7 @@ class Gb2Alignment:
                 if aa
                 else self.ntSequences(featureName)
             )
-        except TranslationError as e:
+        except Gb2SeqError as e:
             if onError == "raise":
                 raise
             elif onError == "print":

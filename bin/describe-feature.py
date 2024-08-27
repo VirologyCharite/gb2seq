@@ -93,6 +93,8 @@ def reportGenomeFeature(features, name, alignment, maxSequenceLength, oneBased):
     print(f"    start: {absoluteStart + bool(oneBased)}")
     print(f"    stop: {absoluteStop}")
     print(f"    length (nt): {len(genomeNt.sequence)}")
+    print(f"    aligned (to ref) start: {alignedStart + bool(oneBased)}")
+    print(f"    aligned (to ref) stop: {alignedStop}")
 
     if maxSequenceLength:
         print(

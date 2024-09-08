@@ -18,7 +18,7 @@ from gb2seq.alignment import (
 )
 from gb2seq.change import splitChange
 from gb2seq.features import Features, AmbiguousFeatureError, MissingFeatureError
-from gb2seq.translate import NoSlipperySequenceError
+from gb2seq.sars2 import NoSlipperySequenceError
 
 from .fasta import getSequence
 

@@ -69,7 +69,8 @@ def reportGenomeFeature(features, name, alignment, maxSequenceLength, oneBased):
         should be reported.
     @param maxSequenceLength: The maximum sequence length to print. Longer sequences
         will be truncated. Use 0 or C{None} to skip printing sequences.
-    @param oneBased: If true, print one-based sites instead of zero-based offsets.
+    @param oneBased: A C{bool}. If true, print one-based sites instead of zero-based
+        offsets.
 
     """
     print(f"  Genome {alignment.genome.id}:")
@@ -90,9 +91,11 @@ def reportGenomeFeature(features, name, alignment, maxSequenceLength, oneBased):
     absoluteStop = len(gappedSequence[:alignedStop].replace("-", ""))
     _, genomeNt = alignment.ntSequences(name, raiseOnReferenceGaps=False)
 
-    print(f"    start: {absoluteStart + bool(oneBased)}")
+    print(f"    start: {absoluteStart + oneBased}")
     print(f"    stop: {absoluteStop}")
     print(f"    length (nt): {len(genomeNt.sequence)}")
+    print(f"    aligned (to ref) start: {alignedStart + oneBased}")
+    print(f"    aligned (to ref) stop: {alignedStop}")
 
     if maxSequenceLength:
         print(

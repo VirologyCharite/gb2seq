@@ -1,3 +1,8 @@
+## 0.2.22 August 27, 2024
+
+Improved dealing with features that have multiple genome ranges to fix
+https://github.com/VirologyCharite/gb2seq/issues/11
+
 ## 0.2.21 August 10, 2023
 Added `--translated` option to `bin/describe-genome.py`.
 This will extract all the features that are translated.

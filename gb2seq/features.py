@@ -1,9 +1,8 @@
 import sys
 from os import environ
 import itertools
-from collections import UserDict
 from pathlib import Path
-from typing import Dict, Optional, Set, Union
+from typing import Dict, Optional, Set, Union, Iterator
 
 try:
     from importlib.resources import files, as_file
@@ -25,7 +24,7 @@ from dark.reads import DNARead
 from gb2seq import Gb2SeqError
 from gb2seq.sars2 import SARS_COV_2_ALIASES, SARS_COV_2_TRANSLATED
 
-# Set ENTREZ_EMAIL in your environment to have your requests to NCBI Entez
+# Set ENTREZ_EMAIL in your environment to have your requests to NCBI Entrez
 # be accompanied by your address. If you don't do this you'll see warning
 # messages and be limited to a lower rate of querying.
 Entrez.email = environ.get("ENTREZ_EMAIL")
@@ -47,7 +46,7 @@ class UnknownFeatureNameError(Gb2SeqError):
     "A feature name is unknown."
 
 
-class Features(UserDict):
+class Features:
     """
     Manage sequence features.
 
@@ -62,17 +61,24 @@ class Features(UserDict):
         else C{None}.
     @param sars2: A C{bool} indicating whether we are dealing with SARS-CoV-2
         features (in which case some defaults can be set).
+    @param translated: A C{set} of C{str} names of features that are known to
+        be translated. If C{None}, this will be derived from the reference (unless
+        C{sars2} is C{True}, in which case SARS_COV_2_TRANSLATED is used).
+    @param aliases: An optional C{dict} mapping C{str} convenient aliases to longer
+        feature names. This allows aliases to be used to look up features. If C{None}
+        and C{sars2} is C{True}, SARS_COV_2_ALIASES is used.
+    @param addUnannotatedRegions: If C{True}, genome regions that are not annotated
+        will be added.
     @param alsoInclude: A C{set} of feature types to also return data for
         (beyond those normally returned), or C{None}.
-    @raise ValueError: If a reference is passed with a string or Path
-        specification.
+    @raise ValueError: If a reference is passed with a C{str} or C{Path} specification.
     @raise ReferenceWithGapError: If the reference or one of its features has a
         gap in its nucleotide sequence.
     """
 
     def __init__(
         self,
-        referenceSpecification: Union[str, Dict, Path] = None,
+        referenceSpecification: Optional[Union[str, Dict, Path]] = None,
         reference: Optional[DNARead] = None,
         sars2: bool = False,
         translated: Optional[Set[str]] = None,
@@ -80,7 +86,7 @@ class Features(UserDict):
         addUnannotatedRegions: bool = False,
         alsoInclude: Optional[set[str]] = None,
     ) -> None:
-        super().__init__()
+        self._data = {}
         self.sars2 = sars2
         self.translatedNames: Set[str] = set()
 
@@ -92,8 +98,7 @@ class Features(UserDict):
                         record = SeqIO.read(fp, "genbank")
                     except Exception as e:
                         print(
-                            "Could not parse default SARS-CoV-2 GenBank record",
-                            e,
+                            f"Could not parse default SARS-CoV-2 GenBank record: {e}",
                             file=sys.stderr,
                         )
                         sys.exit(1)
@@ -123,7 +128,7 @@ class Features(UserDict):
                     except json.decoder.JSONDecodeError as e:
                         jsonError = e
                     else:
-                        self.data.update(record["features"])
+                        self._data.update(record["features"])
                         self.reference = DNARead(record["id"], record["sequence"])
 
                 if jsonError:
@@ -159,8 +164,7 @@ class Features(UserDict):
                         record = SeqIO.read(client, "genbank")
                     except Exception as e:
                         print(
-                            "Could not parse fetched GenBank record:",
-                            e,
+                            f"Could not parse fetched GenBank record: {e}",
                             file=sys.stderr,
                         )
                         sys.exit(1)
@@ -169,7 +173,7 @@ class Features(UserDict):
                     finally:
                         client.close()
                 except Exception as e:
-                    print("Could not fetch GenBank record:", e, file=sys.stderr)
+                    print(f"Could not fetch GenBank record: {e}", file=sys.stderr)
                     sys.exit(1)
         elif isinstance(referenceSpecification, Path):
             if reference is not None:
@@ -180,7 +184,7 @@ class Features(UserDict):
                 record = SeqIO.read(fp, "genbank")
             self._initializeFromGenBankRecord(record, alsoInclude)
         elif isinstance(referenceSpecification, dict):
-            self.data.update(referenceSpecification)
+            self._data.update(referenceSpecification)
             self.reference = reference
         else:
             raise ValueError(f"Unrecognized specification {referenceSpecification!r}.")
@@ -193,7 +197,9 @@ class Features(UserDict):
         else:
             if translated is None:
                 self.translatedNames = set(
-                    name for (name, value) in self.items() if "translation" in value
+                    name
+                    for (name, value) in self._data.items()
+                    if "translation" in value
                 )
             else:
                 self.translatedNames = translated
@@ -218,6 +224,7 @@ class Features(UserDict):
         alsoInclude = alsoInclude or set()
 
         for feature in record.features:
+            name: Optional[str] = None
             type_ = feature.type
             value = {
                 "type": type_,
@@ -229,7 +236,7 @@ class Features(UserDict):
             elif type_ == "stem_loop":
                 for n in itertools.count(1):
                     name = f"stem loop {n}"
-                    if name not in self:
+                    if name not in self._data:
                         break
                 try:
                     value["function"] = feature.qualifiers["function"][0]
@@ -239,21 +246,27 @@ class Features(UserDict):
             elif type_ == "repeat_region":
                 for n in itertools.count(1):
                     name = f"repeat region {n}"
-                    if name not in self:
+                    if name not in self._data:
                         break
                 value["type"] = feature.qualifiers["rpt_type"][0]
 
+            elif "product" in feature.qualifiers:
+                # This covers "CDS", "mat_peptide", "ncRNA".
+                name = feature.qualifiers["product"][0]
+                value["product"] = name
+
             else:
-                if "product" in feature.qualifiers:
-                    # This covers "CDS", "mat_peptide", "ncRNA".
-                    name = feature.qualifiers["product"][0]
-                    value["product"] = name
+                # Skip unwanted features that are not annotated as having a product
+                # (e.g., "source", "gap", "gene", "misc_feature".)
+                if type_ in alsoInclude:
+                    assert name is None
+                    # Give this feature a numbered name based on its type.
+                    for n in itertools.count(1):
+                        name = f"{type_} {n}"
+                        if name not in self._data:
+                            break
                 else:
-                    # This covers "source", "gap", "gene", "misc_feature"
-                    # and any other feature that is not annotated as having
-                    # a product.
-                    if type_ not in alsoInclude:
-                        continue
+                    continue
 
             for optional in "translation", "note":
                 try:
@@ -350,17 +363,17 @@ class Features(UserDict):
             # $ grep product NC_003310.1.gb | grep -i hypothetical
             existingName = self.getKeyIgnoringCase(name)
             if existingName:
-                if self[existingName] != value:
+                if self._data[existingName] != value:
                     lowercaseNames = set(map(str.lower, self))
                     for n in itertools.count(2):
                         adjustedName = f"{name} {n}"
                         if adjustedName.lower() not in lowercaseNames:
                             name = adjustedName
                             value["name"] = adjustedName
-                            self[name] = value
+                            self._data[name] = value
                             break
             else:
-                self[name] = value
+                self._data[name] = value
 
         self._checkForGaps()
 
@@ -369,19 +382,16 @@ class Features(UserDict):
         Find unannotated regions and add them as features.
         """
         annotatedOffsets: Set[int] = set()
-        for feature in self.data.values():
+        for feature in self._data.values():
             annotatedOffsets.update(range(feature["start"], feature["stop"]))
+            # Mark all pre existing features as annotated, seeing as all regions we add
+            # below are not annotated.
             feature["annotated"] = True
 
-        start = None
-        unannotatedRegionCount = 0
-
-        def _addNew(stop: int) -> None:
-            nonlocal unannotatedRegionCount
-            unannotatedRegionCount += 1
+        def _addNew(start: int, stop: int, unannotatedRegionCount: int) -> None:
             name = f"unannotated region {unannotatedRegionCount}"
-            assert name not in self.data
-            self.data[name] = {
+            assert name not in self._data
+            self._data[name] = {
                 "name": name,
                 "annotated": False,
                 "start": start,
@@ -389,34 +399,45 @@ class Features(UserDict):
                 "sequence": self.reference.sequence[start:stop],
             }
 
+        start = -1
+        unannotatedRegionCount = 0
+
         for offset in range(len(self.reference)):
             if offset in annotatedOffsets:
-                if start is not None:
-                    _addNew(offset)
-                    start = None
+                if start != -1:
+                    unannotatedRegionCount += 1
+                    _addNew(start, offset, unannotatedRegionCount)
+                    start = -1
             else:
-                if start is None:
+                if start == -1:
                     start = offset
 
-        if start is not None:
-            _addNew(offset)
+        if start != -1:
+            unannotatedRegionCount += 1
+            _addNew(start, offset, unannotatedRegionCount)
 
-    def getKeyIgnoringCase(self, name: str) -> Union[str, None]:
+    def getKeyIgnoringCase(self, name: str) -> Optional[str]:
         """
-        Find a key in self.data, ignoring case.
+        Find a key in self._data, ignoring case.
 
         @param name: A C{str} name to look up.
         @return: An existing C{str} key that matches C{name} when case is
             ignored, or C{None} if no such key exists.
         """
         name = name.lower()
-        for thisName in self.data:
+        for thisName in self._data:
             if thisName.lower() == name:
                 return thisName
         else:
             return None
 
-    def __getitem__(self, name: str) -> Union[dict, None]:
+    def __contains__(self, item: str) -> bool:
+        return item in self._data
+
+    def __iter__(self) -> Iterator[str]:
+        return iter(self._data)
+
+    def __getitem__(self, name: str) -> dict:
         """
         Find a feature by name. This produces a dictionary with the following
         keys and values for the feature:
@@ -438,9 +459,7 @@ class Features(UserDict):
                     way of slicing out substrings.
                 'translation': The amino acid translation of the feature, if
                     one is provided by the GenBank record. Note that
-                    translations may not be provided for all features! If you
-                    need to know what is actually translated, use the
-                    TRANSLATED set defined at the top of this file.
+                    translations may not be provided for all features!
             }
 
 
@@ -448,7 +467,7 @@ class Features(UserDict):
         @raise UnknownFeatureNameError: If the feature name is unknown.
         @return: A C{dict} for the feature, as above.
         """
-        return self.data[self.canonicalName(name)]
+        return self._data[self.canonicalName(name)]
 
     def canonicalName(self, name: str) -> str:
         """
@@ -458,11 +477,11 @@ class Features(UserDict):
         @raise UnknownFeatureNameError: If C{name} is not a known feature name.
         @return: A C{str} canonical feature name.
         """
-        if name in self:
+        if name in self._data:
             return name
 
         nameLower = name.lower()
-        for featureName in self:
+        for featureName in self._data:
             if nameLower == featureName.lower():
                 return featureName
 
@@ -470,7 +489,7 @@ class Features(UserDict):
         if alias is None:
             raise UnknownFeatureNameError(name)
         else:
-            assert alias in self
+            assert alias in self._data
             return alias
 
     def translated(self, name: str) -> bool:
@@ -515,7 +534,7 @@ class Features(UserDict):
                 f"Reference sequence {referenceId!r} has a gap!"
             )
 
-        for featureInfo in self.values():
+        for featureInfo in self._data.values():
             if featureInfo["sequence"].find("-") > -1:
                 raise ReferenceWithGapError(
                     f'Feature {featureInfo["name"]!r} sequence in '
@@ -547,7 +566,7 @@ class Features(UserDict):
         """
         result = set()
 
-        for name, feature in self.items():
+        for name, feature in self._data.items():
             if feature["start"] <= offset < feature["stop"] and (
                 includeUntranslated or self.translated(name)
             ):
@@ -590,17 +609,20 @@ class Features(UserDict):
 
         if featureName is None:
             if features:
-                # There are some features here, but we weren't told which
-                # one to use. Only proceed if there's just one or if we've
-                # been told to allow ambiguity (in which case we use the
-                # alphabetically first feature name).
+                # There are some features here, but we weren't told which one to
+                # use. Only proceed if there's just one or if we've been told to allow
+                # ambiguity (in which case we use the alphabetically first feature
+                # name).
                 if len(features) == 1 or allowAmbiguous:
                     featureName = list(sorted(features))[0]
-                    feature = self[featureName]
+                    feature = self._data[featureName]
                 else:
                     present = ", ".join(
-                        f"{f!r} ({self[f]['start'] + 1} - {self[f]['stop']})"
-                        for f in sorted(features)
+                        f"{name!r} "
+                        f"({self._data[name]['start'] + 1}"
+                        " - "
+                        f"{self._data[name]['stop']})"
+                        for name in sorted(features)
                     )
                     raise AmbiguousFeatureError(
                         f"There are multiple features at site {offset + 1}: "
@@ -612,11 +634,12 @@ class Features(UserDict):
                 feature = None
         else:
             canonicalName = self.canonicalName(featureName)
-            feature = self[canonicalName]
+            feature = self._data[canonicalName]
             if canonicalName not in features:
                 if features:
                     present = ", ".join(
-                        f"{f!r} ({self[f]['start'] + 1} - {self[f]['stop']})"
+                        f"{f!r} "
+                        f"({self._data[f]['start'] + 1} - {self._data[f]['stop']})"
                         for f in sorted(features)
                     )
                     raise MissingFeatureError(
@@ -647,15 +670,15 @@ class Features(UserDict):
 
         @param name: A C{str} feature name.
         @param maxSequenceLength: The C{int} maximum sequence (prefix) length to
-            include. Pass -1 to specify the full sequence or 0 to exclude sequences
-            from the result.
+            include in the returned string. Pass -1 to specify the full sequence
+            or 0 to exclude sequences from the result.
         @param oneBased: A C{bool}. If C{True} the feature location should be printed
             1-based instead of 0-based.
         @param prefix: A C{str} to put at the start of each line.
         @return: A C{str}.
         """
         canonicalName = self.canonicalName(name)
-        feature = self[canonicalName]
+        feature = self._data[canonicalName]
         sequence = feature["sequence"]
         start = feature["start"]
         stop = feature["stop"]

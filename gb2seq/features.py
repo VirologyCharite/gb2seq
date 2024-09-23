@@ -255,18 +255,19 @@ class Features:
                 name = feature.qualifiers["product"][0]
                 value["product"] = name
 
+            elif type_ in alsoInclude:
+                assert name is None
+                # Give this feature a numbered name based on its type.
+                for n in itertools.count(1):
+                    name = f"{type_} {n}"
+                    if name not in self._data:
+                        break
             else:
                 # Skip unwanted features that are not annotated as having a product
                 # (e.g., "source", "gap", "gene", "misc_feature".)
-                if type_ in alsoInclude:
-                    assert name is None
-                    # Give this feature a numbered name based on its type.
-                    for n in itertools.count(1):
-                        name = f"{type_} {n}"
-                        if name not in self._data:
-                            break
-                else:
-                    continue
+                continue
+
+            assert name is not None
 
             for optional in "translation", "note":
                 try:
@@ -430,6 +431,15 @@ class Features:
                 return thisName
         else:
             return None
+
+    def keys(self) -> Iterator[str]:
+        return self._data.keys()
+
+    def values(self) -> Iterator[dict]:
+        return self._data.values()
+
+    def items(self) -> Iterator[tuple[str, dict]]:
+        return self._data.items()
 
     def __contains__(self, item: str) -> bool:
         return item in self._data

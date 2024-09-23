@@ -1,3 +1,7 @@
+## 0.2.23 September 22, 2024
+
+Change Features class to no longer inherit from UserDict. Fix unbound local bug in Features.
+
 ## 0.2.22 August 27, 2024
 
 Improved dealing with features that have multiple genome ranges to fix

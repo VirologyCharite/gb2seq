@@ -523,7 +523,7 @@ class Gb2Alignment:
         featureName: str,
         onError,
         errFp,
-    ) -> [bool, Optional[str]]:
+    ) -> tuple[bool, Optional[str]]:
         """
         Check that a base occurs at an offset.
 
@@ -558,12 +558,12 @@ class Gb2Alignment:
                 raise IndexError(mesg)
             elif onError == "print":
                 print(mesg, file=errFp)
-                return [False, None]
+                return False, None
             else:
                 assert onError == "ignore"
-                return [False, None]
+                return False, None
         else:
-            return [(base is None or actual == base), actual]
+            return (base is None or actual == base), actual
 
     def checkFeature(
         self,

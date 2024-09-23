@@ -1,7 +1,7 @@
 from warnings import warn
 
 from .alignment import (
-    SARS2Alignment as SARS2Genome,
+    Gb2Alignment as SARS2Genome,
     addAlignerOption,
     getGappedOffsets,
     alignmentEnd,
@@ -20,7 +20,7 @@ _ = (
 )
 
 warn(
-    "The SARS2Genome class has been renamed to SARS2Alignment. "
+    "The SARS2Genome class has been renamed to Gb2Alignment. "
     "Please use that instead. Support for SARS2Genome will be removed "
     "in a future version."
 )

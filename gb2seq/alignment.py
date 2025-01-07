@@ -26,8 +26,12 @@ ALIGNERS = ("edlib", "mafft")
 DEFAULT_ALIGNER = "mafft"
 
 
+class FrameShiftError(Gb2SeqError):
+    "The aligner suggested a frame shift mutation in a feature."
+
+
 class ReferenceInsertionError(Gb2SeqError):
-    "A genome resulted in MAFFT suggesting a reference insertion."
+    "A genome resulted in the aligner suggesting a reference insertion."
 
 
 class AlignmentError(Gb2SeqError):
@@ -402,8 +406,11 @@ class Gb2Alignment:
             self.features.sars2
             and name == "surface glycoprotein"
             and gapCount
-            and gapCount % 3 == 0
         ):
+            if gapCount % 3 != 0:
+                raise FrameShiftError(
+                    f"Gap count {gapCount} in feature {name!r} is not a multiple of 3."
+                )
             referenceAa = referenceAaAligned = AARead(
                 self.features.reference.id + idSuffix,
                 translateSARS2Spike(referenceNt.sequence),

@@ -1,8 +1,7 @@
+import argparse
 from typing import Dict, Iterable, Iterator, Optional, TextIO, Tuple, Union
 
-import argparse
 from Bio.Seq import Seq
-
 from dark.aligners import edlibAlign, mafft
 from dark.reads import AARead, DNARead, Reads
 
@@ -10,9 +9,9 @@ from gb2seq import Gb2SeqError
 from gb2seq.change import splitChange
 from gb2seq.features import Features, UnknownFeatureNameError
 from gb2seq.translate import (
+    TranslatedReferenceAndGenomeLengthError,
     translate,
     translateSARS2Spike,
-    TranslatedReferenceAndGenomeLengthError,
 )
 from gb2seq.variants import VARIANTS
 
@@ -27,11 +26,11 @@ DEFAULT_ALIGNER = "mafft"
 
 
 class FrameShiftError(Gb2SeqError):
-    pass
+    "The aligner suggested a frame shift mutation in a feature."
 
 
 class ReferenceInsertionError(Gb2SeqError):
-    "A genome resulted in MAFFT suggesting a reference insertion."
+    "A genome resulted in the aligner suggesting a reference insertion."
 
 
 class AlignmentError(Gb2SeqError):
@@ -632,7 +631,7 @@ class Gb2Alignment:
         """
 
         def _getChanges(
-            changes: Union[str, Iterable[Tuple[str, int, str]]]
+            changes: Union[str, Iterable[Tuple[str, int, str]]],
         ) -> Iterator[Tuple[Union[str, Tuple[str, int, str]], str, int, str]]:
             if isinstance(changes, str):
                 for change in changes.split():

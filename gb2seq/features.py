@@ -226,7 +226,7 @@ class Features:
         for feature in record.features:
             name: Optional[str] = None
             type_ = feature.type
-            value = {
+            value: dict[str, bool | int | str | None] = {
                 "type": type_,
             }
 

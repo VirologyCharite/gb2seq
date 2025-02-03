@@ -1,8 +1,7 @@
+import argparse
 from typing import Dict, Iterable, Iterator, Optional, TextIO, Tuple, Union
 
-import argparse
 from Bio.Seq import Seq
-
 from dark.aligners import edlibAlign, mafft
 from dark.reads import AARead, DNARead, Reads
 
@@ -10,9 +9,9 @@ from gb2seq import Gb2SeqError
 from gb2seq.change import splitChange
 from gb2seq.features import Features, UnknownFeatureNameError
 from gb2seq.translate import (
+    TranslatedReferenceAndGenomeLengthError,
     translate,
     translateSARS2Spike,
-    TranslatedReferenceAndGenomeLengthError,
 )
 from gb2seq.variants import VARIANTS
 
@@ -53,15 +52,24 @@ def addAlignerOption(parser: argparse.ArgumentParser) -> None:
 
 
 def getGappedOffsets(s: str) -> dict:
-    """
-    Make a dictionary mapping offsets in a sequence with no gaps to the
+    """Make a dictionary mapping offsets in a sequence with no gaps to the
     equivalent offset in a gapped sequence.
 
-    In more detail, we are given C{s}, which is an aligned sequence
+    Our caller will use the mapping to convert an offset in an unaligned
+    sequence to the equivalent offset in an alignment of that sequence.
+
+    I.e., an alignment to a reference has already been done, resulting in our
+    argument (s, the reference with gaps inserted). Now we want examine the
+    aligned reference sequence and return something that will allow code that
+    has an offset into the original unaligned reference to find the
+    equivalent position in an alignment (possibly in the aligned reference
+    (our s) or possibly in a genome that was aligned to the reference.
+
+    Equivalently, we are given C{s}, which is an aligned sequence
     (potentially) with gaps in it and we want a mapping that will allow us to
-    go from an offset in the original string C{s} (i.e., before it was aligned)
-    to the equivalent offset in the aligned (with gaps) string that we have been
-    passed. This function returns such a mapping (a C{dict})
+    go from an offset in the original string C{s} (i.e., before it was
+    aligned) to the equivalent offset in the aligned (with gaps) string that
+    we have been passed. This function returns such a mapping (a C{dict})
 
     @param s: A C{str} sequence, possibly with gap ('-') characters.
     @return: A C{dict} mapping C{int} offsets in the sequence without its
@@ -402,11 +410,7 @@ class Gb2Alignment:
         idSuffix = f" ({name})" if addFeatureToId else ""
 
         gapCount = genomeNt.sequence.count("-")
-        if (
-            self.features.sars2
-            and name == "surface glycoprotein"
-            and gapCount
-        ):
+        if self.features.sars2 and name == "surface glycoprotein" and gapCount:
             if gapCount % 3 != 0:
                 raise FrameShiftError(
                     f"Gap count {gapCount} in feature {name!r} is not a multiple of 3."
@@ -627,7 +631,7 @@ class Gb2Alignment:
         """
 
         def _getChanges(
-            changes: Union[str, Iterable[Tuple[str, int, str]]]
+            changes: Union[str, Iterable[Tuple[str, int, str]]],
         ) -> Iterator[Tuple[Union[str, Tuple[str, int, str]], str, int, str]]:
             if isinstance(changes, str):
                 for change in changes.split():

@@ -1,3 +1,8 @@
+## 0.2.24 January 25, 2025
+
+Improve annotating an unknown genome so untranslated features aren't treated
+as if they were translated. This code needs work!
+
 ## 0.2.23 September 22, 2024
 
 Change Features class to no longer inherit from UserDict. Fix unbound local bug in Features.

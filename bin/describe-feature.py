@@ -127,6 +127,7 @@ def main(args):
         args.reference,
         sars2=args.sars2,
         addUnannotatedRegions=args.addUnannotatedRegions,
+        alsoInclude=set(args.alsoInclude) if args.alsoInclude else None,
     )
 
     if args.names:

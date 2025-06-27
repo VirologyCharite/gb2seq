@@ -788,3 +788,13 @@ def addFeatureOptions(
             '"unannotated region 2", and so on, as needed.'
         ),
     )
+
+    parser.add_argument(
+        "--alsoInclude",
+        nargs="*",
+        metavar="feature-name",
+        help=(
+            "Additional feature types to include (e.g., misc_feature). Can be "
+            "repeated."
+        ),
+    )

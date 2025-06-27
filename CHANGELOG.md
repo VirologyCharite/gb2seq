@@ -1,3 +1,8 @@
+## 0.2.25 June 27, 2025
+
+Added furin cleavage site miscellaneous feature to SARS-2 genbank file. Added
+`--alsoInclude` to feature options.
+
 ## 0.2.24 January 25, 2025
 
 Improve annotating an unknown genome so untranslated features aren't treated

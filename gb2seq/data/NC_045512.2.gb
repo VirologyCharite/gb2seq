@@ -535,6 +535,10 @@ FEATURES             Location/Qualifiers
                      PVLKGVKLHYT"
      misc_feature    23603..23620
                      /note="Furin cleavage site"
+     CDS             23603..23620
+                     /codon_start=1
+                     /product="furin cleavage site"
+                     /translation="PRRARS"
      gene            25393..26220
                      /gene="ORF3a"
                      /locus_tag="GU280_gp03"

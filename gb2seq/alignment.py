@@ -377,7 +377,7 @@ class Gb2Alignment:
         featureName: str,
         addFeatureToId: bool = True,
         raiseOnReferenceGaps: bool = True,
-    ) -> Tuple[DNARead, DNARead]:
+    ) -> Tuple[AARead, AARead]:
         """
         Match the genome and the reference at the amino acid level.
 
@@ -801,7 +801,7 @@ class Gb2Alignment:
             not translated.
         @param minReferenceCoverage: The C{float} fraction of non-N bases
             required in the genome (or feature, if one is given) in order
-            for it to be processed. If the required coveragel is not met,
+            for it to be processed. If the required coverage is not met,
             C{None} is returned.
         @allowAmbiguous: If C{True}, do not raise an error if multiple features
             are found for the offset and no feature name is given to
@@ -831,9 +831,8 @@ class Gb2Alignment:
         else:
             if aa:
                 raise ValueError(
-                    "You cannot pass aa=True unless the offset "
-                    "you pass is relative to the feature (i.e., relativeToFeature "
-                    "must also be set to True)."
+                    "You cannot pass aa=True unless the offset you pass is relative "
+                    "to the feature (i.e., relativeToFeature must also be True)."
                 )
             referenceOffset = offset
 

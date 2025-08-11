@@ -344,6 +344,7 @@ class TestFeatures(TestCase):
             "5'UTR",
             "endoRNAse",
             "envelope protein",
+            "furin cleavage site",
             "helicase",
             "leader protein",
             "membrane glycoprotein",

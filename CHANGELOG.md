@@ -1,3 +1,10 @@
+## 0.2.26 June 27, 2025
+
+Added CDS section for furin cleavage site with product name and translation
+to SARS-2 genbank file. This doesn't seem to break anything (try running
+`bin/describe-feature.py --sars2 --alsoInclude misc_feature`) but may be
+violating some principle.
+
 ## 0.2.25 June 27, 2025
 
 Added furin cleavage site miscellaneous feature to SARS-2 genbank file. Added

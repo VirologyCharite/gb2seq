@@ -602,7 +602,7 @@ class TestOffsetInfo(TestCase):
         error = (
             r"^You cannot pass aa=True unless the offset you pass is "
             r"relative to the feature \(i.e., relativeToFeature must also be "
-            r"set to True\)\.$"
+            r"True\)\.$"
         )
         self.assertRaisesRegex(
             ValueError,

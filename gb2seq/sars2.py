@@ -74,6 +74,7 @@ SARS_COV_2_ALIASES = {
     "envelope": "envelope protein",
     "exon": "3'-to-5' exonuclease",
     "exonuclease": "3'-to-5' exonuclease",
+    "fcs": "furin cleavage site",
     "leader": "leader protein",
     "m": "membrane glycoprotein",
     "membrane": "membrane glycoprotein",
@@ -131,6 +132,7 @@ SARS_COV_2_TRANSLATED = {
     "endoRNAse",  # nsp15
     "nsp16",
     "surface glycoprotein",
+    "furin cleavage site",
     "ORF3a protein",
     "envelope protein",  # ORF4
     "membrane glycoprotein",  # ORF5

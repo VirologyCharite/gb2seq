@@ -1,4 +1,9 @@
-## 0.2.26 June 27, 2025
+## 0.2.27 August 12, 2025
+
+Marked the SARS-CoV-2 furin cleavage site as a translated feature and an "fcs"
+abbreviation for it.
+
+## 0.2.26 August 12, 2025
 
 Added CDS section for furin cleavage site with product name and translation
 to SARS-2 genbank file. This doesn't seem to break anything (try running

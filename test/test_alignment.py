@@ -7,6 +7,12 @@ See test_genomes.py for tests of the specific genomes in ../data
 from unittest import TestCase
 from io import StringIO
 
+try:
+    from importlib.resources import files, as_file
+except ImportError:
+    from importlib_resources import files, as_file
+
+from dark.fasta import FastaReads
 from dark.reads import DNARead
 
 from gb2seq.alignment import (
@@ -795,7 +801,8 @@ class TestOffsetInfo(TestCase):
     def testMultipleFeaturesAtOffsetButNoFeatureRequestedAllowAmbiguous(self):
         """
         If multiple features are found at an offset but no feature name is
-        passed and allowAmbiguous is true,...
+        passed and allowAmbiguous is true, the first feature should be the one
+        returned (in featureName).
         """
         features = Features(
             {
@@ -927,8 +934,8 @@ class TestOffsetInfo(TestCase):
         If the edlib aligner is used with ambiguous nucleotide codes,
         the alignment should match properly (in this case the first nt
         of the aligned genome will be set to '-' because the rest of the
-        genome matches perfectly (they are all ambiguous codes that mach the
-        reference).
+        genome matches perfectly (they are all ambiguous codes that match the
+        reference)).
         """
         features = Features({}, DNARead("refId", "CGTTCCCG"), sars2=True)
 
@@ -1097,16 +1104,16 @@ class TestOffsetInfo(TestCase):
                 "featureName": None,
                 "featureNames": set(),
                 "reference": {
-                    "aa": "X",
-                    "codon": "A",
+                    "aa": None,
+                    "codon": None,
                     "frame": 0,
                     "id": "refId",
                     "aaOffset": 2,
                     "ntOffset": 6,
                 },
                 "genome": {
-                    "aa": "X",
-                    "codon": "A",
+                    "aa": None,
+                    "codon": None,
                     "frame": 0,
                     "id": "genId",
                     "aaOffset": 2,
@@ -1141,16 +1148,16 @@ class TestOffsetInfo(TestCase):
                 "featureName": None,
                 "featureNames": set(),
                 "reference": {
-                    "aa": "X",
-                    "codon": "AT",
+                    "aa": None,
+                    "codon": None,
                     "frame": 1,
                     "id": "refId",
                     "aaOffset": 2,
                     "ntOffset": 7,
                 },
                 "genome": {
-                    "aa": "X",
-                    "codon": "AT",
+                    "aa": None,
+                    "codon": None,
                     "frame": 1,
                     "id": "genId",
                     "aaOffset": 2,
@@ -1256,8 +1263,8 @@ class TestOffsetInfo(TestCase):
     def testInitialGapInAlignedGenomeOffsetZero(self):
         """
         If the alignment results in a gap character at the start of the
-        genome and we request offset zero, we should see the gap in the
-        codon and get back a '-' amino acid.
+        genome and we request offset zero, we should see a gap char at the
+        start of the codon and '-' for the AA.
         """
         features = Features(
             {}, DNARead("refId", "GTTCCCAAATTGCTACTTTGATTGAG"), sars2=True
@@ -2007,3 +2014,30 @@ class TestOffsetInfoMultipleGenomes(TestCase):
                 [alignment1, alignment2, alignment3], 0, minReferenceCoverage=0.5
             )
         )
+
+    def testBadGenomeNtOffset(self):
+        """
+        Test that requesting...
+        """
+        features = Features(sars2=True)
+
+        _f = files("gb2seq").joinpath("data").joinpath("NC_045512.2.fasta")
+        with as_file(_f) as fp:
+            (genome,) = list(FastaReads(fp))
+        genome.sequence = genome.sequence[:-5]
+
+        assert features.reference
+        alignment = Gb2Alignment(genome, features=features)
+
+        with open("/tmp/align.fasta", "w") as fp:
+            print(alignment.referenceAligned.sequence, file=fp)
+            print(alignment.genomeAligned.sequence, file=fp)
+
+        assert len(genome) == 29898
+        assert len(features.reference) == 29903
+        offsetInfo = alignment.offsetInfo(29899)
+        assert offsetInfo
+        assert offsetInfo["genome"]["ntOffset"] is None
+        assert offsetInfo["genome"]["codon"] == "---"
+        assert offsetInfo["genome"]["aa"] == "-"
+        assert offsetInfo["genome"]["aaOffset"] is None

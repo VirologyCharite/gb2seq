@@ -1,3 +1,11 @@
+## 0.3.0 August 13, 2025
+
+Improved the `Gb2Alignment.offsetInfo` method to be more careful about the nt
+offset it returns in the genome (it was possible for it to return an index
+that was longer than the genome). The 'aa', 'ntOffset' values may now come
+back as `None`. See the long comment in that method for details on what it
+returns.
+
 ## 0.2.27 August 12, 2025
 
 Marked the SARS-CoV-2 furin cleavage site as a translated feature and an "fcs"

@@ -234,8 +234,8 @@ class Gb2Alignment:
                 )
                 print(f"gen {self.genome.id:10s}: {self.genome.sequence}")
                 print("ALIGNED")
-                print(f"ref {referenceAligned.id:10s}: " f"{referenceAligned.sequence}")
-                print(f"gen {genomeAligned.id:10s}: " f"{genomeAligned.sequence}")
+                print(f"ref {referenceAligned.id:10s}: {referenceAligned.sequence}")
+                print(f"gen {genomeAligned.id:10s}: {genomeAligned.sequence}")
 
         if len(referenceAligned) != len(genomeAligned):
             if preAligned:
@@ -632,7 +632,7 @@ class Gb2Alignment:
         """
 
         def _getChanges(
-            changes: Union[str, Iterable[Tuple[str, int, str]]]
+            changes: Union[str, Iterable[Tuple[str, int, str]]],
         ) -> Iterator[Tuple[Union[str, Tuple[str, int, str]], str, int, str]]:
             if isinstance(changes, str):
                 for change in changes.split():
@@ -846,18 +846,27 @@ class Gb2Alignment:
             referenceOffset, featureName, includeUntranslated, allowAmbiguous
         )
 
-        # The 'None' values in the following are filled in below. They're set
-        # up-front here to explicitly show what's in the returned dictionary.
+        # Return result description
+        # -------------------------
         #
-        # The 'aa' value will be None if the reference or genome sequence ends
-        # within three nucleotides of the given offset (i.e., the sequence is
-        # too short to get a 3-nucleotide codon). The 'aa' value in the
-        # 'genome' dict will be '-' if the aligned genome contains a gap at any
-        # of the codon locations in the reference and 'X' if the offset falls
-        # in the last two nucleotides of the genome (and so the codon is
-        # too short for translation).
+        # The 'None' values in the result dictionary below will be set to proper values
+        # later in this function. They are set up-front here to explicitly show what's
+        # in the returned result.
         #
-        # The 'frame' value will be 0, 1, or 2.
+        # The 'aa' values will have an upper-case amino acid code or else be
+        #     "X":  If the codon contains any ambiguous nucleotide codes, or
+        #     "-":  If the aligned genome or reference contains a gap at any of the
+        #           codon locations, or
+        #     None: If the reference or genome sequence ends within three nucleotides
+        #           of the given offset (i.e., the sequence is too short to get a
+        #           3-nucleotide codon). In this case, the 'codon' values will also
+        #           be None.
+        #
+        # The 'ntOffset' in the 'genome' dictionary will normally be an int, but if the
+        # genome is shorter than the reference and the offset in the reference is beyond
+        # the end of the genome, the value will be set to None.
+        #
+        # The 'frame' value will be set to 0, 1, or 2.
         result = {
             "featureName": feature["name"] if feature else None,
             "featureNames": features,
@@ -891,9 +900,16 @@ class Gb2Alignment:
 
         codonOffset = referenceOffset - referenceFrame
         codon = self.features.reference.sequence[codonOffset : codonOffset + 3]
+
+        if len(codon) == 3:
+            # translate will produce an 'X' if the reference has any ambiguous nt codes.
+            referenceAa = "-" if "-" in codon else str(Seq(codon).translate())
+        else:
+            codon = referenceAa = None
+
         result["reference"].update(
             {
-                "aa": str(Seq(codon).translate()) if len(codon) == 3 else "X",
+                "aa": referenceAa,
                 "codon": codon,
                 "frame": referenceFrame,
                 "aaOffset": referenceCodonAaOffset,
@@ -903,38 +919,54 @@ class Gb2Alignment:
 
         # Genome.
         gappedOffset = self.gappedOffsets[referenceOffset]
+        genomeNtOffset = gappedOffset - (
+            self.genomeAligned.sequence[:gappedOffset].count("-")
+        )
+        if genomeNtOffset >= len(self.genome):
+            genomeNtOffset = None
+
         if relativeToFeature or feature:
             genomeGappedStart = self.gappedOffsets[feature["start"]]
+            # Check that the start offset of the feature we're in is less than or equal
+            # to the requested offset.
             assert genomeGappedStart <= gappedOffset
-            gapCount = self.genomeAligned.sequence[
-                genomeGappedStart:gappedOffset
-            ].count("-")
         else:
             genomeGappedStart = 0
-            gapCount = self.genomeAligned.sequence[:gappedOffset].count("-")
+
+        gapCount = self.genomeAligned.sequence[genomeGappedStart:gappedOffset].count(
+            "-"
+        )
 
         genomeCodonAaOffset, genomeFrame = divmod(
             gappedOffset - genomeGappedStart - gapCount, 3
         )
+        if genomeCodonAaOffset * 3 >= len(self.genome):
+            genomeCodonAaOffset = None
 
         codonOffset = gappedOffset - genomeFrame
         codon = self.genomeAligned.sequence[codonOffset : codonOffset + 3]
+        if len(codon) == 3:
+            # translate will produce an 'X' if the genome has any ambiguous nt codes.
+            genomeAa = "-" if "-" in codon else str(Seq(codon).translate())
+        else:
+            codon = genomeAa = None
+
         result["genome"].update(
             {
-                "aa": (
-                    "-"
-                    if "-" in codon
-                    else (str(Seq(codon).translate()) if len(codon) == 3 else "X")
-                ),
+                "aa": genomeAa,
                 "codon": codon,
                 "frame": genomeFrame,
                 "aaOffset": genomeCodonAaOffset,
-                "ntOffset": gappedOffset
-                - (self.genomeAligned.sequence[:gappedOffset].count("-")),
+                "ntOffset": genomeNtOffset,
             }
         )
 
         result["alignmentOffset"] = gappedOffset
+
+        # Sanity check that the nucleotide offsets are valid (i.e., do not raise an
+        # IndexError when accessed).
+        # self.genome.sequence[result["genome"]["ntOffset"]]
+        self.features.reference.sequence[result["reference"]["ntOffset"]]
 
         return result
 
@@ -986,7 +1018,7 @@ def offsetInfoMultipleGenomes(
     elif len(ids) != 1:
         raise ValueError(
             f"Gb2Alignment instances with differing reference ids "
-            f'passed to offsetInfoMultipleGenomes: {", ".join(sorted(ids))}.'
+            f"passed to offsetInfoMultipleGenomes: {', '.join(sorted(ids))}."
         )
 
     first = True

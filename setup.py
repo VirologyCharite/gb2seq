@@ -34,6 +34,7 @@ setup(
     keywords=["GenBank", "genetic sequences"],
     scripts=[
         "bin/annotate-genome.py",
+        "bin/compare-genomes.py",
         "bin/describe-feature.py",
         "bin/describe-genome.py",
         "bin/describe-site.py",
@@ -57,5 +58,8 @@ setup(
     ),
     long_description=("See https://github.com/virologycharite/gb2seq for details."),
     license="MIT",
-    install_requires=["dark-matter>=4.0.68"],
+    install_requires=[
+        "dark-matter>=5.0.43",
+        "rich>=13.9.4",
+    ],
 )

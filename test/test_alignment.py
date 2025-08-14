@@ -2029,10 +2029,6 @@ class TestOffsetInfoMultipleGenomes(TestCase):
         assert features.reference
         alignment = Gb2Alignment(genome, features=features)
 
-        with open("/tmp/align.fasta", "w") as fp:
-            print(alignment.referenceAligned.sequence, file=fp)
-            print(alignment.genomeAligned.sequence, file=fp)
-
         assert len(genome) == 29898
         assert len(features.reference) == 29903
         offsetInfo = alignment.offsetInfo(29899)

@@ -6,3 +6,4 @@ data/*.fai
 gb2seq.egg-info
 dist
 .coverage
+build

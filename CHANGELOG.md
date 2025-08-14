@@ -1,3 +1,9 @@
+## 0.3.1 August 14, 2025
+
+Added `bin/compare-genomes.py` script. This allows you to find differences
+between two unannotated sequences via aligning both with an annotated
+reference.
+
 ## 0.3.0 August 13, 2025
 
 Improved the `Gb2Alignment.offsetInfo` method to be more careful about the nt

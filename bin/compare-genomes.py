@@ -19,24 +19,22 @@ def parse_args() -> argparse.Namespace:
     Make an argument parser and use it to parse the command line.
     """
     parser = argparse.ArgumentParser(
-        description="Compare two consensus sequences.",
+        description="Compare two genome sequences.",
         formatter_class=argparse.ArgumentDefaultsHelpFormatter,
     )
 
     parser.add_argument(
-        "--consensus-1",
-        "--c1",
+        "--genome-1",
         "-1",
         required=True,
-        help="The FASTA file containing the first consensus sequence.",
+        help="The FASTA file containing the first genome sequence.",
     )
 
     parser.add_argument(
-        "--consensus-2",
-        "--c2",
+        "--genome-2",
         "-2",
         required=True,
-        help="The FASTA file containing the second consensus sequence.",
+        help="The FASTA file containing the second genome sequence.",
     )
 
     parser.add_argument(
@@ -44,10 +42,10 @@ def parse_args() -> argparse.Namespace:
         help=(
             "The (optional) filename to save the aligned genomes to as FASTA. "
             "The file will contain 1) the reference; 2) the sequence from the "
-            "consensus-1 file; 3) the reference as aligned to the sequence from "
-            "the consensus-1 file; 4) the sequence from the consensus-1 file as "
+            "genome-1 file; 3) the reference as aligned to the sequence from "
+            "the genome-1 file; 4) the sequence from the genome-1 file as "
             "aligned to the reference; and then, for each sequence in the "
-            "consensus-2 file, the sequence and then the sequence aligned to the "
+            "genome-2 file, the sequence and then the sequence aligned to the "
             "reference."
         ),
     )
@@ -111,7 +109,8 @@ def main() -> int:
     if not (args.reference or args.sars2):
         print(
             "You must either supply a GenBank reference file (via --reference) or "
-            "use --sars2 for matching against the original SARS-CoV-2 Wuhan reference.",
+            "use --sars2 for matching against the original SARS-CoV-2 Wuhan "
+            "reference).",
             file=sys.stderr,
         )
 
@@ -125,7 +124,7 @@ def main() -> int:
         sars2=args.sars2, addUnannotatedRegions=args.addUnannotatedRegions
     )
     assert features.reference
-    (a_read,) = list(FastaReads(args.consensus_1))
+    (a_read,) = list(FastaReads(args.genome_1))
 
     a_alignment = Gb2Alignment(a_read, features, aligner=args.aligner)
 
@@ -133,7 +132,7 @@ def main() -> int:
         reads = Reads([features.reference, a_read, a_alignment.genomeAligned])
         reads.save(args.alignment_file)
 
-    for b_read in FastaReads(args.consensus_2):
+    for b_read in FastaReads(args.genome_2):
         b_alignment = Gb2Alignment(b_read, features, aligner=args.aligner)
 
         if args.simple_compare:

@@ -3,7 +3,7 @@
 `gb2seq` provides a Python library and command-line scripts that derive
 information regarding unannotated an viral genome from annotations in a
 GenBank reference. A typical use case is to investigate the properties of
-an unannotated genome called from a [SAM/BAM
+an unannotated consensus genome called from a [SAM/BAM
 file](https://en.wikipedia.org/wiki/SAM_(file_format)) following alignment
 of high-throughput sequencing reads (e.g., with
 [bwa](https://bio-bwa.sourceforge.net/) or
@@ -23,6 +23,7 @@ The Python library (<a href="#api">API described below</a>) provides for:
 * JSON annotations of the features of the unannotated genome.
 * Convenience methods for checking genomes for sets of expected nucleotide
     or amino acid values.
+* Comparison of two unannotated genomes.
 
 ## Scripts
 
@@ -33,6 +34,9 @@ following scripts:
 * `annotate-genome.py` - prints a JSON object containing details of all
     features of an unannotated genome (found via alignment with a reference
     genome).
+* `compare-genomes.py` - prints differences between two genomes, based on
+    an alignment of each to an annotated reference. Use `--verbose 1`
+    (or `2`) to see additional output.
 * `describe-feature.py` - print information about a given feature or
     features.
 * `describe-genome.py` - extract nucleotide and/or amino acid sequences for
@@ -97,10 +101,10 @@ The default alignment algorithm is
 [MAFFT](https://mafft.cbrc.jp/alignment/software/), which you will need to
 have installed in a directory in your shell's `PATH`.
 
-MAFFT can can be slow under some circumstances. So you can also run scripts
-with `--aligner edlib` (or pass `aligner='edlib'` to library functions) to
-use [the Python wrapper](https://pypi.org/project/edlib/) for the fast
-[edlib](https://github.com/Martinsos/edlib) library. `edlib` should
+MAFFT can can be slow (even very slow) under some circumstances. So you can
+also run scripts with `--aligner edlib` (or pass `aligner='edlib'` to library
+functions) to use [the Python wrapper](https://pypi.org/project/edlib/) for
+the fast [edlib](https://github.com/Martinsos/edlib) library. `edlib` should
 probably be the default.
 
 <a id="#scripts"></a>
@@ -193,6 +197,7 @@ $ describe-feature.py --sars2 --names
 5'UTR: 5utr
 endoRNAse: endornase, nsp15
 envelope protein: e, envelope, orf4
+furin cleavage site: fcs
 helicase: nsp13
 leader protein: leader, nsp1
 membrane glycoprotein: m, membrane, orf5
@@ -227,6 +232,18 @@ There is a `--sortBy` option for sorting the order of the reported
 features. The default is the order they are given on the command line.
 Other options are `--sortBy name` and `--sortBy site` (i.e., increasing
 genome start position).
+
+## compare-genomes.py
+
+Can be used to get a summary of differences between two unannotated genomes
+by aligning them to an annotated reference and using that information for the
+comparison. This is different from simply aligning two sequences and
+computing nucleotide identity because it is aware of genome features and can
+tell you what genes (if any) the changes occurred in and whether they were
+synonymous or not.
+
+There is a numeric `--verbose` flag that can be used to control how much
+information is printed.
 
 ## describe-site.py
 

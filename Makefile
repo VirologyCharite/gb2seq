@@ -2,6 +2,7 @@
 
 XARGS := xargs $(shell test $$(uname) = Linux && echo -r)
 PYDIRS := src bin test
+VERSION := $(shell grep 'version = "' pyproject.toml | cut -f2 -d'"')
 
 test:
 	uv run pytest
@@ -25,8 +26,7 @@ clean:
 clobber: clean
 	rm -fr .tox gb2seq.egg-info dist
 
-# The upload target requires that you have access rights to PYPI. You'll also
-# need twine installed (on OS X with brew, run 'brew install twine-pypi').
+# The upload target requires that you have access rights to PYPI.
 upload:
-	python setup.py sdist
-	twine upload --repository pypi dist/gb2seq-$$(grep __version__ gb2seq/__init__.py | cut -f2 -d'"').tar.gz
+	uv build
+	uv publish dist/gb2seq-$(VERSION).tar.gz

@@ -1,3 +1,12 @@
+## 0.3.3 August 17, 2025
+
+Switched to `uv` project organization with `pyproject.toml`.  Many small
+(mainly cosmetic) changes to `bin/compare-genomes.py`.
+
+## 0.3.2 August 15, 2025
+
+Not released.
+
 ## 0.3.1 August 14, 2025
 
 Added `bin/compare-genomes.py` script. This allows you to find differences

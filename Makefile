@@ -1,10 +1,13 @@
 .PHONY: test flake8 wc clean clobber upload
 
 XARGS := xargs $(shell test $$(uname) = Linux && echo -r)
-PYDIRS := gb2seq bin test
+PYDIRS := src bin test
 
 test:
-	env PYTHONPATH=. pytest
+	uv run pytest
+
+nox:
+	uv run noxfile.py
 
 flake8:
 	find $(PYDIRS) -name '*.py' -print0 | $(XARGS) -0 flake8
@@ -14,9 +17,9 @@ wc:
 
 clean:
 	find . \( -name '*.pyc' -o -name '*~' \) -print0 | $(XARGS) -0 rm
-	find . -name '__pycache__' -type d -print0 | $(XARGS) -0 rmdir
-	rm -fr .pytest_cache
-	python setup.py clean
+	find . -name __pycache__ -type d -print0 | $(XARGS) -0 rm -r
+	find . -name .mypy_cache -type d -print0 | $(XARGS) -0 rm -r
+	rm -fr .pytest_cache gb2seq.egg-info dist
 	rm -f data/*.fai
 
 clobber: clean

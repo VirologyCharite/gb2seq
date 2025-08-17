@@ -62,9 +62,9 @@ def getGappedOffsets(s: str) -> dict:
     I.e., an alignment to a reference has already been done, resulting in our
     argument (s, the reference with gaps inserted). Now we want examine the
     aligned reference sequence and return something that will allow code that
-    has an offset into the original unaligned reference to find the
-    equivalent position in an alignment (either in the aligned reference
-    (our s) or in a genome that was aligned to the reference).
+    has an offset into the original unaligned, (i.e., ungapped) reference to
+    find the equivalent position in an alignment (either in the aligned
+    reference (our s) or in a genome that was aligned to the reference).
 
     Equivalently, we are given C{s}, which is an aligned sequence
     (potentially) with gaps in it and we want a mapping that will allow us to

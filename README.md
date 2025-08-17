@@ -10,6 +10,8 @@ of high-throughput sequencing reads (e.g., with
 [bowtie2](https://bowtie-bio.sourceforge.net/bowtie2/manual.shtml)) to a
 reference.
 
+Runs under Python 3.10 - 3.13.
+
 ## Python library
 
 The Python library (<a href="#api">API described below</a>) provides for:
@@ -34,9 +36,9 @@ following scripts:
 * `annotate-genome.py` - prints a JSON object containing details of all
     features of an unannotated genome (found via alignment with a reference
     genome).
-* `compare-genomes.py` - prints differences between two genomes, based on
-    an alignment of each to an annotated reference. Use `--verbose 1`
-    (or `2`) to see additional output.
+* `compare-genomes.py` - prints differences between pairs of genomes, based
+    on an alignment of each to an annotated reference. Use `--verbose 1`
+    (or `2` or `3`) to see additional output.
 * `describe-feature.py` - print information about a given feature or
     features.
 * `describe-genome.py` - extract nucleotide and/or amino acid sequences for
@@ -235,15 +237,86 @@ genome start position).
 
 ## compare-genomes.py
 
-Can be used to get a summary of differences between two unannotated genomes
-by aligning them to an annotated reference and using that information for the
-comparison. This is different from simply aligning two sequences and
-computing nucleotide identity because it is aware of genome features and can
-tell you what genes (if any) the changes occurred in and whether they were
-synonymous or not.
+Can be used to get a summary of differences between unannotated genomes by
+aligning them to an annotated reference and using that information for the
+comparison(s). This is different from simply aligning sequences and computing
+nucleotide identity because it is aware of genome features and can tell you
+what genes (if any) the changes occurred in and whether they were synonymous
+or not.
 
-There is a numeric `--verbose` flag that can be used to control how much
-information is printed.
+All sequences read from standard input (or in a file specified by
+`--fastaFile`) will be compared against each other.  There's a numeric
+`--verbose` option that can be used to control how much information is printed.
+
+Here's an example of output with verbose level `0`:
+
+```sh
+$ cat src/gb2seq/data/NC_045512.2.fasta OQ075381.fasta | uv run bin/compare-genomes.py --sars2 --aligner mafft
+A->C substitutions in 4/29903 (0.013%) sites (non-synonymous: 3, synonymous: 1)
+A->G substitutions in 12/29903 (0.040%) sites (non-synonymous: 8, synonymous: 4)
+A->N substitutions in 229/29903 (0.766%) sites (ambiguous: 226, no feature: 3)
+A->T substitutions in 11/29903 (0.037%) sites (no feature: 1, non-synonymous: 4, untranslated: 6)
+C->A substitutions in 19/29903 (0.064%) sites (non-synonymous: 5, untranslated: 14)
+C->G substitutions in 4/29903 (0.013%) sites (non-synonymous: 4)
+C->N substitutions in 139/29903 (0.465%) sites (ambiguous: 137, no feature: 2)
+C->T substitutions in 28/29903 (0.094%) sites (non-synonymous: 13, synonymous: 8, untranslated: 7)
+G->A substitutions in 18/29903 (0.060%) sites (non-synonymous: 10, synonymous: 2, untranslated: 6)
+G->C substitutions in 6/29903 (0.020%) sites (non-synonymous: 6)
+G->N substitutions in 136/29903 (0.455%) sites (ambiguous: 135, no feature: 1)
+G->T substitutions in 13/29903 (0.043%) sites (non-synonymous: 2, untranslated: 11)
+T->A substitutions in 25/29903 (0.084%) sites (non-synonymous: 8, untranslated: 17)
+T->C substitutions in 11/29903 (0.037%) sites (non-synonymous: 10, synonymous: 1)
+T->G substitutions in 4/29903 (0.013%) sites (non-synonymous: 4)
+T->N substitutions in 232/29903 (0.776%) sites (ambiguous: 232)
+```
+
+and here's the start of the output for the same command, but with `--verbose 1`:
+
+```
+A->C substitutions in 4/29903 (0.013%) sites (non-synonymous: 3, synonymous: 1)
+   1: site 21,634
+      surface glycoprotein (non-synonymous)
+   2: site 23,013
+      surface glycoprotein (non-synonymous)
+   3: site 27,259
+      ORF6 protein (synonymous)
+   4: site 29,510
+      nucleocapsid phosphoprotein (non-synonymous)
+```
+
+and with `--verbose 2`:
+
+```
+A->C substitutions in 4/29903 (0.013%) sites (non-synonymous: 3, synonymous: 1)
+   1: site 21,634
+      surface glycoprotein (non-synonymous)
+        Reference offset 21633: A->C change:
+          Got codon 'TTA' corresponding to nt 'A' in genome A at offset 21633 in genome A. Frame: 2, Codon offset: 21631. Feature offset: 21562.
+          Got codon 'TCA' corresponding to nt 'C' in genome B at offset 21569 in genome B. Frame: 1, Codon offset: 21568. Feature offset: 21499.
+          The A -> C mutation is non-synonymous (L -> S).
+          Original codon: TTA (L) -> new codon: TCA (S)
+   2: site 23,013
+      surface glycoprotein (non-synonymous)
+        Reference offset 23012: A->C change:
+          Got codon 'GAA' corresponding to nt 'A' in genome A at offset 23012 in genome A. Frame: 1, Codon offset: 23011. Feature offset: 21562.
+          Got codon 'GCA' corresponding to nt 'C' in genome B at offset 22937 in genome B. Frame: 1, Codon offset: 22936. Feature offset: 21499.
+          The A -> C mutation is non-synonymous (E -> A).
+          Original codon: GAA (E) -> new codon: GCA (A)
+   3: site 27,259
+      ORF6 protein (synonymous)
+        Reference offset 27258: A->C change:
+          Got codon 'AGG' corresponding to nt 'A' in genome A at offset 27258 in genome A. Frame: 0, Codon offset: 27258. Feature offset: 27201.
+          Got codon 'CGG' corresponding to nt 'C' in genome B at offset 27183 in genome B. Frame: 0, Codon offset: 27183. Feature offset: 27126.
+          The A -> C mutation is synonymous (R).
+          Original codon: AGG (R) -> new codon: CGG (R)
+   4: site 29,510
+      nucleocapsid phosphoprotein (non-synonymous)
+        Reference offset 29509: A->C change:
+          Got codon 'AGT' corresponding to nt 'A' in genome A at offset 29509 in genome A. Frame: 0, Codon offset: 29509. Feature offset: 28273.
+          Got codon 'CGT' corresponding to nt 'C' in genome B at offset 29425 in genome B. Frame: 0, Codon offset: 29425. Feature offset: 28198.
+          The A -> C mutation is non-synonymous (S -> R).
+          Original codon: AGT (S) -> new codon: CGT (R)
+```
 
 ## describe-site.py
 

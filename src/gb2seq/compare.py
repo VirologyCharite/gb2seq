@@ -11,60 +11,61 @@ from dark.utils import pct
 
 def _get_codon(
     sequence: str,
-    site: int,
-    start: int,
+    offset: int,
+    feature_offset: int,
     which_sequence: str,
     verbose: int,
     summary: list[str],
 ):
-    offset = site - start
-    frame = offset % 3
+    assert offset >= feature_offset
 
-    match frame:
-        case 0:
-            sites = site, site + 1, site + 2
-        case 1:
-            sites = site - 1, site, site + 1
-        case 2:
-            sites = site - 2, site - 1, site
-        case _:
-            raise ValueError("Impossible!")
+    frame = (offset - feature_offset) % 3
+    codon_offset = offset - frame
+    codon = sequence[codon_offset : codon_offset + 3]
 
     if verbose > 1:
         summary.append(
-            f"    Getting codon for {sequence[site]!r} at site {site} in "
-            f"{which_sequence}. Frame: {frame}, Codon sites: {sites}. "
-            f"Feature offset: {start}."
+            f"    Got codon {codon!r} corresponding to nt {sequence[offset]!r} in "
+            f"{which_sequence} at offset {offset} in {which_sequence}. Frame: {frame}, "
+            f"Codon offset: {codon_offset}. Feature offset: {feature_offset}."
         )
 
-    return "".join(sequence[s] for s in sites)
+    return codon
 
 
 def _analyze_mutation(
-    a_site: int,
-    b_site: int,
+    a_offset: int,
+    b_offset: int,
+    a_read: Read,
+    b_read: Read,
     a_feature_offset: int,
     b_feature_offset: int,
-    a_sequence: str,
-    b_sequence: str,
     verbose: int,
     summary: list[str],
 ) -> str:
     """
     What can we say about this from_base to to_base mutation at this site?
     """
-    from_base: str = a_sequence[a_site]
-    to_base: str = b_sequence[b_site]
+    from_base: str = a_read.sequence[a_offset]
+    to_base: str = b_read.sequence[b_offset]
     assert from_base != to_base
 
     original_codon = _get_codon(
-        a_sequence, a_site, a_feature_offset, "genome A", verbose, summary
+        a_read.sequence, a_offset, a_feature_offset, "genome A", verbose, summary
     )
     mutated_codon = _get_codon(
-        b_sequence, b_site, b_feature_offset, "genome B", verbose, summary
+        b_read.sequence, b_offset, b_feature_offset, "genome B", verbose, summary
     )
 
-    assert mutated_codon != original_codon
+    if mutated_codon == original_codon:
+        raise ValueError(
+            f"Codon {mutated_codon!r} in {a_read.id!r} at offset {a_offset} is "
+            f"unexpectedly identical to the codon at offset {b_offset} in "
+            f"{b_read.id!r}."
+        )
+
+    if (set(original_codon) | set(mutated_codon)) - set("ACGT"):
+        return "ambiguous"
 
     original_aa = REVERSE_CODONS.get(original_codon, "*")
     mutated_aa = REVERSE_CODONS.get(mutated_codon, "*")
@@ -85,10 +86,37 @@ def _analyze_mutation(
         result = "non-synonymous"
 
     summary.append(
-        f"{result}: {original_codon} ({original_aa}) -> {mutated_codon} ({mutated_aa})"
+        f"    Original codon: {original_codon} ({original_aa}) -> "
+        f"new codon: {mutated_codon} ({mutated_aa})"
     )
 
     return result
+
+
+def genome_offset_and_nt(
+    reference_offset: int, alignment: Gb2Alignment, verbose: int
+) -> tuple[int, str]:
+    """
+    Get the genome offset (if any) and nucleotide for a given reference offset.
+
+    If the offset doesn't exist in the genome, return an offset of -1.
+    """
+    offset_info = alignment.offsetInfo(reference_offset)
+    assert offset_info is not None
+    genome_offset = offset_info["genome"]["ntOffset"]
+
+    if genome_offset is None:
+        alignment_offset = offset_info["alignmentOffset"]
+        assert alignment.gappedOffsets[alignment_offset] >= len(alignment.genome)
+        if verbose > 2:
+            print(
+                f"Reference offset {reference_offset} has alignment offset "
+                f"{alignment_offset}, but that does not exist in length "
+                f"{len(alignment.genome)} sequence {alignment.genome.id!r}. Skipping."
+            )
+        return -1, ""
+
+    return genome_offset, alignment.genome.sequence[genome_offset]
 
 
 def compare(
@@ -106,24 +134,21 @@ def compare(
     assert features.reference
 
     for offset in range(len(features.reference)):
-        a_offset_info = a_alignment.offsetInfo(offset)
-        assert a_offset_info is not None
-        a_offset = a_offset_info["genome"]["ntOffset"]
-        a_nt = a_read.sequence[a_offset]
-
-        b_offset_info = b_alignment.offsetInfo(offset)
-        assert b_offset_info is not None
-        b_offset = b_offset_info["genome"]["ntOffset"]
-        if b_offset is None:
-            if verbose > 2:
-                print(
-                    f"Offset {offset} has alignment offset "
-                    f"{b_offset_info['alignmentOffset']}, but that does "
-                    f"not exist in B genome of len {len(b_read)}. Skipping."
-                )
+        a_offset, a_nt = genome_offset_and_nt(offset, a_alignment, verbose)
+        if a_offset == -1:
             continue
-        else:
-            b_nt = b_read.sequence[b_offset]
+
+        b_offset, b_nt = genome_offset_and_nt(offset, b_alignment, verbose)
+        if b_offset == -1:
+            continue
+
+        if verbose > 2:
+            print(
+                f"Reference offset {offset} has gapped offset "
+                f"{a_alignment.gappedOffsets[offset]} in A alignment, and "
+                f"{b_alignment.gappedOffsets[offset]} in B alignment. "
+                f"A offset {a_offset} has {a_nt!r}, B offset {b_offset} has {b_nt!r}."
+            )
 
         if a_nt == b_nt:
             continue
@@ -133,29 +158,38 @@ def compare(
 
         changes[a_nt + b_nt].append((offset, feature_info, summaries))
 
-        features_list = sorted(features.getFeatureNames(offset))
+        features_list = sorted(
+            features.getFeatureNames(offset, includeUntranslated=True)
+        )
 
         if features_list:
-            summary = []
-            summaries.append(summary)
-            summary.append(f"0-based offset {offset}: {a_nt}->{b_nt} change:")
             for feature_name in features_list:
                 if (
                     len(features_list) == 1
                     or not sars2
+                    or not sars2_simplify_features
                     or (
                         # We are processing SARS-2 genomes and there are multiple
                         # features. If we've been asked to skip the ones that contain
                         # sub-features, process the feature unless it is one we want to
                         # skip.
                         sars2_simplify_features
-                        and not feature_name.endswith(" polyprotein")
-                        and not feature_name.endswith(" glycoprotein")
+                        and not (
+                            feature_name.endswith(" polyprotein")
+                            or feature_name.endswith(" glycoprotein")
+                            or feature_name == "3'UTR"
+                        )
                     )
                 ):
+                    summary = []
+                    summaries.append(summary)
+                    summary.append(
+                        f"  Reference offset {offset}: {a_nt}->{b_nt} change:"
+                    )
+
                     feature = features[feature_name]
 
-                    summary.append(f"  Change in {feature_name}:")
+                    # summary.append(f"  Change in {feature_name}:")
                     feature_start = feature["start"]
 
                     if features.translated(feature_name):
@@ -170,10 +204,10 @@ def compare(
                         change_type = _analyze_mutation(
                             a_offset,
                             b_offset,
+                            a_read,
+                            b_read,
                             a_feature_offset,
                             b_feature_offset,
-                            a_read.sequence,
-                            b_read.sequence,
                             verbose,
                             summary,
                         )
@@ -185,7 +219,7 @@ def compare(
         else:
             summaries.append(
                 [
-                    f"0-based offset {offset}: {a_nt}->{b_nt} but no features "
+                    f"Reference offset {offset}: {a_nt}->{b_nt} but no features "
                     "found here.",
                 ]
             )
@@ -199,17 +233,14 @@ def print_results(
     verbose: int,
     use_rich: bool,
 ):
-    for change in sorted(changes):
-        details = changes[change]
-        a_nt, b_nt = change
-
+    for (a_nt, b_nt), details in sorted(changes.items()):
         change_type_count = defaultdict(int)
         for _, feature_info, _ in details:
             if feature_info:
                 for _, change_type in feature_info:
                     change_type_count[change_type] += 1
             else:
-                change_type_count["non-coding"] += 1
+                change_type_count["no feature"] += 1
 
         change_type_summary = ", ".join(
             f"{change_type}: {count}"
@@ -226,17 +257,23 @@ def print_results(
                 f"{a_nt}->{b_nt} substitutions in "
                 f"{pct(len(details), reference_length)} sites ({change_type_summary})"
             )
+
         if verbose:
             for change_count, (offset, feature_info, summaries) in enumerate(
                 details, start=1
             ):
                 print(f"  {change_count:2d}: site {offset + 1:,}")
-                for (feature_name, change_type), summary in zip(
-                    feature_info, summaries
-                ):
-                    if use_rich:
-                        rich.print(f"      [bold green]{feature_name} ({change_type})")
-                    else:
-                        print(f"      {feature_name} ({change_type})")
-                    if verbose > 1 and summary:
-                        print("      " + "\n      ".join(summary))
+                if feature_info:
+                    for (feature_name, change_type), summary in zip(
+                        feature_info, summaries
+                    ):
+                        if use_rich:
+                            rich.print(
+                                f"      [bold green]{feature_name} ({change_type})"
+                            )
+                        else:
+                            print(f"      {feature_name} ({change_type})")
+                        if verbose > 1 and summary:
+                            print("      " + "\n      ".join(summary))
+                else:
+                    print("      No features.")

@@ -130,6 +130,7 @@ SARS_COV_2_TRANSLATED = {
     "helicase",  # nsp13
     "3'-to-5' exonuclease",  # nsp14
     "endoRNAse",  # nsp15
+    "2'-O-ribose methyltransferase",
     "nsp16",
     "surface glycoprotein",
     "furin cleavage site",

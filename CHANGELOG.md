@@ -1,3 +1,8 @@
+## 0.3.4 August 19, 2025
+
+Added 2'-O-ribose methyltransferase to the list of translated SARS-CoV-2
+features.
+
 ## 0.3.3 August 17, 2025
 
 Switched to `uv` project organization with `pyproject.toml`.  Many small

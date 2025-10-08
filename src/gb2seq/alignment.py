@@ -4,7 +4,7 @@ import argparse
 from Bio.Seq import Seq
 
 from dark.aligners import edlibAlign, mafft
-from dark.reads import AARead, DNARead, Reads
+from dark.reads import AARead, DNARead, Read, Reads
 
 from gb2seq import Gb2SeqError
 from gb2seq.change import splitChange
@@ -161,10 +161,10 @@ class Gb2Alignment:
 
     def __init__(
         self,
-        genome: DNARead,
+        genome: Read,
         features: Features,
-        referenceAligned: Optional[DNARead] = None,
-        genomeAligned: Optional[DNARead] = None,
+        referenceAligned: Read | None = None,
+        genomeAligned: Read | None = None,
         aligner: str = DEFAULT_ALIGNER,
         matchAmbiguous: bool = True,
         untranslatable: Optional[Dict[str, str]] = None,
@@ -183,8 +183,8 @@ class Gb2Alignment:
 
     def _getAlignment(
         self,
-        referenceAligned: Optional[DNARead] = None,
-        genomeAligned: Optional[DNARead] = None,
+        referenceAligned: Read | None = None,
+        genomeAligned: Read | None = None,
     ) -> None:
         """
         Align the reference and the genome.
@@ -281,8 +281,8 @@ class Gb2Alignment:
                 'both end with a "-" character.'
             )
 
-        self.referenceAligned: DNARead = referenceAligned
-        self.genomeAligned: DNARead = genomeAligned
+        self.referenceAligned: Read = referenceAligned
+        self.genomeAligned: Read = genomeAligned
 
     def ntSequences(
         self,
@@ -530,8 +530,8 @@ class Gb2Alignment:
         self,
         base: str,
         offset: int,
-        read: DNARead,
-        change: Union[str, Tuple[Optional[str], int, Optional[str]]],
+        read: Read,
+        change: str | Tuple[str | None, int, str | None],
         featureName: str,
         onError,
         errFp,

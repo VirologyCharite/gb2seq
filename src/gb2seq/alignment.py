@@ -1,18 +1,17 @@
-from typing import Dict, Iterable, Iterator, Optional, TextIO, Tuple, Union
-
 import argparse
-from Bio.Seq import Seq
+from typing import Iterable, Iterator, TextIO
 
+from Bio.Seq import Seq
 from dark.aligners import edlibAlign, mafft
-from dark.reads import AARead, DNARead, Reads
+from dark.reads import AARead, DNARead, Read, Reads
 
 from gb2seq import Gb2SeqError
 from gb2seq.change import splitChange
 from gb2seq.features import Features, UnknownFeatureNameError
 from gb2seq.translate import (
+    TranslatedReferenceAndGenomeLengthError,
     translate,
     translateSARS2Spike,
-    TranslatedReferenceAndGenomeLengthError,
 )
 from gb2seq.variants import VARIANTS
 
@@ -161,13 +160,13 @@ class Gb2Alignment:
 
     def __init__(
         self,
-        genome: DNARead,
+        genome: Read,
         features: Features,
-        referenceAligned: Optional[DNARead] = None,
-        genomeAligned: Optional[DNARead] = None,
+        referenceAligned: Read | None = None,
+        genomeAligned: Read | None = None,
         aligner: str = DEFAULT_ALIGNER,
         matchAmbiguous: bool = True,
-        untranslatable: Optional[Dict[str, str]] = None,
+        untranslatable: dict[str, str] | None = None,
     ):
         if aligner not in ALIGNERS:
             raise ValueError(f"Unknown aligner {aligner!r}.")
@@ -183,8 +182,8 @@ class Gb2Alignment:
 
     def _getAlignment(
         self,
-        referenceAligned: Optional[DNARead] = None,
-        genomeAligned: Optional[DNARead] = None,
+        referenceAligned: Read | None = None,
+        genomeAligned: Read | None = None,
     ) -> None:
         """
         Align the reference and the genome.
@@ -281,8 +280,8 @@ class Gb2Alignment:
                 'both end with a "-" character.'
             )
 
-        self.referenceAligned: DNARead = referenceAligned
-        self.genomeAligned: DNARead = genomeAligned
+        self.referenceAligned: Read = referenceAligned
+        self.genomeAligned: Read = genomeAligned
 
     def ntSequences(
         self,
@@ -290,7 +289,7 @@ class Gb2Alignment:
         reverseComplement: bool = False,
         addFeatureToId: bool = True,
         raiseOnReferenceGaps: bool = True,
-    ) -> Tuple[DNARead, DNARead]:
+    ) -> tuple[DNARead, DNARead]:
         """
         Get the aligned nucelotide sequences.
 
@@ -377,7 +376,7 @@ class Gb2Alignment:
         featureName: str,
         addFeatureToId: bool = True,
         raiseOnReferenceGaps: bool = True,
-    ) -> Tuple[AARead, AARead]:
+    ) -> tuple[AARead, AARead]:
         """
         Match the genome and the reference at the amino acid level.
 
@@ -530,12 +529,12 @@ class Gb2Alignment:
         self,
         base: str,
         offset: int,
-        read: DNARead,
-        change: Union[str, Tuple[Optional[str], int, Optional[str]]],
+        read: Read,
+        change: str | tuple[str | None, int, str | None],
         featureName: str,
         onError,
         errFp,
-    ) -> tuple[bool, Optional[str]]:
+    ) -> tuple[bool, str | None]:
         """
         Check that a base occurs at an offset.
 
@@ -580,17 +579,17 @@ class Gb2Alignment:
     def checkFeature(
         self,
         featureName: str,
-        changes: Union[str, Iterable[Tuple[str, int, str]]],
+        changes: str | Iterable[tuple[str, int, str]],
         aa: bool = False,
         onError: str = "raise",
-        errFp: Optional[TextIO] = None,
+        errFp: TextIO | None = None,
         raiseOnReferenceGaps: bool = True,
-    ) -> Tuple[
+    ) -> tuple[
         int,
         int,
-        Dict[
-            Union[str, Tuple[str, int, str]],
-            Tuple[bool, Optional[str], bool, Optional[str]],
+        dict[
+            str | tuple[str, int, str],
+            tuple[bool, str | None, bool, str | None],
         ],
     ]:
         """Check that a set of changes all happened as expected.
@@ -632,8 +631,8 @@ class Gb2Alignment:
         """
 
         def _getChanges(
-            changes: Union[str, Iterable[Tuple[str, int, str]]],
-        ) -> Iterator[Tuple[Union[str, Tuple[str, int, str]], str, int, str]]:
+            changes: str | Iterable[tuple[str, int, str]],
+        ) -> Iterator[tuple[str | tuple[str, int, str], str, int, str]]:
             if isinstance(changes, str):
                 for change in changes.split():
                     referenceBase, offset, genomeBase = splitChange(change)
@@ -643,7 +642,10 @@ class Gb2Alignment:
                     referenceBase, offset, genomeBase = change
                     yield change, referenceBase, offset, genomeBase
 
-        result: Dict[Union[str, Tuple[Optional[str], int, Optional[str]]],] = {}
+        result: dict[
+            str | tuple[str | None, int, str | None],
+            tuple[bool, str | None, bool, str | None],
+        ] = {}
         testCount = errorCount = 0
 
         try:
@@ -688,11 +690,11 @@ class Gb2Alignment:
 
     def checkVariant(
         self,
-        variant: Union[str, dict],
+        variant: str | dict,
         onError: str = "raise",
-        errFp: Optional[TextIO] = None,
+        errFp: TextIO | None = None,
         raiseOnReferenceGaps: bool = True,
-    ) -> Tuple[int, int, Dict[str, Tuple[bool, Optional[str], bool, Optional[str]]]]:
+    ) -> tuple[int, int, dict[str, tuple[bool, str | None, bool, str | None]]]:
         """
         Check that a set of changes in different features all happened as
         expected.
@@ -752,7 +754,7 @@ class Gb2Alignment:
 
         return testCountTotal, errorCountTotal, result
 
-    def coverage(self, featureName: Optional[str] = None) -> Tuple[int, int]:
+    def coverage(self, featureName: str | None = None) -> tuple[int, int]:
         """
         Get the coverage of a feature or the whole genome.
 
@@ -782,11 +784,11 @@ class Gb2Alignment:
         offset: int,
         relativeToFeature: bool = False,
         aa: bool = False,
-        featureName: Optional[str] = None,
+        featureName: str | None = None,
         includeUntranslated: bool = False,
-        minReferenceCoverage: Optional[float] = None,
+        minReferenceCoverage: float | None = None,
         allowAmbiguous: bool = True,
-    ) -> Union[dict, None]:
+    ) -> dict | None:
         """
         Get information about genome features at an offset.
 
@@ -976,10 +978,10 @@ def offsetInfoMultipleGenomes(
     offset: int,
     relativeToFeature: bool = False,
     aa: bool = False,
-    featureName: Optional[str] = None,
+    featureName: str | None = None,
     includeUntranslated: bool = False,
-    minReferenceCoverage: Optional[float] = None,
-) -> Optional[dict]:
+    minReferenceCoverage: float | None = None,
+) -> dict | None:
     """
     Get information about an offset for multiple Gb2Alignment instances.
 

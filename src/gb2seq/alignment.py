@@ -80,9 +80,9 @@ def getGappedOffsets(s: str) -> dict:
     result = {}
     gapCount = index = 0
 
-    # To build the mapping, we walk through s. If we see a gap we just
-    # count it. Non-gap offsets go into the map with their offset plus the
-    # number of gaps that have been encountered before them.
+    # To build the mapping, we walk through s. If we see a gap we just count it. Non-gap
+    # offsets go into the map with their offset plus the number of gaps that have been
+    # encountered before them.
     for base in s:
         if base == "-":
             gapCount += 1
@@ -90,15 +90,14 @@ def getGappedOffsets(s: str) -> dict:
             result[index] = index + gapCount
             index += 1
 
-    # Sanity check that the result mapping has an entry for all the offsets
-    # in the original string (before it was aligned).  This check can be
-    # removed one day, seeing as there are tests for this function.
+    # Sanity check that the result mapping has an entry for all the offsets in the
+    # original string (before it was aligned).  This check can be removed one day,
+    # seeing as there are tests for this function.
     assert set(result) == set(range(len(s) - s.count("-")))
 
-    # If we have a non-empty result, add a final offset corresponding to
-    # the length of the original string. This allows us to use Python
-    # indexing in the case wanting to convert an offset that is one beyond
-    # the end of the string.
+    # If we have a non-empty result, add a final offset corresponding to the length of
+    # the original string. This allows us to use Python indexing in the case of wanting
+    # to convert an offset that is one beyond the end of the string.
     if result:
         assert index == len(s) - s.count("-")
         result[index] = index + gapCount

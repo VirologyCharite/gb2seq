@@ -91,7 +91,7 @@ def main(args):
         report(alignment, args, False)
     else:
         count = 0
-        fp = open(args.genome) if args.genome else sys.stdin
+        fp = open(args.genome, 'rb') if args.genome else sys.stdin
         for count, read in enumerate(FastaReads(fp), start=1):
             alignment = Gb2Alignment(read, features, aligner=args.aligner)
             report(alignment, args)

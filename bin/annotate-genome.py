@@ -77,7 +77,7 @@ def makeParser() -> argparse.ArgumentParser:
     parser.add_argument(
         "--genome",
         metavar="file.fasta",
-        type=argparse.FileType("r"),
+        type=argparse.FileType("rb"),
         default=sys.stdin,
         help="The FASTA file containing the SARS-CoV-2 genome(s) to examine.",
     )

@@ -367,7 +367,7 @@ if __name__ == "__main__":
     parser.add_argument(
         "--genome",
         metavar="file.fasta",
-        type=argparse.FileType("r"),
+        type=argparse.FileType("rb"),
         default=sys.stdin,
         help="The FASTA file containing the genome(s) to examine.",
     )

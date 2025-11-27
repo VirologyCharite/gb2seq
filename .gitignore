@@ -4,3 +4,4 @@ data/*.fai
 .DS_Store
 .coverage
 build
+__pycache__

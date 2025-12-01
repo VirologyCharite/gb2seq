@@ -1,3 +1,8 @@
+## 0.3.6 December 1, 2025
+
+Added `S1 domain` and `S2 domain` as features to our GenBank reference file
+for SARS-CoV-2 (`src/gb2seq/data/NC_045512.2.gb`).
+
 ## 0.3.5 November 27, 2025
 
 Fixed error in file opening mode (now needs to be binary due to changes in

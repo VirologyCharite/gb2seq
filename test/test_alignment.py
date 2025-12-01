@@ -1487,7 +1487,7 @@ class TestOffsetInfo(TestCase):
                 {
                     "alignmentOffset": start + offset,
                     "featureName": "surface glycoprotein",
-                    "featureNames": {"surface glycoprotein"},
+                    "featureNames": {"S1 domain", "surface glycoprotein"},
                     "reference": {
                         "aa": "N",
                         "codon": "AAT",
@@ -1532,7 +1532,7 @@ class TestOffsetInfo(TestCase):
                 {
                     "alignmentOffset": offset,
                     "featureName": "surface glycoprotein",
-                    "featureNames": {"surface glycoprotein"},
+                    "featureNames": {"S1 domain", "surface glycoprotein"},
                     "reference": {
                         "aa": "N",
                         "codon": "AAT",
@@ -1579,7 +1579,7 @@ class TestOffsetInfo(TestCase):
             {
                 "alignmentOffset": start + offset * 3,
                 "featureName": "surface glycoprotein",
-                "featureNames": {"surface glycoprotein"},
+                "featureNames": {"S1 domain", "surface glycoprotein"},
                 "reference": {
                     "aa": "N",
                     "codon": "AAT",

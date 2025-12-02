@@ -373,5 +373,7 @@ class TestFeatures(TestCase):
             "stem loop 4",
             "stem loop 5",
             "surface glycoprotein",
+            "S1 domain",
+            "S2 domain",
         }
         self.assertEqual(expected, set(_FEATURES))

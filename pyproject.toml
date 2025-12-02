@@ -1,6 +1,6 @@
 [project]
 name = "gb2seq"
-version = "0.3.4"
+version = "0.3.6"
 description = "Python library and scripts for working with unannotated sequences based on an annotated reference genome provided by a GenBank file."
 
 readme = "README.md"
